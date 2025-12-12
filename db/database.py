@@ -14,10 +14,15 @@ def get_connection_string() -> str:
     return os.environ.get("SMOL_DB_URL", "postgresql://localhost/smol")
 
 
+def connect():
+    """Create a database connection."""
+    return psycopg2.connect(get_connection_string())
+
+
 @contextmanager
 def get_connection():
     """Context manager for database connections."""
-    conn = psycopg2.connect(get_connection_string())
+    conn = connect()
     try:
         yield conn
     finally:

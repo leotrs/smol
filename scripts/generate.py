@@ -19,7 +19,7 @@ from typing import Iterator
 sys.path.insert(0, str(__file__).rsplit("/", 2)[0])
 
 from db.graph_data import process_graph, graph_from_graph6
-from db.database import get_connection, init_schema, insert_batch
+from db.database import connect, init_schema, insert_batch
 
 
 def generate_graphs(
@@ -76,7 +76,7 @@ def process_and_insert(
         Total number of graphs processed
     """
     if not dry_run:
-        conn = get_connection().__enter__()
+        conn = connect()
         init_schema(conn)
     else:
         conn = None
