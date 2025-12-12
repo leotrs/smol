@@ -89,30 +89,63 @@ def count_graphs(conn, n: int | None = None) -> int:
         return cur.fetchone()[0]
 
 
-def get_cospectral_pairs(
-    conn, matrix_type: str = "adj", limit: int = 100
-) -> list[tuple[int, int, str]]:
+MATRIX_TYPES = ("adj", "lap", "nb", "nbl")
+
+
+def find_and_store_cospectral_pairs(conn, matrix_type: str) -> int:
     """
-    Find co-spectral pairs for a given matrix type.
+    Find all co-spectral pairs for a matrix type and store them.
 
     Args:
         conn: Database connection
         matrix_type: One of 'adj', 'lap', 'nb', 'nbl'
-        limit: Maximum number of pairs to return
 
     Returns:
-        List of (graph1_id, graph2_id, spectral_hash) tuples
+        Number of pairs inserted
     """
+    if matrix_type not in MATRIX_TYPES:
+        raise ValueError(f"matrix_type must be one of {MATRIX_TYPES}")
+
     hash_col = f"{matrix_type}_spectral_hash"
 
     query = f"""
-    SELECT g1.id, g2.id, g1.{hash_col}
+    INSERT INTO cospectral_pairs (graph1_id, graph2_id, matrix_type)
+    SELECT g1.id, g2.id, %s
     FROM graphs g1
     JOIN graphs g2 ON g1.{hash_col} = g2.{hash_col}
     WHERE g1.id < g2.id
-    LIMIT %s
+    ON CONFLICT (graph1_id, graph2_id, matrix_type) DO NOTHING
     """
 
     with conn.cursor() as cur:
-        cur.execute(query, (limit,))
-        return cur.fetchall()
+        cur.execute(query, (matrix_type,))
+        inserted = cur.rowcount
+
+    conn.commit()
+    return inserted
+
+
+def find_all_cospectral_pairs(conn) -> dict[str, int]:
+    """
+    Find and store co-spectral pairs for all matrix types.
+
+    Returns:
+        Dict mapping matrix_type to number of pairs found
+    """
+    results = {}
+    for matrix_type in MATRIX_TYPES:
+        results[matrix_type] = find_and_store_cospectral_pairs(conn, matrix_type)
+    return results
+
+
+def count_cospectral_pairs(conn, matrix_type: str | None = None) -> int:
+    """Count co-spectral pairs, optionally filtered by matrix type."""
+    with conn.cursor() as cur:
+        if matrix_type:
+            cur.execute(
+                "SELECT COUNT(*) FROM cospectral_pairs WHERE matrix_type = %s",
+                (matrix_type,),
+            )
+        else:
+            cur.execute("SELECT COUNT(*) FROM cospectral_pairs")
+        return cur.fetchone()[0]

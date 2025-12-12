@@ -71,3 +71,18 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_graph6 ON graphs(graph6);
 
 -- GIN index on extra JSONB
 CREATE INDEX IF NOT EXISTS idx_extra ON graphs USING GIN(extra);
+
+-- Co-spectral pairs table
+CREATE TABLE IF NOT EXISTS cospectral_pairs (
+    id              BIGSERIAL PRIMARY KEY,
+    graph1_id       BIGINT NOT NULL REFERENCES graphs(id),
+    graph2_id       BIGINT NOT NULL REFERENCES graphs(id),
+    matrix_type     VARCHAR(3) NOT NULL CHECK (matrix_type IN ('adj', 'lap', 'nb', 'nbl')),
+
+    CONSTRAINT graph_order CHECK (graph1_id < graph2_id),
+    UNIQUE (graph1_id, graph2_id, matrix_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_cospectral_matrix ON cospectral_pairs(matrix_type);
+CREATE INDEX IF NOT EXISTS idx_cospectral_graph1 ON cospectral_pairs(graph1_id);
+CREATE INDEX IF NOT EXISTS idx_cospectral_graph2 ON cospectral_pairs(graph2_id);
