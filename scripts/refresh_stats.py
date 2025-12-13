@@ -31,7 +31,7 @@ def compute_stats(conn) -> dict:
     )
     counts_by_n = {str(r[0]): r[1] for r in cur.fetchall()}
 
-    # Cospectral counts
+    # Cospectral counts (all graphs, not just connected)
     cospectral = {}
     for matrix in ["adj", "lap", "nb", "nbl"]:
         hash_col = f"{matrix}_spectral_hash"
@@ -40,8 +40,7 @@ def compute_stats(conn) -> dict:
             WITH groups AS (
                 SELECT n, {hash_col}, COUNT(*) as cnt
                 FROM graphs
-                WHERE diameter IS NOT NULL
-                GROUP BY n, m, {hash_col}
+                GROUP BY n, {hash_col}
                 HAVING COUNT(*) > 1
             )
             SELECT n, SUM(cnt)::int as cospectral_count
