@@ -7,9 +7,9 @@
 <p>{{ graph.n }} vertices, {{ graph.m }} edges</p>
 
 <div id="graph-viz" style="width: 300px; height: 300px; border: 1px solid #ccc; margin-bottom: 1em;"></div>
-<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://d3js.org/d3.v7.min.js" onload="renderGraph()"></script>
 <script>
-(function() {
+function renderGraph() {
     const n = {{ graph.n }};
     const edges = {{ graph.edges | tojson }};
 
@@ -64,7 +64,7 @@
             .attr("x", d => d.x)
             .attr("y", d => d.y);
     });
-})();
+}
 </script>
 
 <h3>Properties</h3>

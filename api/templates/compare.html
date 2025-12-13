@@ -21,9 +21,9 @@
 {% endfor %}
 </div>
 
-<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://d3js.org/d3.v7.min.js" onload="renderGraphs()"></script>
 <script>
-(function() {
+function renderGraphs() {
     const graphs = {{ result.graphs | tojson }};
     graphs.forEach((g, idx) => {
         const width = 200, height = 200;
@@ -65,7 +65,7 @@
                 .attr("cy", d => d.y);
         });
     });
-})();
+}
 </script>
 
 <h3>Properties</h3>
