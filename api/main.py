@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import networkx as nx
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -36,10 +37,13 @@ def wants_html(request: Request) -> bool:
 
 
 def row_to_graph_full(row: dict, mates: dict[str, list[str]]) -> GraphFull:
+    G = nx.from_graph6_bytes(row["graph6"].encode())
+    edges = [tuple(sorted(e)) for e in G.edges()]
     return GraphFull(
         graph6=row["graph6"],
         n=row["n"],
         m=row["m"],
+        edges=edges,
         properties=GraphProperties(
             is_bipartite=row["is_bipartite"],
             is_planar=row["is_planar"],
@@ -220,7 +224,7 @@ async def compare_graphs(
 
     if wants_html(request):
         return templates.TemplateResponse(
-            request, "compare.html", {"result": result}
+            request, "compare.html", {"result": result.model_dump()}
         )
     return result
 

@@ -86,3 +86,10 @@ CREATE TABLE IF NOT EXISTS cospectral_pairs (
 CREATE INDEX IF NOT EXISTS idx_cospectral_matrix ON cospectral_pairs(matrix_type);
 CREATE INDEX IF NOT EXISTS idx_cospectral_graph1 ON cospectral_pairs(graph1_id);
 CREATE INDEX IF NOT EXISTS idx_cospectral_graph2 ON cospectral_pairs(graph2_id);
+
+-- Stats cache table
+CREATE TABLE IF NOT EXISTS stats_cache (
+    key             VARCHAR(64) PRIMARY KEY,
+    value           JSONB NOT NULL,
+    updated_at      TIMESTAMP DEFAULT NOW()
+);

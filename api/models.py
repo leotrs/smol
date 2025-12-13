@@ -39,6 +39,7 @@ class GraphFull(BaseModel):
     graph6: str
     n: int
     m: int
+    edges: list[tuple[int, int]]  # For visualization
     properties: GraphProperties
     spectra: Spectra
     cospectral_mates: CospectralMates

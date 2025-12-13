@@ -134,18 +134,37 @@ def query_graphs(
 
 
 def get_stats() -> dict[str, Any]:
-    """Get database statistics."""
+    """Get database statistics from cache."""
     with get_db() as conn:
         cur = conn.cursor()
 
-        # Total counts
+        # Try to get from cache first
+        cur.execute(
+            "SELECT value FROM stats_cache WHERE key = 'main_stats'"
+        )
+        row = cur.fetchone()
+        if row:
+            stats = row[0]
+            # Convert string keys back to int for counts_by_n
+            if isinstance(stats.get("counts_by_n"), dict):
+                stats["counts_by_n"] = {
+                    int(k): v for k, v in stats["counts_by_n"].items()
+                }
+            if isinstance(stats.get("cospectral_counts"), dict):
+                for matrix in stats["cospectral_counts"]:
+                    stats["cospectral_counts"][matrix] = {
+                        int(k): v
+                        for k, v in stats["cospectral_counts"][matrix].items()
+                    }
+            return stats
+
+        # Fallback: compute on the fly (slow)
         cur.execute("SELECT COUNT(*) FROM graphs")
         total = cur.fetchone()[0]
 
         cur.execute("SELECT COUNT(*) FROM graphs WHERE diameter IS NOT NULL")
         connected = cur.fetchone()[0]
 
-        # Counts by n
         cur.execute(
             """
             SELECT n, COUNT(*) FROM graphs
@@ -155,7 +174,6 @@ def get_stats() -> dict[str, Any]:
         )
         counts_by_n = {r[0]: r[1] for r in cur.fetchall()}
 
-        # Cospectral counts
         cospectral = {}
         for matrix in ["adj", "lap", "nb", "nbl"]:
             hash_col = f"{matrix}_spectral_hash"

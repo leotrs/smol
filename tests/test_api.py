@@ -26,6 +26,8 @@ class TestGraphEndpoint:
         assert data["graph6"] == "D?{"
         assert data["n"] == 5
         assert data["m"] == 4
+        assert "edges" in data
+        assert len(data["edges"]) == 4
         assert "properties" in data
         assert "spectra" in data
         assert "cospectral_mates" in data
