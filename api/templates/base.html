@@ -1,9 +1,18 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
+    <script>
+        (function() {
+            const stored = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = stored || (prefersDark ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}SMOL{% endblock %}</title>
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <script>
@@ -50,6 +59,34 @@
             --pico-card-background-color: #F9FAFB;
             --pico-card-border-color: #E5E7EB;
             --pico-card-sectioning-background-color: #F3F4F6;
+
+            --graph-node-color: #0D9488;
+            --graph-edge-color: #E5E2DE;
+            --graph-viz-bg: #FFFFFF;
+        }
+
+        [data-theme="dark"] {
+            --pico-primary: #14B8A6;
+            --pico-primary-background: #14B8A6;
+            --pico-primary-border: #14B8A6;
+            --pico-primary-underline: rgba(20, 184, 166, 0.5);
+            --pico-primary-hover: #2DD4BF;
+            --pico-primary-hover-background: #2DD4BF;
+            --pico-primary-focus: rgba(20, 184, 166, 0.25);
+            --pico-primary-inverse: #0F172A;
+
+            --pico-background-color: #0F172A;
+            --pico-color: #E2E8F0;
+            --pico-muted-color: #94A3B8;
+            --pico-muted-border-color: #334155;
+
+            --pico-card-background-color: #1E293B;
+            --pico-card-border-color: #334155;
+            --pico-card-sectioning-background-color: #1E293B;
+
+            --graph-node-color: #14B8A6;
+            --graph-edge-color: #475569;
+            --graph-viz-bg: #1E293B;
         }
 
         /* Tighter overall spacing */
@@ -135,7 +172,7 @@
 
         /* Graph visualization */
         .graph-viz {
-            background: #FFFFFF;
+            background: var(--graph-viz-bg);
             border: 1px solid var(--pico-muted-border-color);
             border-radius: var(--pico-border-radius);
         }
@@ -177,7 +214,7 @@
 
         /* Cards for graph display */
         .graph-card {
-            background: #FFFFFF;
+            background: var(--pico-card-background-color);
             border: 1px solid var(--pico-muted-border-color);
             border-radius: var(--pico-border-radius);
             padding: 0.75rem;
@@ -374,6 +411,152 @@
         summary {
             font-size: 0.9rem;
         }
+
+        /* Theme toggle button */
+        .theme-toggle {
+            background: none;
+            border: none;
+            padding: 0.25rem !important;
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+            margin-left: 0.5rem;
+        }
+
+        .theme-toggle:hover {
+            background: none;
+        }
+
+        [data-theme="light"] .theme-icon-dark,
+        :root:not([data-theme="dark"]) .theme-icon-dark {
+            display: none;
+        }
+
+        [data-theme="dark"] .theme-icon-light {
+            display: none;
+        }
+
+        [data-theme="dark"] .theme-icon-dark {
+            display: inline;
+        }
+
+        /* Responsive mobile styles */
+        @media (max-width: 768px) {
+            .container {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+
+            header nav {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            header .nav-links {
+                gap: 1rem;
+                font-size: 0.85rem;
+            }
+
+            .grid {
+                display: block;
+            }
+
+            .grid > div {
+                margin-bottom: 1rem;
+            }
+
+            #graph-viz {
+                width: 100% !important;
+                max-width: 300px;
+                margin: 0 auto;
+            }
+
+            .compare-grid {
+                flex-direction: column;
+            }
+
+            .compare-grid .graph-card {
+                min-width: unset;
+            }
+
+            .property-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .filter-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-row label {
+                width: 100%;
+            }
+
+            .filter-row select,
+            .filter-row input[type="number"] {
+                width: 100%;
+            }
+
+            .filter-row button {
+                margin-left: 0;
+                margin-top: 0.5rem;
+            }
+
+            .lookup-form {
+                flex-direction: column;
+            }
+
+            .lookup-form input {
+                max-width: none;
+            }
+
+            .tab-pills {
+                flex-wrap: wrap;
+            }
+
+            table {
+                font-size: 0.8rem;
+            }
+
+            th, td {
+                padding: 0.4rem 0.5rem;
+            }
+
+            .footer-actions {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .footer-actions a {
+                text-align: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            :root {
+                --pico-font-size: 14px;
+            }
+
+            header .logo {
+                font-size: 1rem;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            h3 {
+                font-size: 1.1rem;
+            }
+
+            .property-grid {
+                grid-template-columns: 1fr;
+            }
+
+            button, [role="button"] {
+                padding: 0.5rem 1rem !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -384,6 +567,10 @@
                 <a href="/">Search</a>
                 <a href="/glossary">Glossary</a>
                 <a href="/about">About</a>
+                <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+                    <span class="theme-icon-light">☀️</span>
+                    <span class="theme-icon-dark">🌙</span>
+                </button>
             </div>
         </nav>
     </header>
@@ -399,5 +586,14 @@
         </div>
         <div class="footer-tagline">SMOL: Spectra and Matrices Of Little graphs</div>
     </footer>
+
+    <script>
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
 </body>
 </html>

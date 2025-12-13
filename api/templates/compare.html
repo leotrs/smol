@@ -63,11 +63,15 @@ function renderGraphs() {
             .force("charge", d3.forceManyBody().strength(-80))
             .force("center", d3.forceCenter(width / 2, height / 2));
 
+        const style = getComputedStyle(document.documentElement);
+        const nodeColor = style.getPropertyValue('--graph-node-color').trim();
+        const edgeColor = style.getPropertyValue('--graph-edge-color').trim();
+
         const link = container.append("g")
             .selectAll("line")
             .data(links)
             .join("line")
-            .attr("stroke", "#E5E2DE")
+            .attr("stroke", edgeColor)
             .attr("stroke-width", 2);
 
         const node = container.append("g")
@@ -75,7 +79,7 @@ function renderGraphs() {
             .data(nodes)
             .join("circle")
             .attr("r", 5)
-            .attr("fill", "#0D9488")
+            .attr("fill", nodeColor)
             .style("cursor", "pointer")
             .call(d3.drag()
                 .on("start", (event, d) => {
