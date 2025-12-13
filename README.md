@@ -6,7 +6,7 @@ A database of all small connected graphs with their spectral properties.
 
 For each connected graph on up to 10 vertices, SMOL stores:
 
-**Spectra for four matrices:**
+**Spectra for four matrix types:**
 - Adjacency matrix
 - Laplacian matrix (symmetric normalized)
 - Non-backtracking (Hashimoto) matrix
@@ -28,21 +28,37 @@ For each connected graph on up to 10 vertices, SMOL stores:
 | 10       | 11,716,571       |
 | **Total**| **~12 million**  |
 
+## Website
+
+SMOL provides a web interface for exploring graphs:
+
+- **Search**: Look up graphs by graph6 encoding or filter by properties
+- **Graph detail**: View properties, spectra, and cospectral mates
+- **Compare**: Side-by-side comparison of multiple graphs
+- **Random**: Discover random graphs or cospectral families
+- **Glossary**: Terminology and matrix definitions with MathJax
+
 ## API
 
-SMOL provides a REST API for programmatic access:
+All endpoints return JSON by default, HTML when accessed via browser.
 
 ```bash
-# Look up a graph
-curl https://smol.example.com/graphs/D%3F%7B
+# Look up a graph by graph6
+curl https://smol.example.com/graph/D%3F%7B
 
-# Query graphs
+# Query graphs by properties
 curl "https://smol.example.com/graphs?n=7&bipartite=true&limit=10"
 
-# Compare graphs
+# Compare multiple graphs
 curl "https://smol.example.com/compare?graphs=D%3F%7B,DEo"
 
-# Database stats
+# Random graph (redirects)
+curl -L https://smol.example.com/random
+
+# Random cospectral family (redirects)
+curl -L https://smol.example.com/random/cospectral
+
+# Database statistics
 curl https://smol.example.com/stats
 ```
 
@@ -71,10 +87,13 @@ psql smol < sql/schema.sql
 
 ```bash
 # Generate graphs for n=1 through n=8
-uv run python scripts/generate.py --n 1 --n 8
+uv run python scripts/generate.py --n-min 1 --n-max 8
 
-# Dry run (process without inserting)
-uv run python scripts/generate.py --n 6 --dry-run
+# Generate just n=9
+uv run python scripts/generate.py --n-min 9 --n-max 9
+
+# Refresh statistics cache
+uv run python scripts/refresh_stats.py
 ```
 
 ### Run the API locally
@@ -82,6 +101,8 @@ uv run python scripts/generate.py --n 6 --dry-run
 ```bash
 uv run uvicorn api.main:app --reload
 ```
+
+Then visit http://localhost:8000
 
 ### Run tests
 
@@ -107,17 +128,31 @@ smol/
 │   ├── main.py          # Routes and app
 │   ├── database.py      # Database queries
 │   ├── models.py        # Pydantic models
-│   └── templates/       # HTML templates (HTMX)
+│   └── templates/       # Jinja2 + HTMX templates
+│       ├── base.html    # Layout with Pico CSS
+│       ├── home.html    # Search interface
+│       ├── graph_detail.html
+│       ├── graph_list.html
+│       ├── compare.html
+│       ├── glossary.html
+│       └── about.html
 ├── db/                  # Core library
 │   ├── matrices.py      # Matrix computations
 │   ├── spectrum.py      # Eigenvalue computation
 │   ├── metadata.py      # Graph properties
 │   └── graph_data.py    # GraphRecord processing
-├── doc/                 # Documentation
-│   └── wireframes.md    # Website wireframes
 ├── scripts/
-│   └── generate.py      # Generation pipeline
+│   ├── generate.py      # Graph generation pipeline
+│   └── refresh_stats.py # Update statistics cache
 ├── sql/
 │   └── schema.sql       # Database schema
 └── tests/
+    └── test_api.py      # API tests
 ```
+
+## Tech Stack
+
+- **Backend**: FastAPI with Jinja2 templates
+- **Frontend**: HTMX + Alpine.js, Pico CSS, D3.js for graph visualization
+- **Database**: PostgreSQL
+- **Math rendering**: MathJax

@@ -210,3 +210,118 @@ class TestStatsEndpoint:
         assert "lap" in cospectral
         assert "nb" in cospectral
         assert "nbl" in cospectral
+
+
+class TestRandomEndpoints:
+    def test_random_graph_redirects(self):
+        response = client.get("/random", follow_redirects=False)
+        assert response.status_code == 302
+        assert response.headers["location"].startswith("/graph/")
+
+    def test_random_graph_follows_redirect(self):
+        response = client.get("/random", follow_redirects=True)
+        assert response.status_code == 200
+        # Should end up at a graph detail page
+        assert "application/json" in response.headers["content-type"]
+        data = response.json()
+        assert "graph6" in data
+        assert "n" in data
+
+    def test_random_cospectral_redirects(self):
+        response = client.get("/random/cospectral", follow_redirects=False)
+        # Might be 302 (found cospectral) or 404 (none found in attempts)
+        assert response.status_code in (302, 404)
+        if response.status_code == 302:
+            assert "/compare?graphs=" in response.headers["location"]
+
+    def test_random_cospectral_with_matrix_type(self):
+        response = client.get("/random/cospectral?matrix=lap", follow_redirects=False)
+        assert response.status_code in (302, 404)
+
+    def test_random_cospectral_invalid_matrix(self):
+        response = client.get("/random/cospectral?matrix=invalid")
+        assert response.status_code == 400
+        assert "invalid matrix" in response.json()["detail"].lower()
+
+
+class TestGraphsEdgeCases:
+    def test_graphs_empty_params(self):
+        # Empty string params should be treated as None
+        response = client.get("/graphs?n=&m=&bipartite=&limit=10")
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+
+    def test_graphs_with_all_filters(self):
+        response = client.get(
+            "/graphs?n=6&bipartite=true&planar=true&regular=true&limit=5"
+        )
+        assert response.status_code == 200
+        data = response.json()
+        for g in data:
+            assert g["n"] == 6
+            assert g["properties"]["is_bipartite"] is True
+            assert g["properties"]["is_planar"] is True
+            assert g["properties"]["is_regular"] is True
+
+    def test_graphs_by_edge_count(self):
+        response = client.get("/graphs?n=5&m=5&limit=10")
+        assert response.status_code == 200
+        data = response.json()
+        for g in data:
+            assert g["n"] == 5
+            assert g["m"] == 5
+
+
+class TestGraphSpecialCharacters:
+    def test_graph_with_question_mark(self):
+        # D?{ contains a question mark
+        response = client.get("/graph/D%3F%7B")
+        assert response.status_code == 200
+        assert response.json()["graph6"] == "D?{"
+
+    def test_graph_with_backtick(self):
+        # Some graph6 strings contain backticks
+        response = client.get("/graph/E%60o")  # E`o
+        # Might or might not exist, just check no server error
+        assert response.status_code in (200, 404)
+
+    def test_graph_with_special_chars_html(self):
+        response = client.get("/graph/D%3F%7B", headers={"Accept": "text/html"})
+        assert response.status_code == 200
+        # Check that special chars are properly escaped in HTML
+        assert "D?{" in response.text or "D?{" in response.text
+
+
+class TestCompareEdgeCases:
+    def test_compare_same_graph_twice(self):
+        response = client.get("/compare?graphs=D%3F%7B,D%3F%7B")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["graphs"]) == 2
+        # Same graph should have same spectrum
+        assert data["spectral_comparison"]["adj"] == "same"
+
+    def test_compare_html_has_visualizations(self):
+        response = client.get(
+            "/compare?graphs=D%3F%7B,DEo", headers={"Accept": "text/html"}
+        )
+        assert response.status_code == 200
+        assert "viz-" in response.text  # D3 viz containers
+        assert "renderGraphs" in response.text  # JS function
+
+
+class TestHomeSearch:
+    def test_home_has_search_form(self):
+        response = client.get("/")
+        assert response.status_code == 200
+        assert "Lookup" in response.text
+        assert "Search" in response.text
+        assert "graph6" in response.text
+
+    def test_home_has_random_links_in_footer(self):
+        response = client.get("/")
+        assert response.status_code == 200
+        assert "/random" in response.text
+        assert "Random graph" in response.text
+        assert "Random cospectral family" in response.text

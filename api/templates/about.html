@@ -3,70 +3,86 @@
 {% block title %}About - SMOL{% endblock %}
 
 {% block content %}
-<h2>About SMOL</h2>
+<hgroup>
+    <h1>About SMOL</h1>
+    <p>Spectra and Matrices Of Little graphs</p>
+</hgroup>
 
 <p>
-    SMOL (Spectra and Matrices Of Little graphs) is a database of all simple connected graphs
-    up to 10 vertices with precomputed spectral properties for four matrix types.
+    SMOL is a comprehensive database of all simple graphs up to 10 vertices with precomputed
+    spectral properties for four matrix types: adjacency, Laplacian, non-backtracking (Hashimoto),
+    and non-backtracking Laplacian.
 </p>
 
 <p>
-    Use it to find examples, counterexamples, and explore which matrix types can distinguish
-    which graphs.
+    Use it to find examples, explore cospectral pairs, and discover which matrix types can
+    distinguish which graphs.
 </p>
 
-<h3>Statistics</h3>
-<table border="1">
-    <tr>
-        <th>n</th>
-        <th>graphs</th>
-        <th>adj-cospectral</th>
-        <th>lap-cospectral</th>
-        <th>nb-cospectral</th>
-        <th>nbl-cospectral</th>
-    </tr>
-    {% for n, count in stats.counts_by_n.items() %}
-    <tr>
-        <td>{{ n }}</td>
-        <td>{{ "{:,}".format(count) }}</td>
-        <td>{{ "{:,}".format(stats.cospectral_counts.adj.get(n, 0)) }}</td>
-        <td>{{ "{:,}".format(stats.cospectral_counts.lap.get(n, 0)) }}</td>
-        <td>{{ "{:,}".format(stats.cospectral_counts.nb.get(n, 0)) }}</td>
-        <td>{{ "{:,}".format(stats.cospectral_counts.nbl.get(n, 0)) }}</td>
-    </tr>
-    {% endfor %}
-    <tr>
-        <th>Total</th>
-        <th>{{ "{:,}".format(stats.connected_graphs) }}</th>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-    </tr>
-</table>
+<article>
+    <header><h3>Database Statistics</h3></header>
+    <p><strong>{{ "{:,}".format(stats.total_graphs) }}</strong> total graphs ({{ "{:,}".format(stats.connected_graphs) }} connected)</p>
 
-<h3>API</h3>
-<p>All endpoints return JSON. Add <code>Accept: text/html</code> header for HTML.</p>
+    <div style="overflow-x: auto;">
+    <table>
+        <thead>
+            <tr>
+                <th>n</th>
+                <th>Graphs</th>
+                <th>Adj cospectral</th>
+                <th>Lap cospectral</th>
+                <th>NB cospectral</th>
+                <th>NBL cospectral</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for n, count in stats.counts_by_n.items() %}
+            <tr>
+                <td>{{ n }}</td>
+                <td>{{ "{:,}".format(count) }}</td>
+                <td>{{ "{:,}".format(stats.cospectral_counts.adj.get(n, 0)) if stats.cospectral_counts.adj.get(n, 0) else "-" }}</td>
+                <td>{{ "{:,}".format(stats.cospectral_counts.lap.get(n, 0)) if stats.cospectral_counts.lap.get(n, 0) else "-" }}</td>
+                <td>{{ "{:,}".format(stats.cospectral_counts.nb.get(n, 0)) if stats.cospectral_counts.nb.get(n, 0) else "-" }}</td>
+                <td>{{ "{:,}".format(stats.cospectral_counts.nbl.get(n, 0)) if stats.cospectral_counts.nbl.get(n, 0) else "-" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</article>
 
-<pre>
-GET /graphs/{graph6}           Look up a single graph
-GET /graphs?n=7&regular=true  Query graphs by properties
-GET /compare?graphs=D?{,DEo    Compare multiple graphs
-GET /stats                     Database statistics
-</pre>
+<article>
+    <header><h3>API</h3></header>
+    <p>All endpoints return JSON by default. Use <code>Accept: text/html</code> header or access via browser for HTML.</p>
 
-<h3>Citation</h3>
-<pre>
-@misc{smol2025,
+    <pre><code>GET /graph/{graph6}            # Look up a single graph
+GET /graphs?n=7&amp;regular=true   # Query graphs by properties
+GET /compare?graphs=D?{,DEo    # Compare multiple graphs
+GET /stats                     # Database statistics</code></pre>
+</article>
+
+<article>
+    <header><h3>References</h3></header>
+    <p><em>TODO: Add references to relevant papers on graph spectra, non-backtracking matrices, etc.</em></p>
+</article>
+
+<article>
+    <header><h3>Citation</h3></header>
+    <pre><code>@misc{smol2025,
   title  = {SMOL: Spectra and Matrices Of Little graphs},
   author = {...},
   year   = {2025},
   url    = {...}
-}
-</pre>
+}</code></pre>
+</article>
 
-<h3>Source</h3>
-<p>
-    <a href="https://github.com/...">GitHub repository</a>
-</p>
+<article>
+    <header><h3>Source Code</h3></header>
+    <p>
+        SMOL is open source. Contributions and bug reports welcome.
+    </p>
+    <p>
+        <a href="https://github.com/..." role="button" class="outline">View on GitHub</a>
+    </p>
+</article>
 {% endblock %}

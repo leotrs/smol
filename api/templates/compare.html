@@ -3,30 +3,38 @@
 {% block title %}Compare - SMOL{% endblock %}
 
 {% block content %}
-<h2>Comparing {{ result.graphs|length }} graphs</h2>
+<hgroup>
+    <h1>Compare Graphs</h1>
+    <p>Comparing {{ result.graphs|length }} graphs side by side.</p>
+</hgroup>
 
-<h3>Spectral Comparison</h3>
-<p>
-    {% for matrix, status in result.spectral_comparison.items() %}
-        <strong>{{ matrix }}:</strong> {{ status }}{% if not loop.last %} | {% endif %}
-    {% endfor %}
-</p>
+<article>
+    <header>
+        <strong>Spectral Comparison</strong>
+    </header>
+    <p>
+        {% for matrix, status in result.spectral_comparison.items() %}
+            <strong>{{ matrix }}:</strong>
+            <span class="badge badge-{{ status }}">{{ status }}</span>
+            {% if not loop.last %}&nbsp;&nbsp;{% endif %}
+        {% endfor %}
+    </p>
+</article>
 
-<div style="display: flex; gap: 1em; flex-wrap: wrap; margin-bottom: 1em;">
+<div class="compare-grid">
 {% for g in result.graphs %}
-<div>
-    <div><a href="/graph/{{ g.graph6 | urlencode }}">{{ g.graph6 }}</a></div>
-    <div id="viz-{{ loop.index0 }}" style="width: 200px; height: 200px; border: 1px solid #ccc;"></div>
-</div>
+    <div class="graph-card">
+        <a href="/graph/{{ g.graph6 | urlencode }}"><code>{{ g.graph6 }}</code></a>
+        <div id="viz-{{ loop.index0 }}" class="graph-viz" style="width: 180px; height: 180px; margin: 0.5rem auto 0;"></div>
+    </div>
 {% endfor %}
 </div>
 
-<script src="https://d3js.org/d3.v7.min.js" onload="renderGraphs()"></script>
 <script>
 function renderGraphs() {
     const graphs = {{ result.graphs | tojson }};
     graphs.forEach((g, idx) => {
-        const width = 200, height = 200;
+        const width = 180, height = 180;
         const nodes = Array.from({length: g.n}, (_, i) => ({id: i}));
         const links = g.edges.map(([s, t]) => ({source: s, target: t}));
 
@@ -36,7 +44,7 @@ function renderGraphs() {
             .attr("height", height);
 
         const simulation = d3.forceSimulation(nodes)
-            .force("link", d3.forceLink(links).id(d => d.id).distance(40))
+            .force("link", d3.forceLink(links).id(d => d.id).distance(35))
             .force("charge", d3.forceManyBody().strength(-80))
             .force("center", d3.forceCenter(width / 2, height / 2));
 
@@ -44,15 +52,30 @@ function renderGraphs() {
             .selectAll("line")
             .data(links)
             .join("line")
-            .attr("stroke", "#999")
+            .attr("stroke", "#E5E2DE")
             .attr("stroke-width", 2);
 
         const node = svg.append("g")
             .selectAll("circle")
             .data(nodes)
             .join("circle")
-            .attr("r", 6)
-            .attr("fill", "#4a90d9");
+            .attr("r", 5)
+            .attr("fill", "#E85A4F")
+            .call(d3.drag()
+                .on("start", (event, d) => {
+                    if (!event.active) simulation.alphaTarget(0.3).restart();
+                    d.fx = d.x;
+                    d.fy = d.y;
+                })
+                .on("drag", (event, d) => {
+                    d.fx = event.x;
+                    d.fy = event.y;
+                })
+                .on("end", (event, d) => {
+                    if (!event.active) simulation.alphaTarget(0);
+                    d.fx = null;
+                    d.fy = null;
+                }));
 
         simulation.on("tick", () => {
             link
@@ -67,46 +90,53 @@ function renderGraphs() {
     });
 }
 </script>
+<script src="https://d3js.org/d3.v7.min.js" onload="renderGraphs()"></script>
 
 <h3>Properties</h3>
-<table border="1">
-    <tr>
-        <th>Property</th>
-        {% for g in result.graphs %}
-        <th><a href="/graph/{{ g.graph6 | urlencode }}">{{ g.graph6 }}</a></th>
-        {% endfor %}
-    </tr>
-    <tr>
-        <td>n</td>
-        {% for g in result.graphs %}<td>{{ g.n }}</td>{% endfor %}
-    </tr>
-    <tr>
-        <td>m</td>
-        {% for g in result.graphs %}<td>{{ g.m }}</td>{% endfor %}
-    </tr>
-    <tr>
-        <td>bipartite</td>
-        {% for g in result.graphs %}<td>{{ "yes" if g.properties.is_bipartite else "no" }}</td>{% endfor %}
-    </tr>
-    <tr>
-        <td>planar</td>
-        {% for g in result.graphs %}<td>{{ "yes" if g.properties.is_planar else "no" }}</td>{% endfor %}
-    </tr>
-    <tr>
-        <td>regular</td>
-        {% for g in result.graphs %}<td>{{ "yes" if g.properties.is_regular else "no" }}</td>{% endfor %}
-    </tr>
-    <tr>
-        <td>diameter</td>
-        {% for g in result.graphs %}<td>{{ g.properties.diameter if g.properties.diameter else "-" }}</td>{% endfor %}
-    </tr>
-    <tr>
-        <td>girth</td>
-        {% for g in result.graphs %}<td>{{ g.properties.girth if g.properties.girth else "-" }}</td>{% endfor %}
-    </tr>
-    <tr>
-        <td>triangles</td>
-        {% for g in result.graphs %}<td>{{ g.properties.triangle_count }}</td>{% endfor %}
-    </tr>
+<div style="overflow-x: auto;">
+<table>
+    <thead>
+        <tr>
+            <th>Property</th>
+            {% for g in result.graphs %}
+            <th><a href="/graph/{{ g.graph6 | urlencode }}"><code>{{ g.graph6 }}</code></a></th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Vertices</td>
+            {% for g in result.graphs %}<td>{{ g.n }}</td>{% endfor %}
+        </tr>
+        <tr>
+            <td>Edges</td>
+            {% for g in result.graphs %}<td>{{ g.m }}</td>{% endfor %}
+        </tr>
+        <tr>
+            <td>Bipartite</td>
+            {% for g in result.graphs %}<td>{{ "Yes" if g.properties.is_bipartite else "No" }}</td>{% endfor %}
+        </tr>
+        <tr>
+            <td>Planar</td>
+            {% for g in result.graphs %}<td>{{ "Yes" if g.properties.is_planar else "No" }}</td>{% endfor %}
+        </tr>
+        <tr>
+            <td>Regular</td>
+            {% for g in result.graphs %}<td>{{ "Yes" if g.properties.is_regular else "No" }}</td>{% endfor %}
+        </tr>
+        <tr>
+            <td>Diameter</td>
+            {% for g in result.graphs %}<td>{{ g.properties.diameter if g.properties.diameter else "-" }}</td>{% endfor %}
+        </tr>
+        <tr>
+            <td>Girth</td>
+            {% for g in result.graphs %}<td>{{ g.properties.girth if g.properties.girth else "-" }}</td>{% endfor %}
+        </tr>
+        <tr>
+            <td>Triangles</td>
+            {% for g in result.graphs %}<td>{{ g.properties.triangle_count }}</td>{% endfor %}
+        </tr>
+    </tbody>
 </table>
+</div>
 {% endblock %}

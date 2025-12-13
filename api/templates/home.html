@@ -3,53 +3,70 @@
 {% block title %}SMOL - Spectra and Matrices Of Little graphs{% endblock %}
 
 {% block content %}
-<p>Database of all connected graphs up to 10 vertices with spectral properties.</p>
+<hgroup>
+    <h1>Search Graphs</h1>
+    <p>Explore spectral properties of all simple graphs up to 10 vertices.</p>
+</hgroup>
 
-<h2>Search</h2>
-<form hx-get="/graphs" hx-target="#results" hx-trigger="submit">
-    <p>
-        <label>graph6: <input type="text" name="graph6" placeholder="e.g. D?{"></label>
-        <button type="submit">Lookup</button>
-    </p>
-</form>
+<div class="search-box" x-data="{ tab: 'lookup' }">
+    <div class="tab-pills">
+        <button type="button" :class="{ active: tab === 'lookup' }" @click="tab = 'lookup'">Lookup</button>
+        <button type="button" :class="{ active: tab === 'search' }" @click="tab = 'search'">Search</button>
+    </div>
 
-<h2>Filter</h2>
-<form hx-get="/graphs" hx-target="#results" hx-trigger="submit, change from:select, change from:input[type=checkbox]" hx-include="this">
-    <p>
-        <label>n (vertices):
-            <select name="n">
-                <option value="">any</option>
-                {% for i in range(1, 11) %}
-                <option value="{{ i }}">{{ i }}</option>
-                {% endfor %}
-            </select>
-        </label>
+    <div class="tab-content" x-show="tab === 'lookup'">
+        <p class="tab-hint">Look up a graph by its <a href="/glossary#graph6">graph6</a> encoding.</p>
+        <form class="lookup-form" onsubmit="window.location.href='/graph/' + encodeURIComponent(this.graph6.value); return false;">
+            <input type="text" name="graph6" placeholder="e.g. D?{" required>
+            <button type="submit">Go</button>
+        </form>
+    </div>
 
-        <label>m (edges):
-            <input type="number" name="m" min="0" max="45" placeholder="any" style="width: 60px">
-        </label>
-    </p>
-    <p>
-        <label><input type="checkbox" name="bipartite" value="true"> bipartite</label>
-        <label><input type="checkbox" name="planar" value="true"> planar</label>
-        <label><input type="checkbox" name="regular" value="true"> regular</label>
-    </p>
-    <p>
-        <label>Limit:
-            <select name="limit">
-                <option value="20">20</option>
-                <option value="50">50</option>
-                <option value="100" selected>100</option>
-                <option value="500">500</option>
-            </select>
-        </label>
-        <button type="submit">Search</button>
-    </p>
-</form>
-
-<hr>
-
-<div id="results">
-    <p><em>Use the filters above to search graphs.</em></p>
+    <div class="tab-content" x-show="tab === 'search'">
+        <p class="tab-hint">Find graphs by structural properties.</p>
+        <form hx-get="/graphs" hx-target="#results" hx-trigger="submit">
+            <div class="filter-row">
+                <label>
+                    <span>Vertices</span>
+                    <select name="n">
+                        <option value="">any</option>
+                        {% for i in range(1, 11) %}
+                        <option value="{{ i }}">{{ i }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>
+                    <span>Edges</span>
+                    <input type="number" name="m" min="0" max="45" placeholder="any">
+                </label>
+                <label>
+                    <span>Limit</span>
+                    <select name="limit">
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100" selected>100</option>
+                        <option value="500">500</option>
+                    </select>
+                </label>
+            </div>
+            <div class="filter-row">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="bipartite" value="true">
+                    Bipartite
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" name="planar" value="true">
+                    Planar
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" name="regular" value="true">
+                    Regular
+                </label>
+                <button type="submit">Search</button>
+            </div>
+        </form>
+    </div>
 </div>
+
+<section id="results"></section>
 {% endblock %}

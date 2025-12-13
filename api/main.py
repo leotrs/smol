@@ -7,7 +7,14 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from .database import fetch_cospectral_mates, fetch_graph, get_stats, query_graphs
+from .database import (
+    fetch_cospectral_mates,
+    fetch_graph,
+    fetch_random_cospectral_class,
+    fetch_random_graph,
+    get_stats,
+    query_graphs,
+)
 from .models import (
     CospectralMates,
     GraphFull,
@@ -119,24 +126,62 @@ async def get_graph_by_id(graph6: str, request: Request):
     return graph
 
 
+@app.get("/random")
+async def random_graph():
+    """Redirect to a random graph."""
+    from fastapi.responses import RedirectResponse
+    from urllib.parse import quote
+
+    row = fetch_random_graph()
+    if not row:
+        raise HTTPException(status_code=404, detail="No graphs in database")
+    return RedirectResponse(url=f"/graph/{quote(row['graph6'], safe='')}", status_code=302)
+
+
+@app.get("/random/cospectral")
+async def random_cospectral(matrix: str = "adj"):
+    """Redirect to compare page with a random cospectral class."""
+    from fastapi.responses import RedirectResponse
+    from urllib.parse import quote
+
+    if matrix not in ("adj", "lap", "nb", "nbl"):
+        raise HTTPException(status_code=400, detail="Invalid matrix type")
+
+    graphs = fetch_random_cospectral_class(matrix)
+    if not graphs:
+        raise HTTPException(status_code=404, detail="No cospectral pairs found")
+
+    graphs_param = ",".join(quote(g, safe="") for g in graphs)
+    return RedirectResponse(url=f"/compare?graphs={graphs_param}", status_code=302)
+
+
 @app.get("/graphs")
 async def list_graphs(
     request: Request,
     graph6: str | None = None,
-    n: int | None = None,
-    n_min: int | None = None,
-    n_max: int | None = None,
-    m: int | None = None,
-    m_min: int | None = None,
-    m_max: int | None = None,
-    bipartite: bool | None = None,
-    planar: bool | None = None,
-    regular: bool | None = None,
+    n: str | None = None,
+    n_min: str | None = None,
+    n_max: str | None = None,
+    m: str | None = None,
+    m_min: str | None = None,
+    m_max: str | None = None,
+    bipartite: str | None = None,
+    planar: str | None = None,
+    regular: str | None = None,
     connected: bool = True,
     limit: int = Query(default=100, le=1000),
     offset: int = 0,
 ):
     """Query graphs with filters."""
+    n = int(n) if n else None
+    n_min = int(n_min) if n_min else None
+    n_max = int(n_max) if n_max else None
+    m = int(m) if m else None
+    m_min = int(m_min) if m_min else None
+    m_max = int(m_max) if m_max else None
+    bipartite = bipartite == "true" if bipartite else None
+    planar = planar == "true" if planar else None
+    regular = regular == "true" if regular else None
     # Direct lookup by graph6
     if graph6:
         row = fetch_graph(graph6)

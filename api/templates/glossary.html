@@ -3,95 +3,114 @@
 {% block title %}Glossary - SMOL{% endblock %}
 
 {% block content %}
-<h2>Glossary</h2>
+<hgroup>
+    <h1>Glossary</h1>
+    <p>Key concepts and terminology used throughout SMOL.</p>
+</hgroup>
 
-<h3>Graph Encoding</h3>
-<dl>
-    <dt id="graph6"><strong>graph6</strong></dt>
-    <dd>
-        A compact ASCII encoding for simple undirected graphs. Each graph6 string uniquely represents a graph
-        (up to isomorphism). The format encodes the upper triangle of the adjacency matrix.
-        <br>Example: <code>D?{</code> represents the star graph K<sub>1,4</sub> (4 leaves connected to a center).
-        <br>See: <a href="https://users.cecs.anu.edu.au/~bdm/data/formats.txt">nauty format specification</a>
-    </dd>
-</dl>
+<article>
+    <header><h3>Graph Encoding</h3></header>
+    <dl>
+        <dt id="graph6"><strong>graph6</strong></dt>
+        <dd>
+            A compact ASCII encoding for simple undirected graphs. Each graph6 string uniquely represents a graph
+            (up to isomorphism). The format encodes the upper triangle of the adjacency matrix.
+            <br><br>
+            <strong>Example:</strong> <code>D?{</code> represents the star graph $K_{1,4}$ (4 leaves connected to a center).
+            <br><br>
+            <a href="https://users.cecs.anu.edu.au/~bdm/data/formats.txt">Read the full specification →</a>
+        </dd>
+    </dl>
+</article>
 
-<h3>Matrix Types</h3>
-<dl>
-    <dt id="adjacency"><strong>adjacency matrix</strong></dt>
-    <dd>
-        The n×n matrix A where A[i,j] = 1 if vertices i and j are connected, 0 otherwise.
-        Symmetric for undirected graphs. Eigenvalues are real.
-    </dd>
+<article>
+    <header><h3>Matrix Types</h3></header>
+    <dl>
+        <dt id="adjacency"><strong>Adjacency matrix</strong></dt>
+        <dd>
+            The $n \times n$ matrix $A$ where $A_{ij} = 1$ if vertices $i$ and $j$ are connected, 0 otherwise.
+            Symmetric for undirected graphs. Eigenvalues are real.
+        </dd>
 
-    <dt id="laplacian"><strong>laplacian matrix</strong></dt>
-    <dd>
-        The symmetric normalized Laplacian: L = I - D<sup>-1/2</sup>AD<sup>-1/2</sup>, where D is the
-        diagonal degree matrix. Eigenvalues are real and lie in [0, 2].
-    </dd>
+        <dt id="laplacian"><strong>Laplacian matrix</strong></dt>
+        <dd>
+            The symmetric normalized Laplacian: $L = I - D^{-1/2} A D^{-1/2}$, where $D$ is the
+            diagonal degree matrix. Eigenvalues are real and lie in $[0, 2]$.
+        </dd>
 
-    <dt id="nonbacktracking"><strong>non-backtracking matrix</strong> (Hashimoto matrix)</dt>
-    <dd>
-        A 2m×2m matrix indexed by directed edges. B[e→f] = 1 if edge e leads into edge f without
-        backtracking (i.e., the target of e equals the source of f, and f is not the reverse of e).
-        Eigenvalues are generally complex.
-    </dd>
+        <dt id="nonbacktracking"><strong>Non-backtracking matrix</strong> (Hashimoto)</dt>
+        <dd>
+            A $2m \times 2m$ matrix indexed by directed edges. $B_{e \to f} = 1$ if edge $e$ leads into edge $f$ without
+            backtracking (the target of $e$ equals the source of $f$, and $f$ is not the reverse of $e$).
+            Eigenvalues are generally complex.
+        </dd>
 
-    <dt id="nbl"><strong>non-backtracking laplacian</strong></dt>
-    <dd>
-        L = I - D<sup>-1</sup>B, where B is the non-backtracking matrix and D is the diagonal matrix
-        of out-degrees in the directed edge graph. Represents a random walk on directed edges.
-        Eigenvalues are generally complex.
-    </dd>
-</dl>
+        <dt id="nbl"><strong>Non-backtracking Laplacian</strong></dt>
+        <dd>
+            $L_B = I - D^{-1} B$, where $B$ is the non-backtracking matrix and $D$ is the diagonal matrix
+            of out-degrees in the directed edge graph. Represents a random walk on directed edges.
+            Eigenvalues are generally complex.
+        </dd>
+    </dl>
+</article>
 
-<h3>Spectral Concepts</h3>
-<dl>
-    <dt id="spectrum"><strong>spectrum</strong></dt>
-    <dd>
-        The multiset of eigenvalues of a matrix. Two graphs are <em>cospectral</em> if they have
-        the same spectrum for a given matrix type.
-    </dd>
+<article>
+    <header><h3>Spectral Concepts</h3></header>
+    <dl>
+        <dt id="spectrum"><strong>Spectrum</strong></dt>
+        <dd>
+            The multiset of eigenvalues of a matrix. Two graphs are <em>cospectral</em> if they have
+            the same spectrum for a given matrix type.
+        </dd>
 
-    <dt id="cospectral"><strong>cospectral</strong> (isospectral)</dt>
-    <dd>
-        Two non-isomorphic graphs that share the same spectrum for a particular matrix type.
-        Cospectral graphs are indistinguishable by spectral methods using that matrix.
-    </dd>
-</dl>
+        <dt id="cospectral"><strong>Cospectral</strong> (isospectral)</dt>
+        <dd>
+            Two non-isomorphic graphs that share the same spectrum for a particular matrix type.
+            Cospectral graphs are indistinguishable by spectral methods using that matrix alone.
+        </dd>
 
-<h3>Graph Properties</h3>
-<dl>
-    <dt id="bipartite"><strong>bipartite</strong></dt>
-    <dd>
-        A graph whose vertices can be divided into two disjoint sets such that every edge connects
-        a vertex in one set to a vertex in the other. Equivalently, a graph with no odd cycles.
-    </dd>
+        <dt id="spectral-hash"><strong>Spectral hash</strong></dt>
+        <dd>
+            A 16-character hash of the sorted eigenvalues, used for fast cospectral lookup.
+            Two graphs with the same hash have the same spectrum (within numerical precision).
+        </dd>
+    </dl>
+</article>
 
-    <dt id="planar"><strong>planar</strong></dt>
-    <dd>
-        A graph that can be drawn in the plane without any edges crossing.
-    </dd>
+<article>
+    <header><h3>Graph Properties</h3></header>
+    <dl>
+        <dt id="bipartite"><strong>Bipartite</strong></dt>
+        <dd>
+            A graph whose vertices can be divided into two disjoint sets such that every edge connects
+            a vertex in one set to a vertex in the other. Equivalently, a graph with no odd cycles.
+        </dd>
 
-    <dt id="regular"><strong>regular</strong></dt>
-    <dd>
-        A graph where every vertex has the same degree.
-    </dd>
+        <dt id="planar"><strong>Planar</strong></dt>
+        <dd>
+            A graph that can be drawn in the plane without any edges crossing.
+        </dd>
 
-    <dt id="diameter"><strong>diameter</strong></dt>
-    <dd>
-        The maximum shortest path distance between any two vertices. Only defined for connected graphs.
-    </dd>
+        <dt id="regular"><strong>Regular</strong></dt>
+        <dd>
+            A graph where every vertex has the same degree.
+        </dd>
 
-    <dt id="girth"><strong>girth</strong></dt>
-    <dd>
-        The length of the shortest cycle in the graph. Undefined (∞) for acyclic graphs (trees/forests).
-    </dd>
+        <dt id="diameter"><strong>Diameter</strong></dt>
+        <dd>
+            The maximum shortest path distance between any two vertices. Only defined for connected graphs.
+        </dd>
 
-    <dt id="radius"><strong>radius</strong></dt>
-    <dd>
-        The minimum eccentricity of any vertex, where eccentricity is the maximum distance from
-        that vertex to any other vertex.
-    </dd>
-</dl>
+        <dt id="girth"><strong>Girth</strong></dt>
+        <dd>
+            The length of the shortest cycle in the graph. Undefined ($\infty$) for acyclic graphs (trees/forests).
+        </dd>
+
+        <dt id="radius"><strong>Radius</strong></dt>
+        <dd>
+            The minimum eccentricity of any vertex, where eccentricity is the maximum distance from
+            that vertex to any other vertex.
+        </dd>
+    </dl>
+</article>
 {% endblock %}

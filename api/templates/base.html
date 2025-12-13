@@ -1,24 +1,403 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}SMOL{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script>
+        MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+        :root {
+            --pico-font-family: "Inter", sans-serif;
+            --pico-font-size: 15px;
+            --pico-line-height: 1.5;
+            --pico-border-radius: 4px;
+            --pico-spacing: 0.75rem;
+            --pico-form-element-spacing-vertical: 0.5rem;
+            --pico-form-element-spacing-horizontal: 0.75rem;
+        }
+
+        /* Narrower container */
+        .container {
+            max-width: 800px;
+        }
+
+        [data-theme="light"],
+        :root:not([data-theme="dark"]) {
+            --pico-primary: #E85A4F;
+            --pico-primary-background: #E85A4F;
+            --pico-primary-border: #E85A4F;
+            --pico-primary-underline: rgba(232, 90, 79, 0.5);
+            --pico-primary-hover: #D64940;
+            --pico-primary-hover-background: #D64940;
+            --pico-primary-focus: rgba(232, 90, 79, 0.2);
+            --pico-primary-inverse: #FFFFFF;
+
+            --pico-background-color: #FFFFFF;
+            --pico-color: #374151;
+            --pico-muted-color: #6B7280;
+            --pico-muted-border-color: #E5E7EB;
+
+            --pico-card-background-color: #F9FAFB;
+            --pico-card-border-color: #E5E7EB;
+            --pico-card-sectioning-background-color: #F3F4F6;
+        }
+
+        /* Tighter overall spacing */
+        article {
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        article header {
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        h1, h2, h3 {
+            --pico-typography-spacing-vertical: 0.75rem;
+        }
+
+        article header h3 {
+            margin: 0;
+        }
+
+        hgroup > p {
+            font-size: 0.95rem;
+        }
+
+        hgroup {
+            margin-bottom: 1.5rem;
+        }
+
+        /* Compact buttons - not full width */
+        button, [role="button"],
+        article button,
+        form button,
+        [type="submit"] {
+            padding: 0.5rem 2rem !important;
+            font-size: 0.875rem;
+            width: auto !important;
+        }
+
+        /* Right-align form buttons */
+        .button-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 0.75rem;
+        }
+
+        /* Header styling */
+        header.container {
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--pico-muted-border-color);
+            margin-bottom: 1.5rem;
+        }
+
+        header nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        header .logo {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--pico-primary);
+            text-decoration: none;
+            letter-spacing: 0.5px;
+        }
+
+        header .nav-links {
+            display: flex;
+            gap: 1.25rem;
+            font-size: 0.9rem;
+        }
+
+        header .nav-links a {
+            color: var(--pico-muted-color);
+            text-decoration: none;
+        }
+
+        header .nav-links a:hover {
+            color: var(--pico-primary);
+        }
+
+        /* Graph visualization */
+        .graph-viz {
+            background: #FFFFFF;
+            border: 1px solid var(--pico-muted-border-color);
+            border-radius: var(--pico-border-radius);
+        }
+
+        /* Spectral comparison badges */
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-same {
+            background: #DEF7EC;
+            color: #046C4E;
+        }
+
+        .badge-different {
+            background: #FDE8E8;
+            color: #9B1C1C;
+        }
+
+        /* Code/graph6 strings */
+        code {
+            font-size: 0.85em;
+            padding: 0.1rem 0.3rem;
+            white-space: nowrap;
+        }
+
+        /* Tables - tighter */
+        table {
+            font-size: 0.875rem;
+        }
+
+        th, td {
+            padding: 0.5rem 0.75rem;
+        }
+
+        /* Cards for graph display */
+        .graph-card {
+            background: #FFFFFF;
+            border: 1px solid var(--pico-muted-border-color);
+            border-radius: var(--pico-border-radius);
+            padding: 0.75rem;
+        }
+
+        /* Compare page grid */
+        .compare-grid {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .compare-grid .graph-card {
+            flex: 1;
+            min-width: 180px;
+            text-align: center;
+        }
+
+        /* Property list styling */
+        .property-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 0.25rem 1.5rem;
+        }
+
+        .property-grid dt {
+            color: var(--pico-muted-color);
+            font-size: 0.8rem;
+            margin-bottom: 0;
+        }
+
+        .property-grid dd {
+            margin: 0 0 0.5rem 0;
+            font-weight: 500;
+        }
+
+        /* Search box with pill tabs */
+        .search-box {
+            margin-bottom: 1.5rem;
+        }
+
+        .tab-pills {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .tab-pills button {
+            background: var(--pico-card-background-color);
+            border: 1px solid var(--pico-muted-border-color);
+            border-radius: 2rem;
+            padding: 0.4rem 1rem !important;
+            color: var(--pico-muted-color);
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .tab-pills button:hover {
+            border-color: var(--pico-primary);
+            color: var(--pico-primary);
+            background: var(--pico-card-background-color);
+        }
+
+        .tab-pills button.active {
+            background: var(--pico-primary);
+            border-color: var(--pico-primary);
+            color: white;
+        }
+
+        .tab-content {
+            background: var(--pico-card-background-color);
+            border: 1px solid var(--pico-muted-border-color);
+            border-radius: var(--pico-border-radius);
+            padding: 1rem;
+        }
+
+        .tab-hint {
+            font-size: 0.85rem;
+            color: var(--pico-muted-color);
+            margin-bottom: 0.75rem;
+        }
+
+        /* Lookup form */
+        .lookup-form {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .lookup-form input {
+            flex: 1;
+            max-width: 400px;
+            margin-bottom: 0;
+        }
+
+        .lookup-form button {
+            margin-bottom: 0;
+        }
+
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: flex-end;
+            margin-bottom: 0.75rem;
+        }
+
+        .filter-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .filter-row label {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            margin-bottom: 0;
+        }
+
+        .filter-row label span {
+            font-size: 0.8rem;
+            color: var(--pico-muted-color);
+        }
+
+        .filter-row select,
+        .filter-row input[type="number"] {
+            width: 100px;
+            margin-bottom: 0;
+        }
+
+        .filter-row .checkbox-label {
+            flex-direction: row;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.875rem;
+        }
+
+        .filter-row .checkbox-label input {
+            margin-bottom: 0;
+        }
+
+        .filter-row button {
+            margin-left: auto;
+            margin-bottom: 0;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 2rem;
+            padding: 1rem 0;
+            border-top: 1px solid var(--pico-muted-border-color);
+            color: var(--pico-muted-color);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        .footer-actions {
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .footer-actions a {
+            display: inline-block;
+            padding: 0.4rem 1rem;
+            background: var(--pico-card-background-color);
+            border: 1px solid var(--pico-muted-border-color);
+            border-radius: 2rem;
+            color: var(--pico-muted-color);
+            text-decoration: none;
+            font-size: 0.8rem;
+        }
+
+        .footer-actions a:hover {
+            border-color: var(--pico-primary);
+            color: var(--pico-primary);
+        }
+
+        .footer-tagline {
+            font-size: 0.75rem;
+        }
+
+        /* Definition lists */
+        dd {
+            margin-bottom: 1.25rem;
+        }
+
+        /* Details/summary */
+        details {
+            margin-bottom: 0.5rem;
+        }
+
+        summary {
+            font-size: 0.9rem;
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <h1><a href="/">SMOL</a></h1>
+    <header class="container">
         <nav>
-            <a href="/">Search</a> |
-            <a href="/glossary">Glossary</a> |
-            <a href="/about">About</a>
+            <a href="/" class="logo">SMOL</a>
+            <div class="nav-links">
+                <a href="/">Search</a>
+                <a href="/glossary">Glossary</a>
+                <a href="/about">About</a>
+            </div>
         </nav>
     </header>
-    <hr>
-    <main>
+
+    <main class="container">
         {% block content %}{% endblock %}
     </main>
+
+    <footer class="container">
+        <div class="footer-actions">
+            <a href="/random">Random graph</a>
+            <a href="/random/cospectral">Random cospectral family</a>
+        </div>
+        <div class="footer-tagline">SMOL: Spectra and Matrices Of Little graphs</div>
+    </footer>
 </body>
 </html>

@@ -133,6 +133,91 @@ def query_graphs(
         return cur.fetchall()
 
 
+def fetch_random_graph() -> dict[str, Any] | None:
+    """Fetch a random connected graph."""
+    import random
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT MIN(id), MAX(id) FROM graphs WHERE diameter IS NOT NULL")
+        row = cur.fetchone()
+        if not row or not row[0]:
+            return None
+        min_id, max_id = int(row[0]), int(row[1])
+
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        for _ in range(10):  # retry a few times in case of gaps
+            rand_id = random.randint(min_id, max_id)
+            cur.execute(
+                """
+                SELECT graph6, n, m,
+                       is_bipartite, is_planar, is_regular,
+                       diameter, girth, radius,
+                       min_degree, max_degree, triangle_count,
+                       adj_eigenvalues, adj_spectral_hash,
+                       lap_eigenvalues, lap_spectral_hash,
+                       nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
+                       nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash
+                FROM graphs
+                WHERE id >= %s AND diameter IS NOT NULL
+                LIMIT 1
+                """,
+                (rand_id,),
+            )
+            row = cur.fetchone()
+            if row:
+                return row
+        return None
+
+
+def fetch_random_cospectral_class(matrix: str = "adj") -> list[str]:
+    """Fetch a random cospectral class (graphs sharing same spectrum)."""
+    import random
+    hash_col = f"{matrix}_spectral_hash"
+
+    with get_db() as conn:
+        cur = conn.cursor()
+
+        # Get ID range
+        cur.execute("SELECT MIN(id), MAX(id) FROM graphs WHERE diameter IS NOT NULL")
+        row = cur.fetchone()
+        if not row or not row[0]:
+            return []
+        min_id, max_id = int(row[0]), int(row[1])
+
+        # Try random graphs until we find one with cospectral mates
+        for _ in range(50):
+            rand_id = random.randint(min_id, max_id)
+            cur.execute(
+                f"""
+                SELECT {hash_col}, n FROM graphs
+                WHERE id >= %s AND diameter IS NOT NULL
+                LIMIT 1
+                """,
+                (rand_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                continue
+
+            hash_val, n = row
+
+            # Check if this hash has multiple graphs (using index)
+            cur.execute(
+                f"""
+                SELECT graph6 FROM graphs
+                WHERE {hash_col} = %s AND n = %s AND diameter IS NOT NULL
+                ORDER BY graph6
+                LIMIT 10
+                """,
+                (hash_val, n),
+            )
+            graphs = [r[0] for r in cur.fetchall()]
+            if len(graphs) > 1:
+                return graphs
+
+        return []
+
+
 def get_stats() -> dict[str, Any]:
     """Get database statistics from cache."""
     with get_db() as conn:

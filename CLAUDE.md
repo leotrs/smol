@@ -2,21 +2,22 @@
 
 ## What is this project?
 
-SMOL (Spectra and Matrices Of Little graphs) is a database of all small connected simple undirected graphs with their spectral properties. It's designed for spectral graph theory research.
+SMOL (Spectra and Matrices Of Little graphs) is a database of all small connected simple undirected graphs (up to 10 vertices, ~12M graphs) with their spectral properties. It's designed for spectral graph theory research.
 
 ## Key concepts
 
 - **graph6**: A compact string encoding for graphs used by nauty/geng
 - **Non-backtracking matrix**: The Hashimoto matrix B, indexed by directed edges
 - **Non-backtracking Laplacian**: I - D⁻¹B, random walk on directed edges
-- **Spectral hash**: A 16-character hash of sorted eigenvalues for co-spectral detection
+- **Spectral hash**: A 16-character hash of sorted eigenvalues for cospectral detection
+- **Cospectral family**: Graphs sharing the same spectrum for a given matrix type
 
-## Architecture
+## Tech Stack
 
-- **Database**: PostgreSQL (Supabase in production)
-- **API**: FastAPI with content negotiation (JSON + HTML)
-- **Frontend**: HTMX + Alpine.js (planned)
-- **Hosting**: Fly.io (API), Netlify (frontend)
+- **Backend**: FastAPI with Jinja2 templates
+- **Frontend**: HTMX + Alpine.js, Pico CSS (coral accent #E85A4F), D3.js visualizations
+- **Database**: PostgreSQL
+- **Math**: MathJax for LaTeX rendering in glossary
 
 ## Commands
 
@@ -24,8 +25,11 @@ SMOL (Spectra and Matrices Of Little graphs) is a database of all small connecte
 # Run tests
 uv run pytest tests/ -v
 
-# Generate graphs
-uv run python scripts/generate.py --n 1 --n 8
+# Generate graphs (n=1 to n=8)
+uv run python scripts/generate.py --n-min 1 --n-max 8
+
+# Refresh statistics cache
+uv run python scripts/refresh_stats.py
 
 # Run API locally
 uv run uvicorn api.main:app --reload
@@ -34,41 +38,51 @@ uv run uvicorn api.main:app --reload
 ## API Endpoints
 
 ```
-GET /graphs/{graph6}         Look up a graph + cospectral mates
-GET /graphs?n=7&regular=true Query/filter graphs
-GET /compare?graphs=D?{,DEo  Compare multiple graphs
-GET /stats                   Database statistics
+GET /                    Home page (search interface)
+GET /graph/{graph6}      Graph detail + cospectral mates
+GET /graphs              Query/filter graphs (HTMX partial or JSON)
+GET /compare?graphs=...  Compare multiple graphs
+GET /random              Redirect to random graph
+GET /random/cospectral   Redirect to random cospectral family
+GET /glossary            Terminology with MathJax
+GET /about               Stats, API docs, citation
+GET /stats               Database statistics (JSON)
 ```
 
-Content negotiation: Returns JSON by default, HTML when `Accept: text/html`.
+Content negotiation: Returns JSON by default, HTML for browser/HTMX requests.
 
 ## Website Structure
 
 ```
-/           Search + results (home page)
-/graph/{g6} Graph detail + cospectral mates
-/compare    Compare 2+ graphs
-/glossary   Terminology explanations
-/about      What is SMOL, stats, API, citation
+/              Search with tabs (Lookup / Search), results via HTMX
+/graph/{g6}    Graph detail: viz, properties, cospectral mates, spectra
+/compare       Side-by-side comparison with D3 visualizations
+/glossary      Terms and matrix definitions (uses MathJax)
+/about         Database stats, API reference, citation, references
 ```
 
-See `doc/wireframes.md` for detailed wireframes.
+Footer on all pages has "Random graph" and "Random cospectral family" links.
 
-## Dependencies
+## Templates
 
-- **Python**: numpy, scipy, networkx, psycopg2, fastapi, uvicorn, jinja2
-- **System**: nauty (provides `geng` for graph enumeration), PostgreSQL
+- `base.html` - Layout, Pico CSS, custom styles, header nav, footer
+- `home.html` - Alpine.js tabs for Lookup/Search, HTMX form submission
+- `graph_detail.html` - D3 force-directed graph, drag-enabled
+- `graph_list.html` - HTMX partial for search results
+- `compare.html` - Grid of D3 visualizations, properties table
+- `glossary.html` - Definition lists with MathJax
+- `about.html` - Stats from cache, API docs
 
 ## Database
 
 - Connection: `DATABASE_URL` env var or `dbname=smol` (local)
 - Schema: `sql/schema.sql`
+- Stats cached in `stats_cache` table (refresh with `scripts/refresh_stats.py`)
 
 ## Code organization
 
-- `api/`: FastAPI backend with HTMX templates
-- `db/`: Core library (matrices, spectra, metadata)
-- `doc/`: Documentation and wireframes
-- `scripts/`: Generation pipeline
-- `sql/`: Database schema
-- `tests/`: Pytest tests
+- `api/` - FastAPI backend with templates
+- `db/` - Core library (matrices, spectra, metadata)
+- `scripts/` - Generation pipeline and stats refresh
+- `sql/` - Database schema
+- `tests/` - Pytest tests
