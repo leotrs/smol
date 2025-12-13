@@ -89,7 +89,7 @@ def row_to_graph_summary(row: dict) -> GraphSummary:
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """Home page with search."""
-    return templates.TemplateResponse("home.html", {"request": request})
+    return templates.TemplateResponse(request, "home.html")
 
 
 @app.get("/graph/{graph6}")
@@ -110,7 +110,7 @@ async def get_graph_by_id(graph6: str, request: Request):
 
     if wants_html(request):
         return templates.TemplateResponse(
-            "graph_detail.html", {"request": request, "graph": graph}
+            request, "graph_detail.html", {"graph": graph}
         )
     return graph
 
@@ -139,7 +139,7 @@ async def list_graphs(
         if not row:
             if wants_html(request):
                 return templates.TemplateResponse(
-                    "graph_list.html", {"request": request, "graphs": []}
+                    request, "graph_list.html", {"graphs": []}
                 )
             return []
         hashes = {
@@ -152,7 +152,7 @@ async def list_graphs(
         graph = row_to_graph_full(row, mates)
         if wants_html(request):
             return templates.TemplateResponse(
-                "graph_detail.html", {"request": request, "graph": graph}
+                request, "graph_detail.html", {"graph": graph}
             )
         return [graph]
 
@@ -174,7 +174,7 @@ async def list_graphs(
 
     if wants_html(request):
         return templates.TemplateResponse(
-            "graph_list.html", {"request": request, "graphs": graphs}
+            request, "graph_list.html", {"graphs": graphs}
         )
     return graphs
 
@@ -220,7 +220,7 @@ async def compare_graphs(
 
     if wants_html(request):
         return templates.TemplateResponse(
-            "compare.html", {"request": request, "result": result}
+            request, "compare.html", {"result": result}
         )
     return result
 
@@ -228,7 +228,7 @@ async def compare_graphs(
 @app.get("/glossary", response_class=HTMLResponse)
 async def glossary(request: Request):
     """Terminology glossary."""
-    return templates.TemplateResponse("glossary.html", {"request": request})
+    return templates.TemplateResponse(request, "glossary.html")
 
 
 @app.get("/about")
@@ -239,7 +239,7 @@ async def about(request: Request):
 
     if wants_html(request):
         return templates.TemplateResponse(
-            "about.html", {"request": request, "stats": stats}
+            request, "about.html", {"stats": stats}
         )
     return stats
 
@@ -252,6 +252,6 @@ async def stats(request: Request):
 
     if wants_html(request):
         return templates.TemplateResponse(
-            "about.html", {"request": request, "stats": result}
+            request, "about.html", {"stats": result}
         )
     return result
