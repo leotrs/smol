@@ -26,7 +26,7 @@ def generate_graphs(
     n: int, min_edges: int | None = None, max_edges: int | None = None
 ) -> Iterator[str]:
     """
-    Generate all connected graphs on n vertices using geng.
+    Generate all non-isomorphic simple graphs on n vertices using geng.
 
     Args:
         n: Number of vertices
@@ -36,7 +36,7 @@ def generate_graphs(
     Yields:
         graph6 strings
     """
-    cmd = ["geng", "-c", str(n)]
+    cmd = ["geng", str(n)]
 
     if min_edges is not None and max_edges is not None:
         cmd.append(f"{min_edges}:{max_edges}")

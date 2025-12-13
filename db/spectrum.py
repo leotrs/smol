@@ -16,24 +16,37 @@ def compute_real_eigenvalues(matrix: np.ndarray) -> np.ndarray:
     return np.sort(eigs)
 
 
-def compute_complex_eigenvalues(matrix: np.ndarray) -> np.ndarray:
+def compute_complex_eigenvalues(matrix: np.ndarray, precision: int = 6) -> np.ndarray:
     """
     Compute eigenvalues of a general (possibly non-symmetric) matrix.
-    Returns eigenvalues sorted by magnitude, then by phase.
+
+    For real matrices, eigenvalues come in conjugate pairs. We round first,
+    then keep only eigenvalues with non-negative imaginary part (one from
+    each conjugate pair), then sort by (real part, imaginary part).
     """
     if matrix.size == 0:
         return np.array([], dtype=np.complex128)
 
     eigs = eigvals(matrix)
 
-    magnitudes = np.abs(eigs)
-    phases = np.angle(eigs)
-    sort_keys = np.lexsort((phases, magnitudes))
+    # Round first to ensure consistent handling of near-zero values
+    re = np.round(eigs.real, decimals=precision)
+    im = np.round(eigs.imag, decimals=precision)
+    re = np.where(re == 0, 0.0, re)
+    im = np.where(im == 0, 0.0, im)
+    eigs_rounded = re + 1j * im
 
-    return eigs[sort_keys]
+    # Keep only eigenvalues with non-negative imaginary part
+    # (one representative from each conjugate pair)
+    eigs_half = eigs_rounded[im >= 0]
+
+    # Sort by real part, then imaginary part
+    sort_keys = np.lexsort((eigs_half.imag, eigs_half.real))
+
+    return eigs_half[sort_keys]
 
 
-def spectral_hash_real(eigenvalues: np.ndarray, precision: int = 8) -> str:
+def spectral_hash_real(eigenvalues: np.ndarray, precision: int = 6) -> str:
     """
     Compute a hash of real eigenvalues for co-spectral detection.
 
@@ -54,13 +67,14 @@ def spectral_hash_real(eigenvalues: np.ndarray, precision: int = 8) -> str:
     return hashlib.sha256(canonical.encode()).hexdigest()[:16]
 
 
-def spectral_hash_complex(eigenvalues: np.ndarray, precision: int = 8) -> str:
+def spectral_hash_complex(eigenvalues: np.ndarray, precision: int = 6) -> str:
     """
     Compute a hash of complex eigenvalues for co-spectral detection.
 
     Args:
-        eigenvalues: Array of complex eigenvalues (sorted by magnitude, then phase)
-        precision: Number of decimal places for rounding
+        eigenvalues: Array of complex eigenvalues (already rounded and filtered
+                     to non-negative imaginary part by compute_complex_eigenvalues)
+        precision: Number of decimal places for formatting
 
     Returns:
         16-character hex hash
@@ -68,12 +82,8 @@ def spectral_hash_complex(eigenvalues: np.ndarray, precision: int = 8) -> str:
     if eigenvalues.size == 0:
         return hashlib.sha256(b"empty").hexdigest()[:16]
 
-    re = np.round(eigenvalues.real, decimals=precision)
-    im = np.round(eigenvalues.imag, decimals=precision)
-    re = np.where(re == 0, 0.0, re)
-    im = np.where(im == 0, 0.0, im)
-
     canonical = ",".join(
-        f"({r:.{precision}f},{i:.{precision}f})" for r, i in zip(re, im)
+        f"({r:.{precision}f},{i:.{precision}f})"
+        for r, i in zip(eigenvalues.real, eigenvalues.imag)
     )
     return hashlib.sha256(canonical.encode()).hexdigest()[:16]

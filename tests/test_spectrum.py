@@ -55,10 +55,11 @@ def test_compute_complex_eigenvalues():
     )
     eigs = compute_complex_eigenvalues(M)
 
-    # Should have eigenvalues e^{±iθ}
-    assert len(eigs) == 2
-    np.testing.assert_almost_equal(np.abs(eigs[0]), 1.0)
-    np.testing.assert_almost_equal(np.abs(eigs[1]), 1.0)
+    # Rotation matrix has eigenvalues e^{±iθ}, we keep only im >= 0
+    # So we get one eigenvalue with positive imaginary part
+    assert len(eigs) == 1
+    np.testing.assert_almost_equal(np.abs(eigs[0]), 1.0, decimal=5)
+    np.testing.assert_almost_equal(eigs[0].imag, np.sin(theta), decimal=5)
 
 
 def test_compute_complex_eigenvalues_sorted_by_magnitude():

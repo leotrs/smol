@@ -10,10 +10,26 @@ def adjacency_matrix(G: nx.Graph) -> np.ndarray:
 
 
 def laplacian_matrix(G: nx.Graph) -> np.ndarray:
-    """Return the Laplacian matrix L = D - A as a dense numpy array."""
+    """
+    Return the symmetric normalized Laplacian L = I - D^{-1/2}AD^{-1/2}.
+
+    This has the same eigenvalues as the random walk Laplacian I - D^{-1}A
+    (they are similar matrices), but is symmetric so we can use eigvalsh.
+    """
     A = adjacency_matrix(G)
-    D = np.diag(A.sum(axis=1))
-    return D - A
+    n = A.shape[0]
+    degrees = A.sum(axis=1)
+
+    if np.any(degrees == 0):
+        degrees_safe = np.where(degrees == 0, 1.0, degrees)
+        D_inv_sqrt = np.diag(1.0 / np.sqrt(degrees_safe))
+        zero_mask = degrees == 0
+        D_inv_sqrt[zero_mask, :] = 0
+        D_inv_sqrt[:, zero_mask] = 0
+    else:
+        D_inv_sqrt = np.diag(1.0 / np.sqrt(degrees))
+
+    return np.eye(n) - D_inv_sqrt @ A @ D_inv_sqrt
 
 
 def _build_directed_edges(G: nx.Graph) -> list[tuple[int, int]]:
@@ -63,11 +79,10 @@ def nonbacktracking_laplacian(G: nx.Graph) -> np.ndarray:
     """
     Return the non-backtracking Laplacian matrix.
 
-    This is the normalized Laplacian of the non-backtracking graph:
-    L_NB = I - D_NB^{-1/2} B D_NB^{-1/2}
+    L_NB = I - D^{-1} B
 
-    where B is the non-backtracking matrix and D_NB is the diagonal matrix
-    of out-degrees in the NB graph.
+    where B is the non-backtracking (Hashimoto) matrix and D is the diagonal
+    matrix of out-degrees in the NB graph.
     """
     B = nonbacktracking_matrix(G)
 
@@ -77,19 +92,11 @@ def nonbacktracking_laplacian(G: nx.Graph) -> np.ndarray:
     out_degrees = B.sum(axis=1)
 
     if np.any(out_degrees == 0):
-        # Handle isolated directed edges (leaves in original graph)
-        # These have out-degree 0 in the NB graph
-        # Use pseudo-inverse approach: set 0 degrees to 1 for inversion
         out_degrees_safe = np.where(out_degrees == 0, 1.0, out_degrees)
-        D_inv_sqrt = np.diag(1.0 / np.sqrt(out_degrees_safe))
-        # Zero out rows/cols corresponding to zero-degree nodes
+        D_inv = np.diag(1.0 / out_degrees_safe)
         zero_mask = out_degrees == 0
-        D_inv_sqrt[zero_mask, :] = 0
-        D_inv_sqrt[:, zero_mask] = 0
+        D_inv[zero_mask, :] = 0
     else:
-        D_inv_sqrt = np.diag(1.0 / np.sqrt(out_degrees))
+        D_inv = np.diag(1.0 / out_degrees)
 
-    n = B.shape[0]
-    L_NB = np.eye(n) - D_inv_sqrt @ B @ D_inv_sqrt
-
-    return L_NB
+    return np.eye(B.shape[0]) - D_inv @ B

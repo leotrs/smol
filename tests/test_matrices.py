@@ -39,28 +39,33 @@ def test_adjacency_matrix_complete():
 
 
 def test_laplacian_matrix_path():
-    """Test Laplacian matrix for P3."""
+    """Test symmetric normalized Laplacian for P3."""
     G = nx.path_graph(3)
     L = laplacian_matrix(G)
 
+    # Symmetric normalized Laplacian: L = I - D^{-1/2}AD^{-1/2}
+    # For P3: degrees are [1, 2, 1]
+    sqrt2 = np.sqrt(2)
     expected = np.array(
         [
-            [1, -1, 0],
-            [-1, 2, -1],
-            [0, -1, 1],
+            [1, -1/sqrt2, 0],
+            [-1/sqrt2, 1, -1/sqrt2],
+            [0, -1/sqrt2, 1],
         ],
         dtype=np.float64,
     )
 
-    np.testing.assert_array_equal(L, expected)
+    np.testing.assert_array_almost_equal(L, expected)
 
 
-def test_laplacian_row_sum_zero():
-    """Laplacian rows should sum to zero."""
+def test_laplacian_eigenvalue_bounds():
+    """Symmetric normalized Laplacian eigenvalues should be in [0, 2]."""
     G = nx.complete_graph(5)
     L = laplacian_matrix(G)
+    eigs = np.linalg.eigvalsh(L)
 
-    np.testing.assert_array_almost_equal(L.sum(axis=1), np.zeros(5))
+    assert np.all(eigs >= -1e-10)
+    assert np.all(eigs <= 2 + 1e-10)
 
 
 def test_nonbacktracking_matrix_path():

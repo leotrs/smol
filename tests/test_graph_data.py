@@ -48,11 +48,13 @@ def test_process_graph_eigenvalues_count():
     assert len(record.adj_eigenvalues) == 5
     assert len(record.lap_eigenvalues) == 5
 
-    # NB matrices: 2m eigenvalues (C5 has 5 edges)
-    assert len(record.nb_eigenvalues_re) == 10
-    assert len(record.nb_eigenvalues_im) == 10
-    assert len(record.nbl_eigenvalues_re) == 10
-    assert len(record.nbl_eigenvalues_im) == 10
+    # NB matrices: we store only eigenvalues with non-negative imaginary part
+    # (one representative from each conjugate pair), so between m and 2m eigenvalues
+    m = G.number_of_edges()
+    assert m <= len(record.nb_eigenvalues_re) <= 2 * m
+    assert len(record.nb_eigenvalues_re) == len(record.nb_eigenvalues_im)
+    assert m <= len(record.nbl_eigenvalues_re) <= 2 * m
+    assert len(record.nbl_eigenvalues_re) == len(record.nbl_eigenvalues_im)
 
 
 def test_process_graph_hashes():

@@ -8,7 +8,7 @@ def compute_metadata(G: nx.Graph) -> dict:
     Compute structural metadata for a graph.
 
     Args:
-        G: A networkx Graph (assumed to be connected)
+        G: A networkx Graph
 
     Returns:
         Dictionary with metadata fields
@@ -24,13 +24,17 @@ def compute_metadata(G: nx.Graph) -> dict:
     is_planar, _ = nx.check_planarity(G)
     is_regular = min_degree == max_degree
 
-    eccentricities = nx.eccentricity(G)
-    diameter = max(eccentricities.values())
-    radius = min(eccentricities.values())
+    if nx.is_connected(G) and n > 0:
+        eccentricities = nx.eccentricity(G)
+        diameter = max(eccentricities.values())
+        radius = min(eccentricities.values())
+    else:
+        diameter = None
+        radius = None
 
     girth = nx.girth(G)
     if girth == float("inf"):
-        girth = None  # Acyclic graph (tree)
+        girth = None  # Acyclic graph
 
     triangle_count = sum(nx.triangles(G).values()) // 3
 
