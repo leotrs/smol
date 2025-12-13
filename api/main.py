@@ -27,6 +27,10 @@ templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
 
 def wants_html(request: Request) -> bool:
+    """Check if request wants HTML (browser or HTMX) vs JSON (API)."""
+    # HTMX requests always want HTML
+    if request.headers.get("hx-request"):
+        return True
     accept = request.headers.get("accept", "")
     return "text/html" in accept and "application/json" not in accept
 
