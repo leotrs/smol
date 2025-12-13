@@ -82,7 +82,13 @@ def row_to_graph_summary(row: dict) -> GraphSummary:
     )
 
 
-@app.get("/graphs/{graph6}")
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    """Home page with search."""
+    return templates.TemplateResponse("home.html", {"request": request})
+
+
+@app.get("/graph/{graph6}")
 async def get_graph_by_id(graph6: str, request: Request):
     """Look up a graph by its graph6 string."""
     row = fetch_graph(graph6)
@@ -108,6 +114,7 @@ async def get_graph_by_id(graph6: str, request: Request):
 @app.get("/graphs")
 async def list_graphs(
     request: Request,
+    graph6: str | None = None,
     n: int | None = None,
     n_min: int | None = None,
     n_max: int | None = None,
@@ -122,6 +129,29 @@ async def list_graphs(
     offset: int = 0,
 ):
     """Query graphs with filters."""
+    # Direct lookup by graph6
+    if graph6:
+        row = fetch_graph(graph6)
+        if not row:
+            if wants_html(request):
+                return templates.TemplateResponse(
+                    "graph_list.html", {"request": request, "graphs": []}
+                )
+            return []
+        hashes = {
+            "adj": row["adj_spectral_hash"],
+            "lap": row["lap_spectral_hash"],
+            "nb": row["nb_spectral_hash"],
+            "nbl": row["nbl_spectral_hash"],
+        }
+        mates = fetch_cospectral_mates(graph6, row["n"], hashes)
+        graph = row_to_graph_full(row, mates)
+        if wants_html(request):
+            return templates.TemplateResponse(
+                "graph_detail.html", {"request": request, "graph": graph}
+            )
+        return [graph]
+
     rows = query_graphs(
         n=n,
         n_min=n_min,
@@ -191,14 +221,33 @@ async def compare_graphs(
     return result
 
 
+@app.get("/glossary", response_class=HTMLResponse)
+async def glossary(request: Request):
+    """Terminology glossary."""
+    return templates.TemplateResponse("glossary.html", {"request": request})
+
+
+@app.get("/about")
+async def about(request: Request):
+    """About page with statistics."""
+    data = get_stats()
+    stats = Stats(**data)
+
+    if wants_html(request):
+        return templates.TemplateResponse(
+            "about.html", {"request": request, "stats": stats}
+        )
+    return stats
+
+
 @app.get("/stats")
 async def stats(request: Request):
-    """Get database statistics."""
+    """Get database statistics (API)."""
     data = get_stats()
     result = Stats(**data)
 
     if wants_html(request):
         return templates.TemplateResponse(
-            "stats.html", {"request": request, "stats": result}
+            "about.html", {"request": request, "stats": result}
         )
     return result

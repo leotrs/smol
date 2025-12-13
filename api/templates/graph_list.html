@@ -1,36 +1,34 @@
-{% extends "base.html" %}
+<h3>Results ({{ graphs|length }} graphs)</h3>
 
-{% block title %}Graphs - SMOL{% endblock %}
-
-{% block content %}
-<h2>Graphs ({{ graphs|length }} results)</h2>
-
-<table>
+{% if graphs %}
+<table border="1">
     <thead>
         <tr>
             <th>graph6</th>
             <th>n</th>
             <th>m</th>
-            <th>Properties</th>
-            <th>Diameter</th>
-            <th>Girth</th>
+            <th>bipartite</th>
+            <th>planar</th>
+            <th>regular</th>
+            <th>diameter</th>
+            <th>girth</th>
         </tr>
     </thead>
     <tbody>
         {% for g in graphs %}
         <tr>
-            <td><a href="/graphs/{{ g.graph6 }}"><code>{{ g.graph6 }}</code></a></td>
+            <td><a href="/graph/{{ g.graph6 | urlencode }}">{{ g.graph6 }}</a></td>
             <td>{{ g.n }}</td>
             <td>{{ g.m }}</td>
-            <td>
-                {% if g.properties.is_bipartite %}<span class="tag tag-true">bip</span>{% endif %}
-                {% if g.properties.is_planar %}<span class="tag tag-true">planar</span>{% endif %}
-                {% if g.properties.is_regular %}<span class="tag tag-true">reg</span>{% endif %}
-            </td>
+            <td>{{ "yes" if g.properties.is_bipartite else "no" }}</td>
+            <td>{{ "yes" if g.properties.is_planar else "no" }}</td>
+            <td>{{ "yes" if g.properties.is_regular else "no" }}</td>
             <td>{{ g.properties.diameter if g.properties.diameter else "-" }}</td>
             <td>{{ g.properties.girth if g.properties.girth else "-" }}</td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
-{% endblock %}
+{% else %}
+<p>No graphs found.</p>
+{% endif %}

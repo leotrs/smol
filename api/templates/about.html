@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}About - SMOL{% endblock %}
+
+{% block content %}
+<h2>About SMOL</h2>
+
+<p>
+    SMOL (Spectra and Matrices Of Little graphs) is a database of all simple connected graphs
+    up to 10 vertices with precomputed spectral properties for four matrix types.
+</p>
+
+<p>
+    Use it to find examples, counterexamples, and explore which matrix types can distinguish
+    which graphs.
+</p>
+
+<h3>Statistics</h3>
+<table border="1">
+    <tr>
+        <th>n</th>
+        <th>graphs</th>
+        <th>adj-cospectral</th>
+        <th>lap-cospectral</th>
+        <th>nb-cospectral</th>
+        <th>nbl-cospectral</th>
+    </tr>
+    {% for n, count in stats.counts_by_n.items() %}
+    <tr>
+        <td>{{ n }}</td>
+        <td>{{ "{:,}".format(count) }}</td>
+        <td>{{ "{:,}".format(stats.cospectral_counts.adj.get(n, 0)) }}</td>
+        <td>{{ "{:,}".format(stats.cospectral_counts.lap.get(n, 0)) }}</td>
+        <td>{{ "{:,}".format(stats.cospectral_counts.nb.get(n, 0)) }}</td>
+        <td>{{ "{:,}".format(stats.cospectral_counts.nbl.get(n, 0)) }}</td>
+    </tr>
+    {% endfor %}
+    <tr>
+        <th>Total</th>
+        <th>{{ "{:,}".format(stats.connected_graphs) }}</th>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+</table>
+
+<h3>API</h3>
+<p>All endpoints return JSON. Add <code>Accept: text/html</code> header for HTML.</p>
+
+<pre>
+GET /graphs/{graph6}           Look up a single graph
+GET /graphs?n=7&regular=true  Query graphs by properties
+GET /compare?graphs=D?{,DEo    Compare multiple graphs
+GET /stats                     Database statistics
+</pre>
+
+<h3>Citation</h3>
+<pre>
+@misc{smol2025,
+  title  = {SMOL: Spectra and Matrices Of Little graphs},
+  author = {...},
+  year   = {2025},
+  url    = {...}
+}
+</pre>
+
+<h3>Source</h3>
+<p>
+    <a href="https://github.com/...">GitHub repository</a>
+</p>
+{% endblock %}

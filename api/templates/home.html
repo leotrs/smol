@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}SMOL - Spectra and Matrices Of Little graphs{% endblock %}
+
+{% block content %}
+<p>Database of all connected graphs up to 10 vertices with spectral properties.</p>
+
+<h2>Search</h2>
+<form hx-get="/graphs" hx-target="#results" hx-trigger="submit">
+    <p>
+        <label>graph6: <input type="text" name="graph6" placeholder="e.g. D?{"></label>
+        <button type="submit">Lookup</button>
+    </p>
+</form>
+
+<h2>Filter</h2>
+<form hx-get="/graphs" hx-target="#results" hx-trigger="submit, change from:select, change from:input[type=checkbox]" hx-include="this">
+    <p>
+        <label>n (vertices):
+            <select name="n">
+                <option value="">any</option>
+                {% for i in range(1, 11) %}
+                <option value="{{ i }}">{{ i }}</option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label>m (edges):
+            <input type="number" name="m" min="0" max="45" placeholder="any" style="width: 60px">
+        </label>
+    </p>
+    <p>
+        <label><input type="checkbox" name="bipartite" value="true"> bipartite</label>
+        <label><input type="checkbox" name="planar" value="true"> planar</label>
+        <label><input type="checkbox" name="regular" value="true"> regular</label>
+    </p>
+    <p>
+        <label>Limit:
+            <select name="limit">
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100" selected>100</option>
+                <option value="500">500</option>
+            </select>
+        </label>
+        <button type="submit">Search</button>
+    </p>
+</form>
+
+<hr>
+
+<div id="results">
+    <p><em>Use the filters above to search graphs.</em></p>
+</div>
+{% endblock %}

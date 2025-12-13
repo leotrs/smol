@@ -6,61 +6,17 @@
     <title>{% block title %}SMOL{% endblock %}</title>
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <style>
-        * { box-sizing: border-box; }
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            line-height: 1.6;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
-            background: #fafafa;
-        }
-        h1, h2, h3 { margin-top: 0; }
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            background: white;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 0.5rem 1rem;
-            text-align: left;
-        }
-        th { background: #f5f5f5; }
-        tr:hover { background: #f9f9f9; }
-        code {
-            background: #e8e8e8;
-            padding: 0.2em 0.4em;
-            border-radius: 3px;
-            font-size: 0.9em;
-        }
-        a { color: #0066cc; }
-        .tag {
-            display: inline-block;
-            padding: 0.2em 0.5em;
-            border-radius: 3px;
-            font-size: 0.8em;
-            margin-right: 0.3em;
-        }
-        .tag-true { background: #d4edda; color: #155724; }
-        .tag-false { background: #f8d7da; color: #721c24; }
-        .tag-same { background: #d4edda; color: #155724; }
-        .tag-different { background: #fff3cd; color: #856404; }
-        .card {
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-        }
-    </style>
 </head>
 <body>
     <header>
-        <h1><a href="/" style="text-decoration: none; color: inherit;">SMOL</a></h1>
-        <p>Spectra and Matrices Of Little graphs</p>
+        <h1><a href="/">SMOL</a></h1>
+        <nav>
+            <a href="/">Search</a> |
+            <a href="/glossary">Glossary</a> |
+            <a href="/about">About</a>
+        </nav>
     </header>
+    <hr>
     <main>
         {% block content %}{% endblock %}
     </main>
