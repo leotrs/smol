@@ -8,9 +8,9 @@ For each connected graph on up to 10 vertices, SMOL stores:
 
 **Spectra for four matrices:**
 - Adjacency matrix
-- Laplacian matrix (D - A)
+- Laplacian matrix (symmetric normalized)
 - Non-backtracking (Hashimoto) matrix
-- Non-backtracking Laplacian (normalized Laplacian of the NB graph)
+- Non-backtracking Laplacian
 
 **Structural metadata:**
 - Vertex/edge counts
@@ -28,15 +28,46 @@ For each connected graph on up to 10 vertices, SMOL stores:
 | 10       | 11,716,571       |
 | **Total**| **~12 million**  |
 
-## Installation
+## API
+
+SMOL provides a REST API for programmatic access:
+
+```bash
+# Look up a graph
+curl https://smol.example.com/graphs/D%3F%7B
+
+# Query graphs
+curl "https://smol.example.com/graphs?n=7&bipartite=true&limit=10"
+
+# Compare graphs
+curl "https://smol.example.com/compare?graphs=D%3F%7B,DEo"
+
+# Database stats
+curl https://smol.example.com/stats
+```
+
+## Local Development
+
+### Prerequisites
+
+- Python 3.11+
+- PostgreSQL
+- nauty (provides `geng` for graph enumeration)
+
+```bash
+# macOS
+brew install nauty postgresql
+```
+
+### Setup
 
 ```bash
 uv sync
+createdb smol
+psql smol < sql/schema.sql
 ```
 
-## Usage
-
-Generate and populate the database:
+### Generate graphs
 
 ```bash
 # Generate graphs for n=1 through n=8
@@ -46,45 +77,44 @@ uv run python scripts/generate.py --n 1 --n 8
 uv run python scripts/generate.py --n 6 --dry-run
 ```
 
-## Configuration
-
-Set `SMOL_DB_URL` to override the default PostgreSQL connection:
+### Run the API locally
 
 ```bash
-export SMOL_DB_URL="postgresql://user:pass@host:5432/smol"
+uv run uvicorn api.main:app --reload
 ```
 
-Default: `postgresql://localhost/smol`
-
-## For Developers
-
-### Non-Python Dependencies
-
-**nauty** is required for graph enumeration. It provides `geng`, which generates all non-isomorphic graphs.
-
-Install via Homebrew:
-```bash
-brew install nauty
-```
-
-Or build from source: https://pallini.di.uniroma1.it/
-
-### Running Tests
+### Run tests
 
 ```bash
 uv run pytest tests/ -v
 ```
 
-### Project Structure
+## Configuration
+
+Set `DATABASE_URL` to override the default PostgreSQL connection:
+
+```bash
+export DATABASE_URL="postgresql://user:pass@host:5432/smol"
+```
+
+Default: `dbname=smol` (local)
+
+## Project Structure
 
 ```
 smol/
+├── api/                 # FastAPI backend
+│   ├── main.py          # Routes and app
+│   ├── database.py      # Database queries
+│   ├── models.py        # Pydantic models
+│   └── templates/       # HTML templates (HTMX)
 ├── db/                  # Core library
-│   ├── matrices.py      # Matrix computations (A, L, B, L_B)
-│   ├── spectrum.py      # Eigenvalue computation and hashing
-│   ├── metadata.py      # Graph property computation
-│   ├── graph_data.py    # Combines everything into GraphRecord
-│   └── database.py      # PostgreSQL operations
+│   ├── matrices.py      # Matrix computations
+│   ├── spectrum.py      # Eigenvalue computation
+│   ├── metadata.py      # Graph properties
+│   └── graph_data.py    # GraphRecord processing
+├── doc/                 # Documentation
+│   └── wireframes.md    # Website wireframes
 ├── scripts/
 │   └── generate.py      # Generation pipeline
 ├── sql/
