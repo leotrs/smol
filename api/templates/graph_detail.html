@@ -54,31 +54,48 @@ function renderGraph() {
     const svg = d3.select("#graph-viz")
         .append("svg")
         .attr("width", width)
-        .attr("height", height);
+        .attr("height", height)
+        .style("cursor", "grab");
+
+    // Container group for panning
+    const g = svg.append("g");
+
+    // Viewport pan (on SVG background)
+    let pan = {x: 0, y: 0};
+    svg.call(d3.drag()
+        .on("start", () => svg.style("cursor", "grabbing"))
+        .on("drag", (event) => {
+            pan.x += event.dx;
+            pan.y += event.dy;
+            g.attr("transform", `translate(${pan.x},${pan.y})`);
+        })
+        .on("end", () => svg.style("cursor", "grab")));
 
     const simulation = d3.forceSimulation(nodes)
         .force("link", d3.forceLink(links).id(d => d.id).distance(50))
         .force("charge", d3.forceManyBody().strength(-100))
         .force("center", d3.forceCenter(width / 2, height / 2));
 
-    const link = svg.append("g")
+    const link = g.append("g")
         .selectAll("line")
         .data(links)
         .join("line")
         .attr("stroke", "#E5E2DE")
         .attr("stroke-width", 2);
 
-    const node = svg.append("g")
+    const node = g.append("g")
         .selectAll("circle")
         .data(nodes)
         .join("circle")
         .attr("r", 8)
-        .attr("fill", "#E85A4F")
+        .attr("fill", "#0D9488")
+        .style("cursor", "pointer")
         .call(d3.drag()
             .on("start", (event, d) => {
                 if (!event.active) simulation.alphaTarget(0.3).restart();
                 d.fx = d.x;
                 d.fy = d.y;
+                event.sourceEvent.stopPropagation();
             })
             .on("drag", (event, d) => {
                 d.fx = event.x;
@@ -90,7 +107,7 @@ function renderGraph() {
                 d.fy = null;
             }));
 
-    const label = svg.append("g")
+    const label = g.append("g")
         .selectAll("text")
         .data(nodes)
         .join("text")
