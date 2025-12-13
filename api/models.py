@@ -1,0 +1,63 @@
+"""Pydantic models for API responses."""
+
+from pydantic import BaseModel
+
+
+class GraphProperties(BaseModel):
+    is_bipartite: bool
+    is_planar: bool
+    is_regular: bool
+    diameter: int | None
+    girth: int | None
+    radius: int | None
+    min_degree: int
+    max_degree: int
+    triangle_count: int
+
+
+class Spectra(BaseModel):
+    adj_eigenvalues: list[float]
+    adj_hash: str
+    lap_eigenvalues: list[float]
+    lap_hash: str
+    nb_eigenvalues_re: list[float]
+    nb_eigenvalues_im: list[float]
+    nb_hash: str
+    nbl_eigenvalues_re: list[float]
+    nbl_eigenvalues_im: list[float]
+    nbl_hash: str
+
+
+class CospectralMates(BaseModel):
+    adj: list[str]
+    lap: list[str]
+    nb: list[str]
+    nbl: list[str]
+
+
+class GraphFull(BaseModel):
+    graph6: str
+    n: int
+    m: int
+    properties: GraphProperties
+    spectra: Spectra
+    cospectral_mates: CospectralMates
+
+
+class GraphSummary(BaseModel):
+    graph6: str
+    n: int
+    m: int
+    properties: GraphProperties
+
+
+class CompareResult(BaseModel):
+    graphs: list[GraphFull]
+    spectral_comparison: dict[str, str]  # matrix -> "same" or "different"
+
+
+class Stats(BaseModel):
+    total_graphs: int
+    connected_graphs: int
+    counts_by_n: dict[int, int]
+    cospectral_counts: dict[str, dict[int, int]]  # matrix -> n -> count

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Graphs - SMOL{% endblock %}
+
+{% block content %}
+<h2>Graphs ({{ graphs|length }} results)</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>graph6</th>
+            <th>n</th>
+            <th>m</th>
+            <th>Properties</th>
+            <th>Diameter</th>
+            <th>Girth</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for g in graphs %}
+        <tr>
+            <td><a href="/graphs/{{ g.graph6 }}"><code>{{ g.graph6 }}</code></a></td>
+            <td>{{ g.n }}</td>
+            <td>{{ g.m }}</td>
+            <td>
+                {% if g.properties.is_bipartite %}<span class="tag tag-true">bip</span>{% endif %}
+                {% if g.properties.is_planar %}<span class="tag tag-true">planar</span>{% endif %}
+                {% if g.properties.is_regular %}<span class="tag tag-true">reg</span>{% endif %}
+            </td>
+            <td>{{ g.properties.diameter if g.properties.diameter else "-" }}</td>
+            <td>{{ g.properties.girth if g.properties.girth else "-" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

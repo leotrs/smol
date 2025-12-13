@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}{{ graph.graph6 }} - SMOL{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2><code>{{ graph.graph6 }}</code></h2>
+    <p>
+        <strong>{{ graph.n }}</strong> vertices,
+        <strong>{{ graph.m }}</strong> edges
+    </p>
+
+    <h3>Properties</h3>
+    <p>
+        <span class="tag tag-{{ graph.properties.is_bipartite|lower }}">
+            {% if graph.properties.is_bipartite %}bipartite{% else %}not bipartite{% endif %}
+        </span>
+        <span class="tag tag-{{ graph.properties.is_planar|lower }}">
+            {% if graph.properties.is_planar %}planar{% else %}not planar{% endif %}
+        </span>
+        <span class="tag tag-{{ graph.properties.is_regular|lower }}">
+            {% if graph.properties.is_regular %}regular{% else %}not regular{% endif %}
+        </span>
+    </p>
+    <ul>
+        <li>Diameter: {{ graph.properties.diameter if graph.properties.diameter else "∞" }}</li>
+        <li>Girth: {{ graph.properties.girth if graph.properties.girth else "∞ (acyclic)" }}</li>
+        <li>Radius: {{ graph.properties.radius if graph.properties.radius else "-" }}</li>
+        <li>Degree range: [{{ graph.properties.min_degree }}, {{ graph.properties.max_degree }}]</li>
+        <li>Triangles: {{ graph.properties.triangle_count }}</li>
+    </ul>
+</div>
+
+<div class="card">
+    <h3>Cospectral Mates</h3>
+    <table>
+        <tr>
+            <th>Matrix</th>
+            <th>Hash</th>
+            <th>Cospectral Graphs</th>
+        </tr>
+        <tr>
+            <td>Adjacency</td>
+            <td><code>{{ graph.spectra.adj_hash }}</code></td>
+            <td>
+                {% if graph.cospectral_mates.adj %}
+                    {% for mate in graph.cospectral_mates.adj %}
+                        <a href="/graphs/{{ mate }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <em>none</em>
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <td>Laplacian</td>
+            <td><code>{{ graph.spectra.lap_hash }}</code></td>
+            <td>
+                {% if graph.cospectral_mates.lap %}
+                    {% for mate in graph.cospectral_mates.lap %}
+                        <a href="/graphs/{{ mate }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <em>none</em>
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <td>Non-backtracking</td>
+            <td><code>{{ graph.spectra.nb_hash }}</code></td>
+            <td>
+                {% if graph.cospectral_mates.nb %}
+                    {% for mate in graph.cospectral_mates.nb %}
+                        <a href="/graphs/{{ mate }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <em>none</em>
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <td>NB Laplacian</td>
+            <td><code>{{ graph.spectra.nbl_hash }}</code></td>
+            <td>
+                {% if graph.cospectral_mates.nbl %}
+                    {% for mate in graph.cospectral_mates.nbl %}
+                        <a href="/graphs/{{ mate }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <em>none</em>
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+</div>
+
+<div class="card">
+    <h3>Spectra</h3>
+    <details>
+        <summary>Adjacency eigenvalues ({{ graph.spectra.adj_eigenvalues|length }})</summary>
+        <code>{{ graph.spectra.adj_eigenvalues }}</code>
+    </details>
+    <details>
+        <summary>Laplacian eigenvalues ({{ graph.spectra.lap_eigenvalues|length }})</summary>
+        <code>{{ graph.spectra.lap_eigenvalues }}</code>
+    </details>
+    <details>
+        <summary>Non-backtracking eigenvalues ({{ graph.spectra.nb_eigenvalues_re|length }})</summary>
+        <code>{% for r, i in zip(graph.spectra.nb_eigenvalues_re, graph.spectra.nb_eigenvalues_im) %}{{ r }}{% if i != 0 %}+{{ i }}i{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}</code>
+    </details>
+    <details>
+        <summary>NB Laplacian eigenvalues ({{ graph.spectra.nbl_eigenvalues_re|length }})</summary>
+        <code>{% for r, i in zip(graph.spectra.nbl_eigenvalues_re, graph.spectra.nbl_eigenvalues_im) %}{{ r }}{% if i != 0 %}+{{ i }}i{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}</code>
+    </details>
+</div>
+{% endblock %}

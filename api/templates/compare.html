@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Compare - SMOL{% endblock %}
+
+{% block content %}
+<h2>Comparing {{ result.graphs|length }} Graphs</h2>
+
+<div class="card">
+    <h3>Spectral Comparison</h3>
+    <p>
+        {% for matrix, status in result.spectral_comparison.items() %}
+        <span class="tag tag-{{ status }}">{{ matrix }}: {{ status }}</span>
+        {% endfor %}
+    </p>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Property</th>
+            {% for g in result.graphs %}
+            <th><code>{{ g.graph6 }}</code></th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>n</td>
+            {% for g in result.graphs %}<td>{{ g.n }}</td>{% endfor %}
+        </tr>
+        <tr>
+            <td>m</td>
+            {% for g in result.graphs %}<td>{{ g.m }}</td>{% endfor %}
+        </tr>
+        <tr>
+            <td>Bipartite</td>
+            {% for g in result.graphs %}<td>{{ g.properties.is_bipartite }}</td>{% endfor %}
+        </tr>
+        <tr>
+            <td>Planar</td>
+            {% for g in result.graphs %}<td>{{ g.properties.is_planar }}</td>{% endfor %}
+        </tr>
+        <tr>
+            <td>Regular</td>
+            {% for g in result.graphs %}<td>{{ g.properties.is_regular }}</td>{% endfor %}
+        </tr>
+        <tr>
+            <td>Diameter</td>
+            {% for g in result.graphs %}<td>{{ g.properties.diameter if g.properties.diameter else "-" }}</td>{% endfor %}
+        </tr>
+        <tr>
+            <td>Girth</td>
+            {% for g in result.graphs %}<td>{{ g.properties.girth if g.properties.girth else "-" }}</td>{% endfor %}
+        </tr>
+        <tr>
+            <td>Triangles</td>
+            {% for g in result.graphs %}<td>{{ g.properties.triangle_count }}</td>{% endfor %}
+        </tr>
+    </tbody>
+</table>
+{% endblock %}
