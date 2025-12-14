@@ -130,3 +130,63 @@ def test_nonbacktracking_matrix_k3():
     # Each directed edge (u,v) can continue to 1 other edge (v,w) where w != u
     assert B.shape == (6, 6)
     assert B.sum() == 6  # Each directed edge has 1 continuation
+
+
+class TestNonbacktrackingCycleGraphs:
+    """
+    Tests for non-backtracking matrix eigenvalues on cycle graphs.
+
+    For a cycle graph C_n, the NB matrix B is a permutation matrix because each
+    directed edge has exactly one non-backtracking continuation. Therefore B^(2n) = I,
+    and all eigenvalues are (2n)-th roots of unity with magnitude exactly 1.
+    """
+
+    def test_nb_eigenvalues_cycle_3(self):
+        """C_3 (triangle): NB eigenvalues are 6th roots of unity."""
+        G = nx.cycle_graph(3)
+        B = nonbacktracking_matrix(G)
+        eigs = np.linalg.eigvals(B)
+
+        # All eigenvalues should have magnitude 1
+        magnitudes = np.abs(eigs)
+        np.testing.assert_allclose(magnitudes, 1.0, rtol=1e-10)
+
+    def test_nb_eigenvalues_cycle_4(self):
+        """C_4 (square): NB eigenvalues are 8th roots of unity."""
+        G = nx.cycle_graph(4)
+        B = nonbacktracking_matrix(G)
+        eigs = np.linalg.eigvals(B)
+
+        magnitudes = np.abs(eigs)
+        np.testing.assert_allclose(magnitudes, 1.0, rtol=1e-10)
+
+    def test_nb_eigenvalues_cycle_5(self):
+        """C_5 (pentagon): NB eigenvalues are 10th roots of unity."""
+        G = nx.cycle_graph(5)
+        B = nonbacktracking_matrix(G)
+        eigs = np.linalg.eigvals(B)
+
+        magnitudes = np.abs(eigs)
+        np.testing.assert_allclose(magnitudes, 1.0, rtol=1e-10)
+
+    def test_nb_eigenvalues_cycle_6(self):
+        """C_6 (hexagon): NB eigenvalues are 12th roots of unity."""
+        G = nx.cycle_graph(6)
+        B = nonbacktracking_matrix(G)
+        eigs = np.linalg.eigvals(B)
+
+        magnitudes = np.abs(eigs)
+        np.testing.assert_allclose(magnitudes, 1.0, rtol=1e-10)
+
+    def test_nb_eigenvalues_all_cycles(self):
+        """NB eigenvalues of all cycle graphs C_3 to C_10 should be on unit circle."""
+        for n in range(3, 11):
+            G = nx.cycle_graph(n)
+            B = nonbacktracking_matrix(G)
+            eigs = np.linalg.eigvals(B)
+
+            magnitudes = np.abs(eigs)
+            np.testing.assert_allclose(
+                magnitudes, 1.0, rtol=1e-10,
+                err_msg=f"C_{n}: NB eigenvalues not on unit circle"
+            )

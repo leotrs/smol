@@ -101,15 +101,30 @@ function renderSpectrumPlot() {
     const imMax = Math.max(Math.abs(imExtent[0]), Math.abs(imExtent[1]));
     imExtent = [-imMax, imMax];
 
-    const rePadding = (reExtent[1] - reExtent[0]) * 0.1 || 1;
-    const imPadding = imMax * 0.1 || 1;
+    const rePadding = (reExtent[1] - reExtent[0]) * 0.1 || 0.5;
+    const imPadding = imMax * 0.1 || 0.5;
+
+    // Calculate data ranges with padding
+    const xDataRange = (reExtent[1] - reExtent[0]) + 2 * rePadding;
+    const yDataRange = 2 * (imMax + imPadding);
+
+    // Force 1:1 aspect ratio by using the same scale for both axes
+    const xPixelsPerUnit = plotWidth / xDataRange;
+    const yPixelsPerUnit = plotHeight / yDataRange;
+    const pixelsPerUnit = Math.min(xPixelsPerUnit, yPixelsPerUnit);
+
+    // Center the data in the available space
+    const xCenter = (reExtent[0] + reExtent[1]) / 2;
+    const yCenter = 0;
+    const xHalfRange = (plotWidth / pixelsPerUnit) / 2;
+    const yHalfRange = (plotHeight / pixelsPerUnit) / 2;
 
     const xScale = d3.scaleLinear()
-        .domain([reExtent[0] - rePadding, reExtent[1] + rePadding])
+        .domain([xCenter - xHalfRange, xCenter + xHalfRange])
         .range([0, plotWidth]);
 
     const yScale = d3.scaleLinear()
-        .domain([-(imMax + imPadding), imMax + imPadding])
+        .domain([yCenter - yHalfRange, yCenter + yHalfRange])
         .range([plotHeight, 0]);
 
     const svg = d3.select('#spectrum-plot')
@@ -369,22 +384,74 @@ function renderGraph() {
 <div class="spectrum-plot-section">
     <div id="spectrum-plot"></div>
     <div class="spectrum-controls">
-        <button class="spectrum-pill active" data-spectrum="adj" onclick="toggleSpectrumPill(this, 'adj')">
-            <span class="spectrum-dot" style="background: var(--spectrum-adj);"></span>
-            Adjacency
-        </button>
-        <button class="spectrum-pill active" data-spectrum="lap" onclick="toggleSpectrumPill(this, 'lap')">
-            <span class="spectrum-dot" style="background: var(--spectrum-lap);"></span>
-            Laplacian
-        </button>
-        <button class="spectrum-pill active" data-spectrum="nb" onclick="toggleSpectrumPill(this, 'nb')">
-            <span class="spectrum-dot" style="background: var(--spectrum-nb);"></span>
-            Non-backtracking
-        </button>
-        <button class="spectrum-pill active" data-spectrum="nbl" onclick="toggleSpectrumPill(this, 'nbl')">
-            <span class="spectrum-dot" style="background: var(--spectrum-nbl);"></span>
-            NB-Laplacian
-        </button>
+        <div class="spectrum-legend-item">
+            <button class="spectrum-pill active" data-spectrum="adj" onclick="toggleSpectrumPill(this, 'adj')">
+                <span class="spectrum-dot" style="background: var(--spectrum-adj);"></span>
+                Adjacency
+            </button>
+            <button class="spectrum-expand" onclick="toggleEigenvalues(this)" aria-label="Show eigenvalues">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="spectrum-eigenvalues">
+                <div class="spectrum-eigenvalues-content">
+                    <code>[{% for e in graph.spectra.adj_eigenvalues %}{{ "%.6f"|format(e) }}{% if not loop.last %}, {% endif %}{% endfor %}]</code>
+                    <button class="copy-btn-small" onclick="copyEigenvalues(this)" aria-label="Copy">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="spectrum-legend-item">
+            <button class="spectrum-pill active" data-spectrum="lap" onclick="toggleSpectrumPill(this, 'lap')">
+                <span class="spectrum-dot" style="background: var(--spectrum-lap);"></span>
+                Laplacian
+            </button>
+            <button class="spectrum-expand" onclick="toggleEigenvalues(this)" aria-label="Show eigenvalues">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="spectrum-eigenvalues">
+                <div class="spectrum-eigenvalues-content">
+                    <code>[{% for e in graph.spectra.lap_eigenvalues %}{{ "%.6f"|format(e) }}{% if not loop.last %}, {% endif %}{% endfor %}]</code>
+                    <button class="copy-btn-small" onclick="copyEigenvalues(this)" aria-label="Copy">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="spectrum-legend-item">
+            <button class="spectrum-pill active" data-spectrum="nb" onclick="toggleSpectrumPill(this, 'nb')">
+                <span class="spectrum-dot" style="background: var(--spectrum-nb);"></span>
+                Non-backtracking
+            </button>
+            <button class="spectrum-expand" onclick="toggleEigenvalues(this)" aria-label="Show eigenvalues">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="spectrum-eigenvalues">
+                <div class="spectrum-eigenvalues-content">
+                    <code>[{% for i in range(graph.spectra.nb_eigenvalues_re|length) %}{{ "%.6f"|format(graph.spectra.nb_eigenvalues_re[i]) }}{% if graph.spectra.nb_eigenvalues_im[i] >= 0 %}+{% endif %}{{ "%.6f"|format(graph.spectra.nb_eigenvalues_im[i]) }}j{% if not loop.last %}, {% endif %}{% endfor %}]</code>
+                    <button class="copy-btn-small" onclick="copyEigenvalues(this)" aria-label="Copy">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="spectrum-legend-item">
+            <button class="spectrum-pill active" data-spectrum="nbl" onclick="toggleSpectrumPill(this, 'nbl')">
+                <span class="spectrum-dot" style="background: var(--spectrum-nbl);"></span>
+                NB-Laplacian
+            </button>
+            <button class="spectrum-expand" onclick="toggleEigenvalues(this)" aria-label="Show eigenvalues">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="spectrum-eigenvalues">
+                <div class="spectrum-eigenvalues-content">
+                    <code>[{% for i in range(graph.spectra.nbl_eigenvalues_re|length) %}{{ "%.6f"|format(graph.spectra.nbl_eigenvalues_re[i]) }}{% if graph.spectra.nbl_eigenvalues_im[i] >= 0 %}+{% endif %}{{ "%.6f"|format(graph.spectra.nbl_eigenvalues_im[i]) }}j{% if not loop.last %}, {% endif %}{% endfor %}]</code>
+                    <button class="copy-btn-small" onclick="copyEigenvalues(this)" aria-label="Copy">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 <script>
@@ -400,47 +467,24 @@ if (typeof d3 !== 'undefined') {
         }, 50);
     });
 }
+
+function toggleEigenvalues(btn) {
+    const item = btn.closest('.spectrum-legend-item');
+    const eigenvalues = item.querySelector('.spectrum-eigenvalues');
+    const isOpen = eigenvalues.classList.toggle('open');
+    btn.classList.toggle('open', isOpen);
+}
+
+function copyEigenvalues(btn) {
+    const code = btn.parentElement.querySelector('code').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+        btn.classList.add('copied');
+        setTimeout(() => btn.classList.remove('copied'), 1500);
+    });
+}
 </script>
 
-<h4>Eigenvalue Data</h4>
-<details class="spectrum-box">
-    <summary>Adjacency eigenvalues</summary>
-    <div class="spectrum-content">
-        <button class="copy-btn" onclick="copySpectrum(this)" aria-label="Copy to clipboard">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-        </button>
-        <pre><code>[{% for e in graph.spectra.adj_eigenvalues %}{{ "%.6f"|format(e) }}{% if not loop.last %}, {% endif %}{% endfor %}]</code></pre>
-    </div>
-</details>
-<details class="spectrum-box">
-    <summary>Laplacian eigenvalues</summary>
-    <div class="spectrum-content">
-        <button class="copy-btn" onclick="copySpectrum(this)" aria-label="Copy to clipboard">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-        </button>
-        <pre><code>[{% for e in graph.spectra.lap_eigenvalues %}{{ "%.6f"|format(e) }}{% if not loop.last %}, {% endif %}{% endfor %}]</code></pre>
-    </div>
-</details>
-<details class="spectrum-box">
-    <summary>Non-backtracking eigenvalues</summary>
-    <div class="spectrum-content">
-        <button class="copy-btn" onclick="copySpectrum(this)" aria-label="Copy to clipboard">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-        </button>
-        <pre><code>[{% for i in range(graph.spectra.nb_eigenvalues_re|length) %}{{ "%.6f"|format(graph.spectra.nb_eigenvalues_re[i]) }}{% if graph.spectra.nb_eigenvalues_im[i] >= 0 %}+{% endif %}{{ "%.6f"|format(graph.spectra.nb_eigenvalues_im[i]) }}j{% if not loop.last %}, {% endif %}{% endfor %}]</code></pre>
-    </div>
-</details>
-<details class="spectrum-box">
-    <summary>NB-Laplacian eigenvalues</summary>
-    <div class="spectrum-content">
-        <button class="copy-btn" onclick="copySpectrum(this)" aria-label="Copy to clipboard">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-        </button>
-        <pre><code>[{% for i in range(graph.spectra.nbl_eigenvalues_re|length) %}{{ "%.6f"|format(graph.spectra.nbl_eigenvalues_re[i]) }}{% if graph.spectra.nbl_eigenvalues_im[i] >= 0 %}+{% endif %}{{ "%.6f"|format(graph.spectra.nbl_eigenvalues_im[i]) }}j{% if not loop.last %}, {% endif %}{% endfor %}]</code></pre>
-    </div>
-</details>
-
-<h3>Cospectral Mates</h3>
+<h3 style="margin-top: 2rem;">Cospectral Mates</h3>
 {% if graph.cospectral_mates.adj or graph.cospectral_mates.lap or graph.cospectral_mates.nb or graph.cospectral_mates.nbl %}
 <p>Graphs that share the same spectrum for a given matrix type.</p>
 <table>
