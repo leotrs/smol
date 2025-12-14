@@ -45,7 +45,7 @@ def test_compute_real_eigenvalues_empty():
 
 def test_compute_complex_eigenvalues():
     """Test eigenvalues of a non-symmetric matrix."""
-    # Rotation matrix has complex eigenvalues
+    # Rotation matrix has complex eigenvalues e^{±iθ}
     theta = np.pi / 4
     M = np.array(
         [
@@ -55,11 +55,15 @@ def test_compute_complex_eigenvalues():
     )
     eigs = compute_complex_eigenvalues(M)
 
-    # Rotation matrix has eigenvalues e^{±iθ}, we keep only im >= 0
-    # So we get one eigenvalue with positive imaginary part
-    assert len(eigs) == 1
+    # Should return ALL eigenvalues (both conjugates)
+    assert len(eigs) == 2
+    # Both should have magnitude 1
     np.testing.assert_almost_equal(np.abs(eigs[0]), 1.0, decimal=5)
-    np.testing.assert_almost_equal(eigs[0].imag, np.sin(theta), decimal=5)
+    np.testing.assert_almost_equal(np.abs(eigs[1]), 1.0, decimal=5)
+    # One positive imaginary, one negative
+    imag_parts = sorted([e.imag for e in eigs])
+    np.testing.assert_almost_equal(imag_parts[0], -np.sin(theta), decimal=5)
+    np.testing.assert_almost_equal(imag_parts[1], np.sin(theta), decimal=5)
 
 
 def test_compute_complex_eigenvalues_sorted_by_magnitude():
@@ -143,3 +147,27 @@ def test_spectral_hash_empty():
 
     assert hash1 == hash2
     assert len(hash1) == 16
+
+
+def test_compute_complex_eigenvalues_nb_matrix_size():
+    """NB matrix should return exactly 2m eigenvalues for m edges."""
+    import networkx as nx
+    from db.matrices import nonbacktracking_matrix
+
+    # Triangle (K3): m=3 edges, expect 2*3=6 eigenvalues
+    G = nx.cycle_graph(3)
+    B = nonbacktracking_matrix(G)
+    eigs = compute_complex_eigenvalues(B)
+    assert len(eigs) == 6, f"K3: expected 6 eigenvalues, got {len(eigs)}"
+
+    # Square (C4): m=4 edges, expect 2*4=8 eigenvalues
+    G = nx.cycle_graph(4)
+    B = nonbacktracking_matrix(G)
+    eigs = compute_complex_eigenvalues(B)
+    assert len(eigs) == 8, f"C4: expected 8 eigenvalues, got {len(eigs)}"
+
+    # Star S4 (4 edges): expect 2*4=8 eigenvalues
+    G = nx.star_graph(4)
+    B = nonbacktracking_matrix(G)
+    eigs = compute_complex_eigenvalues(B)
+    assert len(eigs) == 8, f"S4: expected 8 eigenvalues, got {len(eigs)}"

@@ -18,32 +18,39 @@ def compute_real_eigenvalues(matrix: np.ndarray) -> np.ndarray:
 
 def compute_complex_eigenvalues(matrix: np.ndarray, precision: int = 6) -> np.ndarray:
     """
-    Compute eigenvalues of a general (possibly non-symmetric) matrix.
+    Compute ALL eigenvalues of a general (possibly non-symmetric) matrix.
 
-    For real matrices, eigenvalues come in conjugate pairs. We round first,
-    then keep only eigenvalues with non-negative imaginary part (one from
-    each conjugate pair), then sort by (real part, imaginary part).
+    Returns all eigenvalues (including both members of conjugate pairs),
+    rounded to specified precision and sorted by (real part, imaginary part).
     """
     if matrix.size == 0:
         return np.array([], dtype=np.complex128)
 
     eigs = eigvals(matrix)
 
-    # Round first to ensure consistent handling of near-zero values
+    # Round to ensure consistent handling of near-zero values
     re = np.round(eigs.real, decimals=precision)
     im = np.round(eigs.imag, decimals=precision)
     re = np.where(re == 0, 0.0, re)
     im = np.where(im == 0, 0.0, im)
     eigs_rounded = re + 1j * im
 
-    # Keep only eigenvalues with non-negative imaginary part
-    # (one representative from each conjugate pair)
-    eigs_half = eigs_rounded[im >= 0]
-
     # Sort by real part, then imaginary part
-    sort_keys = np.lexsort((eigs_half.imag, eigs_half.real))
+    sort_keys = np.lexsort((eigs_rounded.imag, eigs_rounded.real))
 
-    return eigs_half[sort_keys]
+    return eigs_rounded[sort_keys]
+
+
+def _half_spectrum(eigenvalues: np.ndarray) -> np.ndarray:
+    """
+    Filter complex eigenvalues to one representative from each conjugate pair.
+
+    Keeps eigenvalues with non-negative imaginary part. Used for hashing
+    since conjugate pairs are redundant for cospectrality comparison.
+    """
+    if eigenvalues.size == 0:
+        return eigenvalues
+    return eigenvalues[eigenvalues.imag >= 0]
 
 
 def spectral_hash_real(eigenvalues: np.ndarray, precision: int = 6) -> str:
@@ -71,9 +78,12 @@ def spectral_hash_complex(eigenvalues: np.ndarray, precision: int = 6) -> str:
     """
     Compute a hash of complex eigenvalues for co-spectral detection.
 
+    Internally filters to one representative from each conjugate pair
+    (keeping eigenvalues with non-negative imaginary part) before hashing,
+    since conjugate pairs are redundant for cospectrality comparison.
+
     Args:
-        eigenvalues: Array of complex eigenvalues (already rounded and filtered
-                     to non-negative imaginary part by compute_complex_eigenvalues)
+        eigenvalues: Array of complex eigenvalues (full spectrum)
         precision: Number of decimal places for formatting
 
     Returns:
@@ -82,8 +92,11 @@ def spectral_hash_complex(eigenvalues: np.ndarray, precision: int = 6) -> str:
     if eigenvalues.size == 0:
         return hashlib.sha256(b"empty").hexdigest()[:16]
 
+    # Filter to half-spectrum for hashing (one from each conjugate pair)
+    half = _half_spectrum(eigenvalues)
+
     canonical = ",".join(
         f"({r:.{precision}f},{i:.{precision}f})"
-        for r, i in zip(eigenvalues.real, eigenvalues.imag)
+        for r, i in zip(half.real, half.imag)
     )
     return hashlib.sha256(canonical.encode()).hexdigest()[:16]

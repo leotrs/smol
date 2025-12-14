@@ -335,7 +335,14 @@ class TestHomeSearch:
     def test_home_example_graphs_exist(self):
         """Verify all example graphs on home page exist in database."""
         from urllib.parse import quote
-        example_graphs = ["D~{", "EEh_", "E?Bw", "G?zTb_"]
+        # Example graphs + cospectral family examples (adj, lap, nb, nbl)
+        example_graphs = [
+            "D~{", "EEh_", "E?Bw", "G?zTb_",  # Named graphs
+            "D?{", "DEo", "ECRw", "EEiW",      # Adj cospectral
+            "CF", "C]", "E?zW", "ECxw",        # Lap cospectral
+            "DC{", "DEk", "E?ro", "E?zO",      # NB cospectral
+            "CU", "E?bw", "ECZG",              # NBL cospectral (CF already listed)
+        ]
         for g6 in example_graphs:
             response = client.get(f"/graph/{quote(g6, safe='')}")
             assert response.status_code == 200, f"Example graph {g6} not found"
