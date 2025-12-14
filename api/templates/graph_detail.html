@@ -505,7 +505,11 @@ function copyEigenvalues(btn) {
                 {% endfor %}
             </td>
             <td>
+                {% if graph.cospectral_mates.adj | length < 10 %}
                 <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.adj | join(',') | urlencode }}" role="button" class="outline">Compare</a>
+                {% else %}
+                <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
+                {% endif %}
             </td>
         </tr>
         {% endif %}
@@ -518,7 +522,11 @@ function copyEigenvalues(btn) {
                 {% endfor %}
             </td>
             <td>
+                {% if graph.cospectral_mates.lap | length < 10 %}
                 <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.lap | join(',') | urlencode }}" role="button" class="outline">Compare</a>
+                {% else %}
+                <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
+                {% endif %}
             </td>
         </tr>
         {% endif %}
@@ -531,7 +539,11 @@ function copyEigenvalues(btn) {
                 {% endfor %}
             </td>
             <td>
+                {% if graph.cospectral_mates.nb | length < 10 %}
                 <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.nb | join(',') | urlencode }}" role="button" class="outline">Compare</a>
+                {% else %}
+                <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
+                {% endif %}
             </td>
         </tr>
         {% endif %}
@@ -544,7 +556,11 @@ function copyEigenvalues(btn) {
                 {% endfor %}
             </td>
             <td>
+                {% if graph.cospectral_mates.nbl | length < 10 %}
                 <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.nbl | join(',') | urlencode }}" role="button" class="outline">Compare</a>
+                {% else %}
+                <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
+                {% endif %}
             </td>
         </tr>
         {% endif %}
