@@ -143,22 +143,46 @@ function renderSpectrumPlot() {
     const g = svg.append('g')
         .attr('transform', `translate(${margin.left},${margin.top})`);
 
-    // Container for pannable content
+    // Container for pannable/zoomable content
     const plotArea = g.append('g')
         .attr('clip-path', 'url(#plot-clip)');
 
     const content = plotArea.append('g');
 
-    // Viewport pan
-    let pan = {x: 0, y: 0};
+    // Viewport pan and zoom
+    let transform = {x: 0, y: 0, k: 1};
+    const baseRadius = 4;
+
+    function updatePlotTransform() {
+        content.attr('transform', `translate(${transform.x},${transform.y}) scale(${transform.k})`);
+        // Keep eigenvalue dots at constant visual size by scaling radius inversely
+        content.selectAll('.eigenvalue-dot').attr('r', baseRadius / transform.k);
+    }
+
     svg.call(d3.drag()
         .on('start', () => svg.style('cursor', 'grabbing'))
         .on('drag', (event) => {
-            pan.x += event.dx;
-            pan.y += event.dy;
-            content.attr('transform', `translate(${pan.x},${pan.y})`);
+            transform.x += event.dx;
+            transform.y += event.dy;
+            updatePlotTransform();
         })
         .on('end', () => svg.style('cursor', 'grab')));
+
+    svg.on('wheel', (event) => {
+        event.preventDefault();
+        const scaleFactor = event.deltaY > 0 ? 0.9 : 1.1;
+        const newK = Math.max(0.2, Math.min(5, transform.k * scaleFactor));
+
+        // Get mouse position relative to plot area
+        const [mx, my] = d3.pointer(event, plotArea.node());
+
+        // Zoom centered on mouse position
+        transform.x = mx - (mx - transform.x) * (newK / transform.k);
+        transform.y = my - (my - transform.y) * (newK / transform.k);
+        transform.k = newK;
+
+        updatePlotTransform();
+    });
 
     // Tooltip
     const tooltip = d3.select('body').append('div')
@@ -239,9 +263,10 @@ function renderSpectrumPlot() {
 
     const labels = {adj: 'Adj', lap: 'Lap', nb: 'NB', nbl: 'NBL'};
 
-    // Draw unit circle (in content so it pans)
+    // Draw unit circle (in content so it pans, but scales with zoom)
     const circleRadius = Math.abs(xScale(1) - xScale(0));
     content.append('circle')
+        .attr('class', 'unit-circle')
         .attr('cx', xScale(0))
         .attr('cy', yScale(0))
         .attr('r', circleRadius)
@@ -266,16 +291,17 @@ function renderSpectrumPlot() {
             .selectAll('circle')
             .data(plotData[key])
             .join('circle')
+            .attr('class', 'eigenvalue-dot')
             .attr('cx', d => xScale(d.re))
             .attr('cy', d => yScale(d.im))
-            .attr('r', 4)
+            .attr('r', baseRadius)
             .attr('fill', colors[key])
             .attr('opacity', 0.7)
             .style('cursor', 'pointer')
             .on('mouseover', (event, d) => {
                 tooltip.style('visibility', 'visible')
                     .html(`<strong>${labels[key]}:</strong> ${formatEig(d)}`);
-                d3.select(event.target).attr('r', 6).attr('opacity', 1);
+                d3.select(event.target).attr('r', 6 / transform.k).attr('opacity', 1);
             })
             .on('mousemove', (event) => {
                 tooltip.style('top', (event.pageY - 10) + 'px')
@@ -283,7 +309,7 @@ function renderSpectrumPlot() {
             })
             .on('mouseout', (event) => {
                 tooltip.style('visibility', 'hidden');
-                d3.select(event.target).attr('r', 4).attr('opacity', 0.7);
+                d3.select(event.target).attr('r', baseRadius / transform.k).attr('opacity', 0.7);
             });
     });
 
@@ -312,19 +338,40 @@ function renderGraph() {
         .attr("height", height)
         .style("cursor", "grab");
 
-    // Container group for panning
+    // Container group for panning/zooming
     const g = svg.append("g");
 
-    // Viewport pan (on SVG background)
-    let pan = {x: 0, y: 0};
+    // Viewport pan and zoom
+    let transform = {x: 0, y: 0, k: 1};
+
+    function updateTransform() {
+        g.attr("transform", `translate(${transform.x},${transform.y}) scale(${transform.k})`);
+    }
+
     svg.call(d3.drag()
         .on("start", () => svg.style("cursor", "grabbing"))
         .on("drag", (event) => {
-            pan.x += event.dx;
-            pan.y += event.dy;
-            g.attr("transform", `translate(${pan.x},${pan.y})`);
+            transform.x += event.dx;
+            transform.y += event.dy;
+            updateTransform();
         })
         .on("end", () => svg.style("cursor", "grab")));
+
+    svg.on("wheel", (event) => {
+        event.preventDefault();
+        const scaleFactor = event.deltaY > 0 ? 0.9 : 1.1;
+        const newK = Math.max(0.2, Math.min(5, transform.k * scaleFactor));
+
+        // Get mouse position relative to SVG
+        const [mx, my] = d3.pointer(event, svg.node());
+
+        // Zoom centered on mouse position
+        transform.x = mx - (mx - transform.x) * (newK / transform.k);
+        transform.y = my - (my - transform.y) * (newK / transform.k);
+        transform.k = newK;
+
+        updateTransform();
+    });
 
     const simulation = d3.forceSimulation(nodes)
         .force("link", d3.forceLink(links).id(d => d.id).distance(50))
@@ -366,7 +413,14 @@ function renderGraph() {
                 d.fy = null;
             }));
 
+    const padding = 10;
     simulation.on("tick", () => {
+        // Constrain nodes to viewport
+        nodes.forEach(d => {
+            d.x = Math.max(padding, Math.min(width - padding, d.x));
+            d.y = Math.max(padding, Math.min(height - padding, d.y));
+        });
+
         link
             .attr("x1", d => d.source.x)
             .attr("y1", d => d.source.y)
@@ -570,7 +624,7 @@ function copyEigenvalues(btn) {
 <p><em>No cospectral mates for any matrix type.</em></p>
 {% endif %}
 
-<h3>Code</h3>
+<h3>Code <span class="code-lang">Python</span></h3>
 <div class="code-block">
     <button class="copy-btn" onclick="copySpectrum(this)" aria-label="Copy to clipboard">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
@@ -578,7 +632,7 @@ function copyEigenvalues(btn) {
 <pre><code class="language-python">import networkx as nx
 
 G = nx.from_graph6_bytes(b"{{ graph.graph6 }}")
-print(G.number_of_nodes(), G.number_of_edges())  # {{ graph.n }} {{ graph.m }}</code></pre>
+A = nx.to_numpy_array(G)  # adjacency matrix</code></pre>
 </div>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css" id="prism-light">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-okaidia.min.css" id="prism-dark" disabled>
