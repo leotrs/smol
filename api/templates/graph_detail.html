@@ -43,6 +43,244 @@
 </div>
 
 <script>
+// Spectrum data
+const spectraData = {
+    adj: {{ graph.spectra.adj_eigenvalues | tojson }}.map(x => ({re: x, im: 0})),
+    lap: {{ graph.spectra.lap_eigenvalues | tojson }}.map(x => ({re: x, im: 0})),
+    nb: {{ graph.spectra.nb_eigenvalues_re | tojson }}.map((re, i) => ({
+        re: re,
+        im: {{ graph.spectra.nb_eigenvalues_im | tojson }}[i]
+    })),
+    nbl: {{ graph.spectra.nbl_eigenvalues_re | tojson }}.map((re, i) => ({
+        re: re,
+        im: {{ graph.spectra.nbl_eigenvalues_im | tojson }}[i]
+    }))
+};
+
+function renderSpectrumPlot() {
+    const container = document.getElementById('spectrum-plot');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const width = container.clientWidth || 500;
+    const height = 350;
+    const margin = {top: 20, right: 20, bottom: 40, left: 50};
+    const plotWidth = width - margin.left - margin.right;
+    const plotHeight = height - margin.top - margin.bottom;
+
+    // Mirror complex eigenvalues to show conjugate pairs
+    function withConjugates(points) {
+        const result = [];
+        points.forEach(p => {
+            result.push(p);
+            if (Math.abs(p.im) > 1e-10) {
+                result.push({re: p.re, im: -p.im});
+            }
+        });
+        return result;
+    }
+
+    const plotData = {
+        adj: spectraData.adj,
+        lap: spectraData.lap,
+        nb: withConjugates(spectraData.nb),
+        nbl: withConjugates(spectraData.nbl)
+    };
+
+    const allPoints = [
+        ...plotData.adj,
+        ...plotData.lap,
+        ...plotData.nb,
+        ...plotData.nbl
+    ];
+
+    const reExtent = d3.extent(allPoints, d => d.re);
+    let imExtent = d3.extent(allPoints, d => d.im);
+
+    // Make y-axis symmetric around 0
+    const imMax = Math.max(Math.abs(imExtent[0]), Math.abs(imExtent[1]));
+    imExtent = [-imMax, imMax];
+
+    const rePadding = (reExtent[1] - reExtent[0]) * 0.1 || 1;
+    const imPadding = imMax * 0.1 || 1;
+
+    const xScale = d3.scaleLinear()
+        .domain([reExtent[0] - rePadding, reExtent[1] + rePadding])
+        .range([0, plotWidth]);
+
+    const yScale = d3.scaleLinear()
+        .domain([-(imMax + imPadding), imMax + imPadding])
+        .range([plotHeight, 0]);
+
+    const svg = d3.select('#spectrum-plot')
+        .append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .style('cursor', 'grab');
+
+    // Clip path to contain points within plot area
+    svg.append('defs').append('clipPath')
+        .attr('id', 'plot-clip')
+        .append('rect')
+        .attr('width', plotWidth)
+        .attr('height', plotHeight);
+
+    const g = svg.append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+
+    // Container for pannable content
+    const plotArea = g.append('g')
+        .attr('clip-path', 'url(#plot-clip)');
+
+    const content = plotArea.append('g');
+
+    // Viewport pan
+    let pan = {x: 0, y: 0};
+    svg.call(d3.drag()
+        .on('start', () => svg.style('cursor', 'grabbing'))
+        .on('drag', (event) => {
+            pan.x += event.dx;
+            pan.y += event.dy;
+            content.attr('transform', `translate(${pan.x},${pan.y})`);
+        })
+        .on('end', () => svg.style('cursor', 'grab')));
+
+    // Tooltip
+    const tooltip = d3.select('body').append('div')
+        .attr('class', 'spectrum-tooltip')
+        .style('position', 'absolute')
+        .style('visibility', 'hidden')
+        .style('background', 'var(--pico-card-background-color)')
+        .style('border', '1px solid var(--pico-muted-border-color)')
+        .style('border-radius', '4px')
+        .style('padding', '4px 8px')
+        .style('font-size', '12px')
+        .style('pointer-events', 'none')
+        .style('z-index', '1000');
+
+    const style = getComputedStyle(document.documentElement);
+    const axisColor = style.getPropertyValue('--pico-muted-color').trim() || '#666';
+    const borderColor = style.getPropertyValue('--pico-muted-border-color').trim() || '#ddd';
+
+    // X axis
+    const xAxis = g.append('g')
+        .attr('transform', `translate(0,${plotHeight})`)
+        .call(d3.axisBottom(xScale).ticks(6));
+    xAxis.selectAll('text').attr('fill', axisColor).attr('stroke', 'none');
+    xAxis.selectAll('line, path').attr('stroke', borderColor);
+
+    // Y axis
+    const yAxis = g.append('g')
+        .call(d3.axisLeft(yScale).ticks(6));
+    yAxis.selectAll('text').attr('fill', axisColor).attr('stroke', 'none');
+    yAxis.selectAll('line, path').attr('stroke', borderColor);
+
+    // Axis labels
+    g.append('text')
+        .attr('x', plotWidth / 2)
+        .attr('y', plotHeight + 32)
+        .attr('text-anchor', 'middle')
+        .attr('fill', axisColor)
+        .attr('font-size', '11px')
+        .text('Re(λ)');
+
+    g.append('text')
+        .attr('transform', 'rotate(-90)')
+        .attr('x', -plotHeight / 2)
+        .attr('y', -32)
+        .attr('text-anchor', 'middle')
+        .attr('fill', axisColor)
+        .attr('font-size', '11px')
+        .text('Im(λ)');
+
+    // Zero lines (in content so they pan)
+    if (xScale.domain()[0] < 0 && xScale.domain()[1] > 0) {
+        content.append('line')
+            .attr('x1', xScale(0))
+            .attr('x2', xScale(0))
+            .attr('y1', 0)
+            .attr('y2', plotHeight)
+            .attr('stroke', axisColor)
+            .attr('stroke-opacity', 0.3)
+            .attr('stroke-dasharray', '4,4');
+    }
+    if (yScale.domain()[0] < 0 && yScale.domain()[1] > 0) {
+        content.append('line')
+            .attr('x1', 0)
+            .attr('x2', plotWidth)
+            .attr('y1', yScale(0))
+            .attr('y2', yScale(0))
+            .attr('stroke', axisColor)
+            .attr('stroke-opacity', 0.3)
+            .attr('stroke-dasharray', '4,4');
+    }
+
+    const colors = {
+        adj: style.getPropertyValue('--spectrum-adj').trim(),
+        lap: style.getPropertyValue('--spectrum-lap').trim(),
+        nb: style.getPropertyValue('--spectrum-nb').trim(),
+        nbl: style.getPropertyValue('--spectrum-nbl').trim()
+    };
+
+    const labels = {adj: 'Adj', lap: 'Lap', nb: 'NB', nbl: 'NBL'};
+
+    // Draw unit circle (in content so it pans)
+    const circleRadius = Math.abs(xScale(1) - xScale(0));
+    content.append('circle')
+        .attr('cx', xScale(0))
+        .attr('cy', yScale(0))
+        .attr('r', circleRadius)
+        .attr('fill', 'none')
+        .attr('stroke', axisColor)
+        .attr('stroke-opacity', 0.2)
+        .attr('stroke-dasharray', '4,4');
+
+    // Format eigenvalue for tooltip
+    function formatEig(d) {
+        const re = d.re.toFixed(4);
+        const im = d.im.toFixed(4);
+        if (Math.abs(d.im) < 1e-10) return re;
+        const sign = d.im >= 0 ? '+' : '';
+        return `${re}${sign}${im}i`;
+    }
+
+    // Draw points with tooltips
+    ['adj', 'lap', 'nb', 'nbl'].forEach(key => {
+        content.append('g')
+            .attr('class', `spectrum-points spectrum-${key}`)
+            .selectAll('circle')
+            .data(plotData[key])
+            .join('circle')
+            .attr('cx', d => xScale(d.re))
+            .attr('cy', d => yScale(d.im))
+            .attr('r', 4)
+            .attr('fill', colors[key])
+            .attr('opacity', 0.7)
+            .style('cursor', 'pointer')
+            .on('mouseover', (event, d) => {
+                tooltip.style('visibility', 'visible')
+                    .html(`<strong>${labels[key]}:</strong> ${formatEig(d)}`);
+                d3.select(event.target).attr('r', 6).attr('opacity', 1);
+            })
+            .on('mousemove', (event) => {
+                tooltip.style('top', (event.pageY - 10) + 'px')
+                    .style('left', (event.pageX + 10) + 'px');
+            })
+            .on('mouseout', (event) => {
+                tooltip.style('visibility', 'hidden');
+                d3.select(event.target).attr('r', 4).attr('opacity', 0.7);
+            });
+    });
+
+    // Clean up tooltip when plot is re-rendered
+    return () => tooltip.remove();
+}
+
+function toggleSpectrum(key, visible) {
+    d3.selectAll(`.spectrum-${key}`)
+        .style('display', visible ? null : 'none');
+}
+
 function renderGraph() {
     const n = {{ graph.n }};
     const edges = {{ graph.edges | tojson }};
@@ -125,6 +363,85 @@ function renderGraph() {
 </script>
 <script src="https://d3js.org/d3.v7.min.js" onload="renderGraph()"></script>
 
+<h3>Spectra</h3>
+<div class="spectrum-plot-section">
+    <div id="spectrum-plot"></div>
+    <div class="spectrum-controls">
+        <label class="spectrum-toggle">
+            <input type="checkbox" checked onchange="toggleSpectrum('adj', this.checked)">
+            <span class="spectrum-dot" style="background: var(--spectrum-adj);"></span>
+            Adjacency
+        </label>
+        <label class="spectrum-toggle">
+            <input type="checkbox" checked onchange="toggleSpectrum('lap', this.checked)">
+            <span class="spectrum-dot" style="background: var(--spectrum-lap);"></span>
+            Laplacian
+        </label>
+        <label class="spectrum-toggle">
+            <input type="checkbox" checked onchange="toggleSpectrum('nb', this.checked)">
+            <span class="spectrum-dot" style="background: var(--spectrum-nb);"></span>
+            Non-backtracking
+        </label>
+        <label class="spectrum-toggle">
+            <input type="checkbox" checked onchange="toggleSpectrum('nbl', this.checked)">
+            <span class="spectrum-dot" style="background: var(--spectrum-nbl);"></span>
+            NB-Laplacian
+        </label>
+    </div>
+</div>
+<script>
+if (typeof d3 !== 'undefined') {
+    renderSpectrumPlot();
+} else {
+    document.addEventListener('DOMContentLoaded', () => {
+        const checkD3 = setInterval(() => {
+            if (typeof d3 !== 'undefined') {
+                clearInterval(checkD3);
+                renderSpectrumPlot();
+            }
+        }, 50);
+    });
+}
+</script>
+
+<h4>Eigenvalue Data</h4>
+<details class="spectrum-box">
+    <summary>Adjacency eigenvalues</summary>
+    <div class="spectrum-content">
+        <button class="copy-btn" onclick="copySpectrum(this)" aria-label="Copy to clipboard">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
+        <pre><code>[{% for e in graph.spectra.adj_eigenvalues %}{{ "%.6f"|format(e) }}{% if not loop.last %}, {% endif %}{% endfor %}]</code></pre>
+    </div>
+</details>
+<details class="spectrum-box">
+    <summary>Laplacian eigenvalues</summary>
+    <div class="spectrum-content">
+        <button class="copy-btn" onclick="copySpectrum(this)" aria-label="Copy to clipboard">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
+        <pre><code>[{% for e in graph.spectra.lap_eigenvalues %}{{ "%.6f"|format(e) }}{% if not loop.last %}, {% endif %}{% endfor %}]</code></pre>
+    </div>
+</details>
+<details class="spectrum-box">
+    <summary>Non-backtracking eigenvalues</summary>
+    <div class="spectrum-content">
+        <button class="copy-btn" onclick="copySpectrum(this)" aria-label="Copy to clipboard">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
+        <pre><code>[{% for i in range(graph.spectra.nb_eigenvalues_re|length) %}{{ "%.6f"|format(graph.spectra.nb_eigenvalues_re[i]) }}{% if graph.spectra.nb_eigenvalues_im[i] >= 0 %}+{% endif %}{{ "%.6f"|format(graph.spectra.nb_eigenvalues_im[i]) }}j{% if not loop.last %}, {% endif %}{% endfor %}]</code></pre>
+    </div>
+</details>
+<details class="spectrum-box">
+    <summary>NB-Laplacian eigenvalues</summary>
+    <div class="spectrum-content">
+        <button class="copy-btn" onclick="copySpectrum(this)" aria-label="Copy to clipboard">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
+        <pre><code>[{% for i in range(graph.spectra.nbl_eigenvalues_re|length) %}{{ "%.6f"|format(graph.spectra.nbl_eigenvalues_re[i]) }}{% if graph.spectra.nbl_eigenvalues_im[i] >= 0 %}+{% endif %}{{ "%.6f"|format(graph.spectra.nbl_eigenvalues_im[i]) }}j{% if not loop.last %}, {% endif %}{% endfor %}]</code></pre>
+    </div>
+</details>
+
 <h3>Cospectral Mates</h3>
 {% if graph.cospectral_mates.adj or graph.cospectral_mates.lap or graph.cospectral_mates.nb or graph.cospectral_mates.nbl %}
 <p>Graphs that share the same spectrum for a given matrix type.</p>
@@ -194,44 +511,6 @@ function renderGraph() {
 {% else %}
 <p><em>No cospectral mates for any matrix type.</em></p>
 {% endif %}
-
-<h3>Spectra</h3>
-<details class="spectrum-box">
-    <summary>Adjacency eigenvalues ({{ graph.spectra.adj_eigenvalues|length }})</summary>
-    <div class="spectrum-content">
-        <button class="copy-btn" onclick="copySpectrum(this)" aria-label="Copy to clipboard">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-        </button>
-        <pre><code>[{% for e in graph.spectra.adj_eigenvalues %}{{ "%.6f"|format(e) }}{% if not loop.last %}, {% endif %}{% endfor %}]</code></pre>
-    </div>
-</details>
-<details class="spectrum-box">
-    <summary>Laplacian eigenvalues ({{ graph.spectra.lap_eigenvalues|length }})</summary>
-    <div class="spectrum-content">
-        <button class="copy-btn" onclick="copySpectrum(this)" aria-label="Copy to clipboard">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-        </button>
-        <pre><code>[{% for e in graph.spectra.lap_eigenvalues %}{{ "%.6f"|format(e) }}{% if not loop.last %}, {% endif %}{% endfor %}]</code></pre>
-    </div>
-</details>
-<details class="spectrum-box">
-    <summary>Non-backtracking eigenvalues ({{ graph.spectra.nb_eigenvalues_re|length }})</summary>
-    <div class="spectrum-content">
-        <button class="copy-btn" onclick="copySpectrum(this)" aria-label="Copy to clipboard">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-        </button>
-        <pre><code>[{% for i in range(graph.spectra.nb_eigenvalues_re|length) %}{{ "%.6f"|format(graph.spectra.nb_eigenvalues_re[i]) }}{% if graph.spectra.nb_eigenvalues_im[i] >= 0 %}+{% endif %}{{ "%.6f"|format(graph.spectra.nb_eigenvalues_im[i]) }}j{% if not loop.last %}, {% endif %}{% endfor %}]</code></pre>
-    </div>
-</details>
-<details class="spectrum-box">
-    <summary>NB-Laplacian eigenvalues ({{ graph.spectra.nbl_eigenvalues_re|length }})</summary>
-    <div class="spectrum-content">
-        <button class="copy-btn" onclick="copySpectrum(this)" aria-label="Copy to clipboard">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-        </button>
-        <pre><code>[{% for i in range(graph.spectra.nbl_eigenvalues_re|length) %}{{ "%.6f"|format(graph.spectra.nbl_eigenvalues_re[i]) }}{% if graph.spectra.nbl_eigenvalues_im[i] >= 0 %}+{% endif %}{{ "%.6f"|format(graph.spectra.nbl_eigenvalues_im[i]) }}j{% if not loop.last %}, {% endif %}{% endfor %}]</code></pre>
-    </div>
-</details>
 
 <h3>Code</h3>
 <div class="code-block">

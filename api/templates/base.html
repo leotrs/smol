@@ -63,6 +63,11 @@
             --graph-node-color: #0D9488;
             --graph-edge-color: #E5E2DE;
             --graph-viz-bg: #FFFFFF;
+
+            --spectrum-adj: #0D9488;
+            --spectrum-lap: #E85A4F;
+            --spectrum-nb: #7C3AED;
+            --spectrum-nbl: #3B82F6;
         }
 
         [data-theme="dark"] {
@@ -87,6 +92,11 @@
             --graph-node-color: #14B8A6;
             --graph-edge-color: #475569;
             --graph-viz-bg: #1E293B;
+
+            --spectrum-adj: #14B8A6;
+            --spectrum-lap: #F87171;
+            --spectrum-nb: #A78BFA;
+            --spectrum-nbl: #60A5FA;
         }
 
         /* Tighter overall spacing */
@@ -559,6 +569,67 @@
             font-size: 0.85rem;
         }
 
+        /* Spectrum plot */
+        .spectrum-plot-section {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .spectrum-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: var(--pico-card-background-color);
+            border: 1px solid var(--pico-muted-border-color);
+            border-radius: var(--pico-border-radius);
+            align-self: flex-start;
+        }
+
+        .spectrum-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.8rem;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+
+        .spectrum-toggle input {
+            margin: 0;
+            width: 0.9rem;
+            height: 0.9rem;
+        }
+
+        .spectrum-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        #spectrum-plot {
+            flex: 1;
+            max-width: 550px;
+            height: 350px;
+            background: var(--graph-viz-bg);
+            border: 1px solid var(--pico-muted-border-color);
+            border-radius: var(--pico-border-radius);
+        }
+
+        #spectrum-plot svg text {
+            font-family: var(--pico-font-family);
+        }
+
+        #spectrum-plot svg .tick text {
+            font-size: 11px;
+        }
+
+        #spectrum-plot svg .domain,
+        #spectrum-plot svg .tick line {
+            stroke: var(--pico-muted-border-color);
+        }
 
         /* Theme toggle button */
         .theme-toggle {
