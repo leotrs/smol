@@ -111,17 +111,6 @@ function renderGraph() {
                 d.fy = null;
             }));
 
-    const label = g.append("g")
-        .selectAll("text")
-        .data(nodes)
-        .join("text")
-        .text(d => d.id)
-        .attr("font-size", "10px")
-        .attr("text-anchor", "middle")
-        .attr("dy", "0.35em")
-        .attr("fill", "white")
-        .style("pointer-events", "none");
-
     simulation.on("tick", () => {
         link
             .attr("x1", d => d.source.x)
@@ -131,9 +120,6 @@ function renderGraph() {
         node
             .attr("cx", d => d.x)
             .attr("cy", d => d.y);
-        label
-            .attr("x", d => d.x)
-            .attr("y", d => d.y);
     });
 }
 </script>
@@ -210,20 +196,75 @@ function renderGraph() {
 {% endif %}
 
 <h3>Spectra</h3>
-<details>
+<details class="spectrum-box">
     <summary>Adjacency eigenvalues ({{ graph.spectra.adj_eigenvalues|length }})</summary>
-    <pre><code>{% for e in graph.spectra.adj_eigenvalues %}{{ "%.6f"|format(e) }}{% if not loop.last %}, {% endif %}{% endfor %}</code></pre>
+    <div class="spectrum-content">
+        <button class="copy-btn" onclick="copySpectrum(this)" aria-label="Copy to clipboard">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
+        <pre><code>[{% for e in graph.spectra.adj_eigenvalues %}{{ "%.6f"|format(e) }}{% if not loop.last %}, {% endif %}{% endfor %}]</code></pre>
+    </div>
 </details>
-<details>
+<details class="spectrum-box">
     <summary>Laplacian eigenvalues ({{ graph.spectra.lap_eigenvalues|length }})</summary>
-    <pre><code>{% for e in graph.spectra.lap_eigenvalues %}{{ "%.6f"|format(e) }}{% if not loop.last %}, {% endif %}{% endfor %}</code></pre>
+    <div class="spectrum-content">
+        <button class="copy-btn" onclick="copySpectrum(this)" aria-label="Copy to clipboard">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
+        <pre><code>[{% for e in graph.spectra.lap_eigenvalues %}{{ "%.6f"|format(e) }}{% if not loop.last %}, {% endif %}{% endfor %}]</code></pre>
+    </div>
 </details>
-<details>
+<details class="spectrum-box">
     <summary>Non-backtracking eigenvalues ({{ graph.spectra.nb_eigenvalues_re|length }})</summary>
-    <pre><code>{% for i in range(graph.spectra.nb_eigenvalues_re|length) %}{{ "%.6f"|format(graph.spectra.nb_eigenvalues_re[i]) }}{% if graph.spectra.nb_eigenvalues_im[i] >= 0 %}+{% endif %}{{ "%.6f"|format(graph.spectra.nb_eigenvalues_im[i]) }}j{% if not loop.last %}, {% endif %}{% endfor %}</code></pre>
+    <div class="spectrum-content">
+        <button class="copy-btn" onclick="copySpectrum(this)" aria-label="Copy to clipboard">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
+        <pre><code>[{% for i in range(graph.spectra.nb_eigenvalues_re|length) %}{{ "%.6f"|format(graph.spectra.nb_eigenvalues_re[i]) }}{% if graph.spectra.nb_eigenvalues_im[i] >= 0 %}+{% endif %}{{ "%.6f"|format(graph.spectra.nb_eigenvalues_im[i]) }}j{% if not loop.last %}, {% endif %}{% endfor %}]</code></pre>
+    </div>
 </details>
-<details>
+<details class="spectrum-box">
     <summary>NB-Laplacian eigenvalues ({{ graph.spectra.nbl_eigenvalues_re|length }})</summary>
-    <pre><code>{% for i in range(graph.spectra.nbl_eigenvalues_re|length) %}{{ "%.6f"|format(graph.spectra.nbl_eigenvalues_re[i]) }}{% if graph.spectra.nbl_eigenvalues_im[i] >= 0 %}+{% endif %}{{ "%.6f"|format(graph.spectra.nbl_eigenvalues_im[i]) }}j{% if not loop.last %}, {% endif %}{% endfor %}</code></pre>
+    <div class="spectrum-content">
+        <button class="copy-btn" onclick="copySpectrum(this)" aria-label="Copy to clipboard">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
+        <pre><code>[{% for i in range(graph.spectra.nbl_eigenvalues_re|length) %}{{ "%.6f"|format(graph.spectra.nbl_eigenvalues_re[i]) }}{% if graph.spectra.nbl_eigenvalues_im[i] >= 0 %}+{% endif %}{{ "%.6f"|format(graph.spectra.nbl_eigenvalues_im[i]) }}j{% if not loop.last %}, {% endif %}{% endfor %}]</code></pre>
+    </div>
 </details>
+
+<h3>Code</h3>
+<div class="code-block">
+    <button class="copy-btn" onclick="copySpectrum(this)" aria-label="Copy to clipboard">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+    </button>
+<pre><code class="language-python">import networkx as nx
+
+G = nx.from_graph6_bytes(b"{{ graph.graph6 }}")
+print(G.number_of_nodes(), G.number_of_edges())  # {{ graph.n }} {{ graph.m }}</code></pre>
+</div>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css" id="prism-light">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-okaidia.min.css" id="prism-dark" disabled>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
+<script>
+function updatePrismTheme() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    document.getElementById('prism-light').disabled = isDark;
+    document.getElementById('prism-dark').disabled = !isDark;
+}
+updatePrismTheme();
+const observer = new MutationObserver(updatePrismTheme);
+observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+</script>
+
+<script>
+function copySpectrum(btn) {
+    const code = btn.parentElement.querySelector('code').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+        btn.classList.add('copied');
+        setTimeout(() => btn.classList.remove('copied'), 1500);
+    });
+}
+</script>
 {% endblock %}

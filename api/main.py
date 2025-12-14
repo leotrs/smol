@@ -270,8 +270,18 @@ async def compare_graphs(
     result = CompareResult(graphs=full_graphs, spectral_comparison=comparison)
 
     if wants_html(request):
+        prop_diffs = {
+            "n": len(set(g.n for g in full_graphs)) > 1,
+            "m": len(set(g.m for g in full_graphs)) > 1,
+            "is_bipartite": len(set(g.properties.is_bipartite for g in full_graphs)) > 1,
+            "is_planar": len(set(g.properties.is_planar for g in full_graphs)) > 1,
+            "is_regular": len(set(g.properties.is_regular for g in full_graphs)) > 1,
+            "diameter": len(set(g.properties.diameter for g in full_graphs)) > 1,
+            "girth": len(set(g.properties.girth for g in full_graphs)) > 1,
+            "triangle_count": len(set(g.properties.triangle_count for g in full_graphs)) > 1,
+        }
         return templates.TemplateResponse(
-            request, "compare.html", {"result": result.model_dump()}
+            request, "compare.html", {"result": result.model_dump(), "prop_diffs": prop_diffs}
         )
     return result
 

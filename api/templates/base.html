@@ -91,7 +91,7 @@
 
         /* Tighter overall spacing */
         article {
-            padding: 1rem;
+            padding: 1.25rem;
             margin-bottom: 1rem;
         }
 
@@ -114,6 +114,15 @@
 
         hgroup {
             margin-bottom: 1.5rem;
+        }
+
+        hgroup.hero {
+            text-align: center;
+            padding: 2rem 0 2.5rem;
+        }
+
+        hgroup.hero h1 {
+            margin-bottom: 0.5rem;
         }
 
         /* Compact buttons - not full width */
@@ -185,6 +194,7 @@
             border-radius: 3px;
             font-size: 0.75rem;
             font-weight: 500;
+            vertical-align: middle;
         }
 
         .badge-same {
@@ -195,6 +205,15 @@
         .badge-different {
             background: #FDE8E8;
             color: #9B1C1C;
+        }
+
+        article p:last-child {
+            margin-bottom: 0;
+        }
+
+        article header + p,
+        article header + div {
+            padding-top: 0.25rem;
         }
 
         /* Code/graph6 strings */
@@ -211,6 +230,26 @@
 
         th, td {
             padding: 0.5rem 0.75rem;
+        }
+
+        tr.row-diff td:first-child {
+            box-shadow: inset 3px 0 0 var(--pico-primary);
+        }
+
+        tr.row-diff td {
+            background: rgba(13, 148, 136, 0.06) !important;
+            font-weight: 600;
+        }
+
+        [data-theme="dark"] tr.row-diff td {
+            background: rgba(20, 184, 166, 0.1) !important;
+        }
+
+        /* Outline button hover */
+        [role="button"].outline:hover {
+            background: var(--pico-primary);
+            border-color: var(--pico-primary);
+            color: white;
         }
 
         /* Cards for graph display */
@@ -368,26 +407,27 @@
             padding: 1rem 0;
             border-top: 1px solid var(--pico-muted-border-color);
             color: var(--pico-muted-color);
-            font-size: 0.8rem;
-            text-align: center;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.75rem;
         }
 
         .footer-actions {
             display: flex;
-            justify-content: center;
-            gap: 0.75rem;
-            margin-bottom: 0.75rem;
+            gap: 0.5rem;
         }
 
         .footer-actions a {
-            display: inline-block;
-            padding: 0.4rem 1rem;
+            padding: 0.3rem 0.75rem;
             background: var(--pico-card-background-color);
             border: 1px solid var(--pico-muted-border-color);
             border-radius: 2rem;
             color: var(--pico-muted-color);
             text-decoration: none;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
         }
 
         .footer-actions a:hover {
@@ -395,8 +435,68 @@
             color: var(--pico-primary);
         }
 
-        .footer-tagline {
-            font-size: 0.75rem;
+        .footer-meta {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .footer-credit a {
+            color: var(--pico-muted-color);
+        }
+
+        .footer-credit a:hover {
+            color: var(--pico-primary);
+        }
+
+        /* Examples section */
+        .examples {
+            margin-top: 3rem;
+            text-align: center;
+        }
+
+        .examples h3 {
+            color: var(--pico-muted-color);
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+        }
+
+        .examples-grid {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .example-card {
+            text-decoration: none;
+            color: inherit;
+            transition: transform 0.15s ease;
+        }
+
+        .example-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .example-viz {
+            width: 100px;
+            height: 100px;
+            background: var(--graph-viz-bg);
+            border: 1px solid var(--pico-muted-border-color);
+            border-radius: var(--pico-border-radius);
+        }
+
+        .example-label {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--pico-muted-color);
+        }
+
+        .example-card:hover .example-label {
+            color: var(--pico-primary);
         }
 
         /* Definition lists */
@@ -412,6 +512,53 @@
         summary {
             font-size: 0.9rem;
         }
+
+        /* Spectrum boxes with copy button */
+        .spectrum-content {
+            position: relative;
+        }
+
+        .spectrum-content pre {
+            margin: 0;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: var(--pico-card-background-color);
+            border: 1px solid var(--pico-muted-border-color);
+            border-radius: 4px;
+            padding: 0.3rem !important;
+            cursor: pointer;
+            color: var(--pico-muted-color);
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .copy-btn:hover {
+            color: var(--pico-primary);
+            border-color: var(--pico-primary);
+            background: var(--pico-card-background-color);
+        }
+
+        .copy-btn.copied {
+            color: #046C4E;
+            border-color: #046C4E;
+        }
+
+        .code-block {
+            position: relative;
+        }
+
+        .code-block pre[class*="language-"] {
+            border-radius: var(--pico-border-radius);
+            margin: 0;
+            font-size: 0.85rem;
+        }
+
 
         /* Theme toggle button */
         .theme-toggle {
@@ -592,7 +739,10 @@
             <a href="/random">Random graph</a>
             <a href="/random/cospectral">Random cospectral family</a>
         </div>
-        <div class="footer-tagline">SMOL: Spectra and Matrices Of Little graphs</div>
+        <div class="footer-meta">
+            <span class="footer-tagline">SMOL: Spectra and Matrices Of Little graphs</span>
+            <span class="footer-credit">made with ♥ by <a href="https://leotrs.com">leotrs</a></span>
+        </div>
     </footer>
 
     <script>

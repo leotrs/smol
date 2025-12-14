@@ -125,35 +125,35 @@ function renderGraphs() {
         </tr>
     </thead>
     <tbody>
-        <tr>
+        <tr{% if prop_diffs.n %} class="row-diff"{% endif %}>
             <td>Vertices</td>
             {% for g in result.graphs %}<td>{{ g.n }}</td>{% endfor %}
         </tr>
-        <tr>
+        <tr{% if prop_diffs.m %} class="row-diff"{% endif %}>
             <td>Edges</td>
             {% for g in result.graphs %}<td>{{ g.m }}</td>{% endfor %}
         </tr>
-        <tr>
+        <tr{% if prop_diffs.is_bipartite %} class="row-diff"{% endif %}>
             <td>Bipartite</td>
             {% for g in result.graphs %}<td>{{ "Yes" if g.properties.is_bipartite else "No" }}</td>{% endfor %}
         </tr>
-        <tr>
+        <tr{% if prop_diffs.is_planar %} class="row-diff"{% endif %}>
             <td>Planar</td>
             {% for g in result.graphs %}<td>{{ "Yes" if g.properties.is_planar else "No" }}</td>{% endfor %}
         </tr>
-        <tr>
+        <tr{% if prop_diffs.is_regular %} class="row-diff"{% endif %}>
             <td>Regular</td>
             {% for g in result.graphs %}<td>{{ "Yes" if g.properties.is_regular else "No" }}</td>{% endfor %}
         </tr>
-        <tr>
+        <tr{% if prop_diffs.diameter %} class="row-diff"{% endif %}>
             <td>Diameter</td>
             {% for g in result.graphs %}<td>{{ g.properties.diameter if g.properties.diameter else "-" }}</td>{% endfor %}
         </tr>
-        <tr>
+        <tr{% if prop_diffs.girth %} class="row-diff"{% endif %}>
             <td>Girth</td>
             {% for g in result.graphs %}<td>{{ g.properties.girth if g.properties.girth else "-" }}</td>{% endfor %}
         </tr>
-        <tr>
+        <tr{% if prop_diffs.triangle_count %} class="row-diff"{% endif %}>
             <td>Triangles</td>
             {% for g in result.graphs %}<td>{{ g.properties.triangle_count }}</td>{% endfor %}
         </tr>

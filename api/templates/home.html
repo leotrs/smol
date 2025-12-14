@@ -3,7 +3,7 @@
 {% block title %}SMOL - Spectra and Matrices Of Little graphs{% endblock %}
 
 {% block content %}
-<hgroup>
+<hgroup class="hero">
     <h1>SMOL Graph DB</h1>
     <p>Spectra and matrices of all simple connected graphs up to 10 vertices.</p>
 </hgroup>
@@ -69,4 +69,85 @@
 </div>
 
 <section id="results"></section>
+
+<section class="examples">
+    <h3>Example Graphs</h3>
+    <div class="examples-grid">
+        <a href="/graph/D~{" class="example-card">
+            <div id="ex-k5" class="example-viz"></div>
+            <div class="example-label">K₅ complete</div>
+        </a>
+        <a href="/graph/EEh_" class="example-card">
+            <div id="ex-c6" class="example-viz"></div>
+            <div class="example-label">C₆ cycle</div>
+        </a>
+        <a href="/graph/E%3FBw" class="example-card">
+            <div id="ex-s6" class="example-viz"></div>
+            <div class="example-label">S₆ star</div>
+        </a>
+        <a href="/graph/G%3FzTb_" class="example-card">
+            <div id="ex-cube" class="example-viz"></div>
+            <div class="example-label">Q₃ cube</div>
+        </a>
+    </div>
+</section>
+
+<script>
+const exampleGraphs = {
+    'ex-k5': {n: 5, edges: [[0,1],[0,2],[0,3],[0,4],[1,2],[1,3],[1,4],[2,3],[2,4],[3,4]]},
+    'ex-c6': {n: 6, edges: [[0,3],[0,4],[1,3],[1,5],[2,4],[2,5]]},
+    'ex-s6': {n: 6, edges: [[0,5],[1,5],[2,5],[3,5],[4,5]]},
+    'ex-cube': {n: 8, edges: [[0,4],[0,5],[0,6],[1,4],[1,5],[1,7],[2,4],[2,6],[2,7],[3,5],[3,6],[3,7]]}
+};
+
+function renderExamples() {
+    const style = getComputedStyle(document.documentElement);
+    const nodeColor = style.getPropertyValue('--graph-node-color').trim();
+    const edgeColor = style.getPropertyValue('--graph-edge-color').trim();
+
+    Object.entries(exampleGraphs).forEach(([id, g]) => {
+        const width = 100, height = 100;
+        const nodes = Array.from({length: g.n}, (_, i) => ({id: i}));
+        const links = g.edges.map(([s, t]) => ({source: s, target: t}));
+
+        const svg = d3.select("#" + id)
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+        const container = svg.append("g");
+
+        const simulation = d3.forceSimulation(nodes)
+            .force("link", d3.forceLink(links).id(d => d.id).distance(25))
+            .force("charge", d3.forceManyBody().strength(-50))
+            .force("center", d3.forceCenter(width / 2, height / 2));
+
+        const link = container.append("g")
+            .selectAll("line")
+            .data(links)
+            .join("line")
+            .attr("stroke", edgeColor)
+            .attr("stroke-width", 1.5);
+
+        const node = container.append("g")
+            .selectAll("circle")
+            .data(nodes)
+            .join("circle")
+            .attr("r", 4)
+            .attr("fill", nodeColor);
+
+        simulation.on("tick", () => {
+            link
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+            node
+                .attr("cx", d => d.x)
+                .attr("cy", d => d.y);
+        });
+    });
+}
+</script>
+<script src="https://d3js.org/d3.v7.min.js" onload="renderExamples()"></script>
 {% endblock %}

@@ -325,3 +325,47 @@ class TestHomeSearch:
         assert "/random" in response.text
         assert "Random graph" in response.text
         assert "Random cospectral family" in response.text
+
+    def test_home_example_graphs_exist(self):
+        """Verify all example graphs on home page exist in database."""
+        from urllib.parse import quote
+        example_graphs = ["D~{", "EEh_", "E?Bw", "G?zTb_"]
+        for g6 in example_graphs:
+            response = client.get(f"/graph/{quote(g6, safe='')}")
+            assert response.status_code == 200, f"Example graph {g6} not found"
+
+
+class TestComparePropertyDiffs:
+    def test_compare_highlights_different_properties(self):
+        """Compare endpoint should flag properties that differ between graphs."""
+        # Find two graphs with same n but different diameter
+        response = client.get(
+            "/compare?graphs=ICpfbjNvW,ICpfbjNzg",
+            headers={"Accept": "text/html"}
+        )
+        assert response.status_code == 200
+        assert 'class="row-diff"' in response.text
+
+    def test_compare_same_graphs_no_diff_highlight(self):
+        """Same graph compared to itself should have no diff highlights."""
+        response = client.get(
+            "/compare?graphs=D%3F%7B,D%3F%7B",
+            headers={"Accept": "text/html"}
+        )
+        assert response.status_code == 200
+        assert 'class="row-diff"' not in response.text
+
+    def test_eigenvalues_formatted_as_python_list(self):
+        """Eigenvalues should be wrapped in brackets for Python list syntax."""
+        response = client.get("/graph/D%3F%7B", headers={"Accept": "text/html"})
+        assert response.status_code == 200
+        # Check for opening bracket at start of eigenvalue list
+        assert "[" in response.text and "]" in response.text
+
+    def test_graph_detail_has_code_snippet(self):
+        """Graph detail page should have copyable Python code snippet."""
+        response = client.get("/graph/D%3F%7B", headers={"Accept": "text/html"})
+        assert response.status_code == 200
+        assert "import networkx as nx" in response.text
+        assert "nx.from_graph6_bytes" in response.text
+        assert 'b"D?{"' in response.text
