@@ -276,7 +276,9 @@ function renderSpectrumPlot() {
     return () => tooltip.remove();
 }
 
-function toggleSpectrum(key, visible) {
+function toggleSpectrumPill(btn, key) {
+    btn.classList.toggle('active');
+    const visible = btn.classList.contains('active');
     d3.selectAll(`.spectrum-${key}`)
         .style('display', visible ? null : 'none');
 }
@@ -367,26 +369,22 @@ function renderGraph() {
 <div class="spectrum-plot-section">
     <div id="spectrum-plot"></div>
     <div class="spectrum-controls">
-        <label class="spectrum-toggle">
-            <input type="checkbox" checked onchange="toggleSpectrum('adj', this.checked)">
+        <button class="spectrum-pill active" data-spectrum="adj" onclick="toggleSpectrumPill(this, 'adj')">
             <span class="spectrum-dot" style="background: var(--spectrum-adj);"></span>
             Adjacency
-        </label>
-        <label class="spectrum-toggle">
-            <input type="checkbox" checked onchange="toggleSpectrum('lap', this.checked)">
+        </button>
+        <button class="spectrum-pill active" data-spectrum="lap" onclick="toggleSpectrumPill(this, 'lap')">
             <span class="spectrum-dot" style="background: var(--spectrum-lap);"></span>
             Laplacian
-        </label>
-        <label class="spectrum-toggle">
-            <input type="checkbox" checked onchange="toggleSpectrum('nb', this.checked)">
+        </button>
+        <button class="spectrum-pill active" data-spectrum="nb" onclick="toggleSpectrumPill(this, 'nb')">
             <span class="spectrum-dot" style="background: var(--spectrum-nb);"></span>
             Non-backtracking
-        </label>
-        <label class="spectrum-toggle">
-            <input type="checkbox" checked onchange="toggleSpectrum('nbl', this.checked)">
+        </button>
+        <button class="spectrum-pill active" data-spectrum="nbl" onclick="toggleSpectrumPill(this, 'nbl')">
             <span class="spectrum-dot" style="background: var(--spectrum-nbl);"></span>
             NB-Laplacian
-        </label>
+        </button>
     </div>
 </div>
 <script>
