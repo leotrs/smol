@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Similar to {{ source_graph6 }} - SMOL{% endblock %}
+
+{% block content %}
+<hgroup>
+    <h1>Spectrally Similar Graphs</h1>
+    <p>Graphs with similar {{ matrix }} spectrum to <a href="/graph/{{ source_graph6 | urlencode }}"><code>{{ source_graph6 }}</code></a></p>
+</hgroup>
+
+<div class="matrix-selector">
+    <span>Matrix:</span>
+    <a href="/similar/{{ source_graph6 | urlencode }}?matrix=adj" class="{% if matrix == 'adj' %}active{% endif %}">Adjacency</a>
+    <a href="/similar/{{ source_graph6 | urlencode }}?matrix=lap" class="{% if matrix == 'lap' %}active{% endif %}">Laplacian</a>
+    <a href="/similar/{{ source_graph6 | urlencode }}?matrix=nb" class="{% if matrix == 'nb' %}active{% endif %}">NB</a>
+    <a href="/similar/{{ source_graph6 | urlencode }}?matrix=nbl" class="{% if matrix == 'nbl' %}active{% endif %}">NBL</a>
+</div>
+
+{% if results %}
+<table>
+    <thead>
+        <tr>
+            <th>Graph</th>
+            <th>n</th>
+            <th>m</th>
+            <th>Distance</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in results %}
+        <tr{% if item.distance < 0.000001 %} class="cospectral-mate"{% endif %}>
+            <td>
+                <a href="/graph/{{ item.graph.graph6 | urlencode }}"><code>{{ item.graph.graph6 }}</code></a>
+                {% if item.distance < 0.000001 %}<span class="mate-badge">mate</span>{% endif %}
+            </td>
+            <td>{{ item.graph.n }}</td>
+            <td>{{ item.graph.m }}</td>
+            <td>{{ "%.4f"|format(item.distance) }}</td>
+            <td>
+                <a href="/compare?graphs={{ source_graph6 | urlencode }},{{ item.graph.graph6 | urlencode }}" role="button" class="outline">Compare</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p><em>No similar graphs found.</em></p>
+{% endif %}
+
+<style>
+    .matrix-selector {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        font-size: 0.9rem;
+    }
+
+    .matrix-selector span {
+        color: var(--pico-muted-color);
+    }
+
+    .matrix-selector a {
+        padding: 0.3rem 0.75rem;
+        background: var(--pico-card-background-color);
+        border: 1px solid var(--pico-muted-border-color);
+        border-radius: 2rem;
+        color: var(--pico-muted-color);
+        text-decoration: none;
+        font-size: 0.8rem;
+    }
+
+    .matrix-selector a:hover {
+        border-color: var(--pico-primary);
+        color: var(--pico-primary);
+    }
+
+    .matrix-selector a.active {
+        background: var(--pico-primary);
+        border-color: var(--pico-primary);
+        color: white;
+    }
+
+    tr.cospectral-mate td {
+        background: rgba(13, 148, 136, 0.08);
+    }
+
+    [data-theme="dark"] tr.cospectral-mate td {
+        background: rgba(20, 184, 166, 0.12);
+    }
+
+    .mate-badge {
+        display: inline-block;
+        margin-left: 0.5rem;
+        padding: 0.1rem 0.4rem;
+        background: var(--pico-primary);
+        color: white;
+        font-size: 0.65rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        border-radius: 3px;
+        vertical-align: middle;
+    }
+</style>
+{% endblock %}

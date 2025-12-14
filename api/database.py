@@ -218,6 +218,121 @@ def fetch_random_cospectral_class(matrix: str = "adj") -> list[str]:
         return []
 
 
+def fetch_similar_graphs(
+    graph6: str,
+    matrix: str = "adj",
+    limit: int = 10,
+) -> list[tuple[dict[str, Any], float]]:
+    """Find graphs with similar spectrum using L2 distance.
+
+    Returns list of (graph_row, distance) tuples sorted by distance.
+    Only searches graphs with same n (vertex count).
+    """
+    import math
+
+    # Get target graph
+    target = fetch_graph(graph6)
+    if not target:
+        return []
+
+    n = target["n"]
+
+    if matrix in ("adj", "lap"):
+        target_eigs = target[f"{matrix}_eigenvalues"]
+        target_hash = target[f"{matrix}_spectral_hash"]
+        eig_col = f"{matrix}_eigenvalues"
+        hash_col = f"{matrix}_spectral_hash"
+    else:
+        # For complex eigenvalues (nb, nbl), use magnitude
+        re_col = f"{matrix}_eigenvalues_re"
+        im_col = f"{matrix}_eigenvalues_im"
+        target_re = target[re_col]
+        target_im = target[im_col]
+        target_eigs = [math.sqrt(r**2 + i**2) for r, i in zip(target_re, target_im)]
+        target_eigs.sort()
+        target_hash = target[f"{matrix}_spectral_hash"]
+        eig_col = None  # handled separately
+        hash_col = f"{matrix}_spectral_hash"
+
+    with get_db() as conn:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        # First get cospectral mates (same hash) - these should always appear
+        # Then sample additional random graphs
+        if eig_col:
+            cur.execute(
+                f"""
+                (SELECT graph6, n, m,
+                       is_bipartite, is_planar, is_regular,
+                       diameter, girth, radius,
+                       min_degree, max_degree, triangle_count,
+                       {eig_col}
+                FROM graphs
+                WHERE n = %s AND {hash_col} = %s AND graph6 != %s
+                LIMIT 50)
+                UNION ALL
+                (SELECT graph6, n, m,
+                       is_bipartite, is_planar, is_regular,
+                       diameter, girth, radius,
+                       min_degree, max_degree, triangle_count,
+                       {eig_col}
+                FROM graphs
+                WHERE n = %s AND {hash_col} != %s AND graph6 != %s
+                ORDER BY random()
+                LIMIT 450)
+                """,
+                (n, target_hash, graph6, n, target_hash, graph6),
+            )
+        else:
+            # For complex eigenvalues
+            cur.execute(
+                f"""
+                (SELECT graph6, n, m,
+                       is_bipartite, is_planar, is_regular,
+                       diameter, girth, radius,
+                       min_degree, max_degree, triangle_count,
+                       {matrix}_eigenvalues_re, {matrix}_eigenvalues_im
+                FROM graphs
+                WHERE n = %s AND {hash_col} = %s AND graph6 != %s
+                LIMIT 50)
+                UNION ALL
+                (SELECT graph6, n, m,
+                       is_bipartite, is_planar, is_regular,
+                       diameter, girth, radius,
+                       min_degree, max_degree, triangle_count,
+                       {matrix}_eigenvalues_re, {matrix}_eigenvalues_im
+                FROM graphs
+                WHERE n = %s AND {hash_col} != %s AND graph6 != %s
+                ORDER BY random()
+                LIMIT 450)
+                """,
+                (n, target_hash, graph6, n, target_hash, graph6),
+            )
+
+        candidates = cur.fetchall()
+
+    # Compute L2 distances
+    results = []
+    for row in candidates:
+        if eig_col:
+            eigs = row[eig_col]
+        else:
+            re_vals = row[f"{matrix}_eigenvalues_re"]
+            im_vals = row[f"{matrix}_eigenvalues_im"]
+            eigs = sorted([math.sqrt(r**2 + i**2) for r, i in zip(re_vals, im_vals)])
+
+        if len(eigs) != len(target_eigs):
+            continue
+
+        # L2 distance
+        dist = math.sqrt(sum((a - b) ** 2 for a, b in zip(eigs, target_eigs)))
+        results.append((dict(row), dist))
+
+    # Sort by distance and return top N
+    results.sort(key=lambda x: x[1])
+    return results[:limit]
+
+
 def get_stats() -> dict[str, Any]:
     """Get database statistics from cache."""
     with get_db() as conn:

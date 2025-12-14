@@ -13,6 +13,7 @@ from .database import (
     fetch_graph,
     fetch_random_cospectral_class,
     fetch_random_graph,
+    fetch_similar_graphs,
     get_stats,
     query_graphs,
 )
@@ -316,3 +317,34 @@ async def stats(request: Request):
             request, "about.html", {"stats": result}
         )
     return result
+
+
+@app.get("/similar/{graph6}")
+async def similar_graphs(
+    graph6: str,
+    request: Request,
+    matrix: str = Query(default="adj", description="Matrix type: adj, lap, nb, nbl"),
+    limit: int = Query(default=10, le=50),
+):
+    """Find graphs with similar spectrum (by L2 distance)."""
+    if matrix not in ("adj", "lap", "nb", "nbl"):
+        raise HTTPException(status_code=400, detail="Invalid matrix type")
+
+    results = fetch_similar_graphs(graph6, matrix=matrix, limit=limit)
+
+    if not results:
+        raise HTTPException(status_code=404, detail=f"Graph '{graph6}' not found or no similar graphs")
+
+    similar = [
+        {
+            "graph": row_to_graph_summary(row),
+            "distance": round(dist, 6),
+        }
+        for row, dist in results
+    ]
+
+    if wants_html(request):
+        return templates.TemplateResponse(
+            request, "similar.html", {"source_graph6": graph6, "matrix": matrix, "results": similar}
+        )
+    return similar

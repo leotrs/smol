@@ -433,6 +433,14 @@
             margin-bottom: 0;
         }
 
+        /* Compare textarea */
+        .tab-content textarea {
+            width: 100%;
+            font-family: monospace;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
         /* Footer */
         footer {
             margin-top: 2rem;
@@ -597,6 +605,47 @@
             border-radius: var(--pico-border-radius);
             margin: 0;
             font-size: 0.85rem;
+        }
+
+        /* Section header with link */
+        .section-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .section-header h3 {
+            margin-bottom: 0.5rem;
+        }
+
+        .find-similar-link {
+            font-size: 0.85rem;
+            color: var(--pico-muted-color);
+            text-decoration: none;
+        }
+
+        .find-similar-link:hover {
+            color: var(--pico-primary);
+        }
+
+        /* Export buttons */
+        .export-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .export-buttons button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.75rem !important;
+            font-size: 0.8rem !important;
+        }
+
+        .export-buttons svg {
+            flex-shrink: 0;
         }
 
         /* Spectrum plot */
@@ -764,6 +813,47 @@
         #spectrum-plot svg .domain,
         #spectrum-plot svg .tick line {
             stroke: var(--pico-muted-border-color);
+        }
+
+        /* Visualization container with reset button */
+        .viz-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .viz-reset-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            width: 28px !important;
+            height: 28px !important;
+            padding: 0 !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--pico-card-background-color) !important;
+            border: 1px solid var(--pico-muted-border-color) !important;
+            border-radius: 4px;
+            color: var(--pico-muted-color);
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.15s;
+            z-index: 10;
+        }
+
+        .viz-container:hover .viz-reset-btn {
+            opacity: 1;
+        }
+
+        .viz-reset-btn:hover {
+            color: var(--pico-primary);
+            border-color: var(--pico-primary) !important;
+            background: var(--pico-card-background-color) !important;
+        }
+
+        .viz-reset-btn:focus {
+            outline: none !important;
+            box-shadow: none !important;
         }
 
         /* Theme toggle button */

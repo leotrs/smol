@@ -25,12 +25,28 @@
 {% for g in result.graphs %}
     <div class="graph-card">
         <a href="/graph/{{ g.graph6 | urlencode }}"><code>{{ g.graph6 }}</code></a>
-        <div id="viz-{{ loop.index0 }}" class="graph-viz" style="width: 180px; height: 180px; margin: 0.5rem auto 0;"></div>
+        <div class="viz-container" style="margin: 0.5rem auto 0;">
+            <div id="viz-{{ loop.index0 }}" class="graph-viz" style="width: 180px; height: 180px;"></div>
+            <button class="viz-reset-btn" onclick="resetCompareViz({{ loop.index0 }})" title="Reset view">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            </button>
+        </div>
     </div>
 {% endfor %}
 </div>
 
 <script>
+const compareVizStates = [];
+
+function resetCompareViz(idx) {
+    if (compareVizStates[idx]) {
+        compareVizStates[idx].transform.x = 0;
+        compareVizStates[idx].transform.y = 0;
+        compareVizStates[idx].transform.k = 1;
+        compareVizStates[idx].update();
+    }
+}
+
 function renderGraphs() {
     const graphs = {{ result.graphs | tojson }};
     graphs.forEach((g, idx) => {
@@ -53,6 +69,9 @@ function renderGraphs() {
         function updateTransform() {
             container.attr("transform", `translate(${transform.x},${transform.y}) scale(${transform.k})`);
         }
+
+        // Store for reset button
+        compareVizStates[idx] = { transform, update: updateTransform };
 
         svg.call(d3.drag()
             .on("start", () => svg.style("cursor", "grabbing"))

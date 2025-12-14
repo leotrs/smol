@@ -10,7 +10,12 @@
 
 <div class="grid">
     <div>
-        <div id="graph-viz" class="graph-viz" style="width: 300px; height: 300px;"></div>
+        <div class="viz-container">
+            <div id="graph-viz" class="graph-viz" style="width: 300px; height: 300px;"></div>
+            <button class="viz-reset-btn" onclick="resetGraphViz()" title="Reset view">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            </button>
+        </div>
     </div>
     <div>
         <h3>Properties</h3>
@@ -158,6 +163,9 @@ function renderSpectrumPlot() {
         // Keep eigenvalue dots at constant visual size by scaling radius inversely
         content.selectAll('.eigenvalue-dot').attr('r', baseRadius / transform.k);
     }
+
+    // Store for reset button
+    spectrumPlotState = { transform, update: updatePlotTransform };
 
     svg.call(d3.drag()
         .on('start', () => svg.style('cursor', 'grabbing'))
@@ -324,6 +332,27 @@ function toggleSpectrumPill(btn, key) {
         .style('display', visible ? null : 'none');
 }
 
+let graphVizState = null;
+let spectrumPlotState = null;
+
+function resetGraphViz() {
+    if (graphVizState) {
+        graphVizState.transform.x = 0;
+        graphVizState.transform.y = 0;
+        graphVizState.transform.k = 1;
+        graphVizState.update();
+    }
+}
+
+function resetSpectrumPlot() {
+    if (spectrumPlotState) {
+        spectrumPlotState.transform.x = 0;
+        spectrumPlotState.transform.y = 0;
+        spectrumPlotState.transform.k = 1;
+        spectrumPlotState.update();
+    }
+}
+
 function renderGraph() {
     const n = {{ graph.n }};
     const edges = {{ graph.edges | tojson }};
@@ -342,11 +371,14 @@ function renderGraph() {
     const g = svg.append("g");
 
     // Viewport pan and zoom
-    let transform = {x: 0, y: 0, k: 1};
+    const transform = {x: 0, y: 0, k: 1};
 
     function updateTransform() {
         g.attr("transform", `translate(${transform.x},${transform.y}) scale(${transform.k})`);
     }
+
+    // Store for reset button
+    graphVizState = { transform, update: updateTransform };
 
     svg.call(d3.drag()
         .on("start", () => svg.style("cursor", "grabbing"))
@@ -436,7 +468,12 @@ function renderGraph() {
 
 <h3>Spectra</h3>
 <div class="spectrum-plot-section">
-    <div id="spectrum-plot"></div>
+    <div class="viz-container" style="flex: 1; max-width: 550px;">
+        <div id="spectrum-plot"></div>
+        <button class="viz-reset-btn" onclick="resetSpectrumPlot()" title="Reset view">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        </button>
+    </div>
     <div class="spectrum-controls">
         <div class="spectrum-legend-item">
             <button class="spectrum-pill active" data-spectrum="adj" onclick="toggleSpectrumPill(this, 'adj')">
@@ -538,7 +575,10 @@ function copyEigenvalues(btn) {
 }
 </script>
 
-<h3 style="margin-top: 2rem;">Cospectral Mates</h3>
+<div class="section-header" style="margin-top: 2rem;">
+    <h3>Cospectral Mates</h3>
+    <a href="/similar/{{ graph.graph6 | urlencode }}" class="find-similar-link">Find similar spectra</a>
+</div>
 {% if graph.cospectral_mates.adj or graph.cospectral_mates.lap or graph.cospectral_mates.nb or graph.cospectral_mates.nbl %}
 <p>Graphs that share the same spectrum for a given matrix type.</p>
 <table>
@@ -656,6 +696,84 @@ function copySpectrum(btn) {
         btn.classList.add('copied');
         setTimeout(() => btn.classList.remove('copied'), 1500);
     });
+}
+</script>
+
+<h3>Export</h3>
+<div class="export-buttons">
+    <button class="outline" onclick="downloadJSON()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        JSON
+    </button>
+    <button class="outline" onclick="downloadEdgeList()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Edge list
+    </button>
+    <button class="outline" onclick="downloadAdjList()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Adjacency list
+    </button>
+</div>
+<script>
+const graphData = {
+    graph6: {{ graph.graph6 | tojson }},
+    n: {{ graph.n }},
+    m: {{ graph.m }},
+    edges: {{ graph.edges | tojson }},
+    properties: {
+        is_bipartite: {{ graph.properties.is_bipartite | tojson }},
+        is_planar: {{ graph.properties.is_planar | tojson }},
+        is_regular: {{ graph.properties.is_regular | tojson }},
+        diameter: {{ graph.properties.diameter | tojson }},
+        girth: {{ graph.properties.girth | tojson }},
+        radius: {{ graph.properties.radius | tojson }},
+        min_degree: {{ graph.properties.min_degree }},
+        max_degree: {{ graph.properties.max_degree }},
+        triangle_count: {{ graph.properties.triangle_count }}
+    },
+    spectra: {
+        adj_eigenvalues: {{ graph.spectra.adj_eigenvalues | tojson }},
+        lap_eigenvalues: {{ graph.spectra.lap_eigenvalues | tojson }},
+        nb_eigenvalues_re: {{ graph.spectra.nb_eigenvalues_re | tojson }},
+        nb_eigenvalues_im: {{ graph.spectra.nb_eigenvalues_im | tojson }},
+        nbl_eigenvalues_re: {{ graph.spectra.nbl_eigenvalues_re | tojson }},
+        nbl_eigenvalues_im: {{ graph.spectra.nbl_eigenvalues_im | tojson }}
+    }
+};
+
+function downloadFile(content, filename, type) {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function downloadJSON() {
+    const json = JSON.stringify(graphData, null, 2);
+    downloadFile(json, `${graphData.graph6}.json`, 'application/json');
+}
+
+function downloadEdgeList() {
+    const lines = graphData.edges.map(([u, v]) => `${u} ${v}`);
+    const content = `# Edge list for ${graphData.graph6}\n# ${graphData.n} vertices, ${graphData.m} edges\n` + lines.join('\n');
+    downloadFile(content, `${graphData.graph6}.edgelist`, 'text/plain');
+}
+
+function downloadAdjList() {
+    const adj = {};
+    for (let i = 0; i < graphData.n; i++) adj[i] = [];
+    graphData.edges.forEach(([u, v]) => {
+        adj[u].push(v);
+        adj[v].push(u);
+    });
+    const lines = Object.entries(adj).map(([node, neighbors]) =>
+        `${node}: ${neighbors.sort((a, b) => a - b).join(' ')}`
+    );
+    const content = `# Adjacency list for ${graphData.graph6}\n# ${graphData.n} vertices, ${graphData.m} edges\n` + lines.join('\n');
+    downloadFile(content, `${graphData.graph6}.adjlist`, 'text/plain');
 }
 </script>
 {% endblock %}

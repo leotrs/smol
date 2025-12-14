@@ -319,6 +319,12 @@ class TestHomeSearch:
         assert "Search" in response.text
         assert "graph6" in response.text
 
+    def test_home_has_compare_tab(self):
+        response = client.get("/")
+        assert response.status_code == 200
+        assert "Compare" in response.text
+        assert "compareGraphs" in response.text
+
     def test_home_has_random_links_in_footer(self):
         response = client.get("/")
         assert response.status_code == 200
@@ -369,3 +375,64 @@ class TestComparePropertyDiffs:
         assert "import networkx as nx" in response.text
         assert "nx.from_graph6_bytes" in response.text
         assert 'b"D?{"' in response.text
+
+    def test_graph_detail_has_export_buttons(self):
+        """Graph detail page should have export buttons."""
+        response = client.get("/graph/D%3F%7B", headers={"Accept": "text/html"})
+        assert response.status_code == 200
+        assert "Export" in response.text
+        assert "downloadJSON" in response.text
+        assert "downloadEdgeList" in response.text
+        assert "downloadAdjList" in response.text
+
+    def test_graph_detail_has_find_similar_link(self):
+        """Graph detail page should have link to find similar spectra."""
+        response = client.get("/graph/D%3F%7B", headers={"Accept": "text/html"})
+        assert response.status_code == 200
+        assert "Find similar" in response.text
+        assert "/similar/" in response.text
+
+
+class TestSimilarEndpoint:
+    def test_similar_returns_json(self):
+        response = client.get("/similar/D%3F%7B")
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        for item in data:
+            assert "graph" in item
+            assert "distance" in item
+            assert item["distance"] >= 0
+
+    def test_similar_includes_cospectral_mates_with_zero_distance(self):
+        """Cospectral mates should appear first with distance ~0."""
+        # D?{ and DEo are known adj-cospectral mates
+        response = client.get("/similar/D%3F%7B?matrix=adj")
+        assert response.status_code == 200
+        data = response.json()
+
+        # Find DEo in results
+        deo_result = next((item for item in data if item["graph"]["graph6"] == "DEo"), None)
+        assert deo_result is not None, "Cospectral mate DEo should appear in results"
+        assert deo_result["distance"] < 1e-6, "Cospectral mate should have distance ~0"
+
+    def test_similar_with_matrix_param(self):
+        response = client.get("/similar/D%3F%7B?matrix=lap")
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+
+    def test_similar_invalid_matrix(self):
+        response = client.get("/similar/D%3F%7B?matrix=invalid")
+        assert response.status_code == 400
+        assert "invalid matrix" in response.json()["detail"].lower()
+
+    def test_similar_not_found(self):
+        response = client.get("/similar/INVALID")
+        assert response.status_code == 404
+
+    def test_similar_returns_html(self):
+        response = client.get("/similar/D%3F%7B", headers={"Accept": "text/html"})
+        assert response.status_code == 200
+        assert "text/html" in response.headers["content-type"]
+        assert "Similar" in response.text
