@@ -16,7 +16,6 @@ Features:
 
 import argparse
 import multiprocessing as mp
-import os
 import subprocess
 import sys
 import time
@@ -25,7 +24,7 @@ from typing import Iterator
 sys.path.insert(0, str(__file__).rsplit("/", 2)[0])
 
 from db.graph_data import process_graph, graph_from_graph6
-from db.database import connect, init_schema, insert_batch
+from db.database import connect, init_schema
 
 
 def generate_graphs(n: int, connected: bool = True) -> Iterator[str]:

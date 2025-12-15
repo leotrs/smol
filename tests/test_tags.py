@@ -1,7 +1,6 @@
 """Tests for graph tag detection."""
 
 import networkx as nx
-import pytest
 
 from db.tags import compute_tags
 

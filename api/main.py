@@ -10,13 +10,6 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(message)s",
-    datefmt="%H:%M:%S",
-)
-logger = logging.getLogger("smol")
-
 from .database import (
     fetch_cospectral_mates,
     fetch_graph,
@@ -35,6 +28,13 @@ from .models import (
     Stats,
     CompareResult,
 )
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+    datefmt="%H:%M:%S",
+)
+logger = logging.getLogger("smol")
 
 app = FastAPI(
     title="SMOL",
