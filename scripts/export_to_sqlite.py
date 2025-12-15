@@ -64,7 +64,8 @@ def export_graphs(sqlite_conn, pg_conn, max_n: int, batch_size: int = 1000):
             clique_number, chromatic_number,
             algebraic_connectivity, global_clustering, avg_local_clustering,
             avg_path_length, assortativity,
-            degree_sequence, betweenness_centrality, closeness_centrality, eigenvector_centrality
+            degree_sequence, betweenness_centrality, closeness_centrality, eigenvector_centrality,
+            tags
         FROM graphs
         WHERE n <= %s
         ORDER BY n, id
@@ -90,6 +91,7 @@ def export_graphs(sqlite_conn, pg_conn, max_n: int, batch_size: int = 1000):
             alg_conn, global_clust, avg_local_clust,
             avg_path, assort,
             deg_seq, between, close, eigen,
+            tags,
         ) = row
 
         batch.append((
@@ -108,6 +110,7 @@ def export_graphs(sqlite_conn, pg_conn, max_n: int, batch_size: int = 1000):
             avg_path, assort,
             array_to_json(deg_seq), array_to_json(between),
             array_to_json(close), array_to_json(eigen),
+            array_to_json(tags),
         ))
 
         if len(batch) >= batch_size:
@@ -142,8 +145,9 @@ def insert_batch(cursor, batch):
             clique_number, chromatic_number,
             algebraic_connectivity, global_clustering, avg_local_clustering,
             avg_path_length, assortativity,
-            degree_sequence, betweenness_centrality, closeness_centrality, eigenvector_centrality
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            degree_sequence, betweenness_centrality, closeness_centrality, eigenvector_centrality,
+            tags
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         batch,
     )

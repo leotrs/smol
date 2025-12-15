@@ -7,6 +7,13 @@
     <h1><code>{{ graph.graph6 }}</code></h1>
     <p>{{ graph.n }} vertices, {{ graph.m }} edges</p>
 </hgroup>
+{% if graph.tags %}
+<div class="graph-tags">
+    {% for tag in graph.tags %}
+    <span class="tag">{{ tag }}</span>
+    {% endfor %}
+</div>
+{% endif %}
 
 <div class="grid">
     <div>

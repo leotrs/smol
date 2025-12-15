@@ -41,6 +41,9 @@ CREATE TABLE IF NOT EXISTS graphs (
     clique_number       SMALLINT,               -- expensive, computed later
     chromatic_number    SMALLINT,               -- expensive, computed later
 
+    -- Tags (e.g., 'complete', 'cycle', 'tree', 'petersen', etc.)
+    tags                TEXT[] DEFAULT '{}',
+
     -- Extensible metadata
     extra               JSONB DEFAULT '{}'::jsonb,
 
@@ -62,6 +65,12 @@ CREATE INDEX IF NOT EXISTS idx_lap_hash ON graphs(lap_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_nb_hash ON graphs(nb_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_nbl_hash ON graphs(nbl_spectral_hash);
 
+-- Composite indexes for cospectral mate queries (n + spectral_hash)
+CREATE INDEX IF NOT EXISTS idx_n_adj_hash ON graphs(n, adj_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_n_lap_hash ON graphs(n, lap_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_n_nb_hash ON graphs(n, nb_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_n_nbl_hash ON graphs(n, nbl_spectral_hash);
+
 -- Composite indexes for "same X spectrum, different Y spectrum" queries
 CREATE INDEX IF NOT EXISTS idx_adj_nb_hash ON graphs(adj_spectral_hash, nb_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_adj_lap_hash ON graphs(adj_spectral_hash, lap_spectral_hash);
@@ -71,6 +80,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_graph6 ON graphs(graph6);
 
 -- GIN index on extra JSONB
 CREATE INDEX IF NOT EXISTS idx_extra ON graphs USING GIN(extra);
+
+-- GIN index on tags for array containment queries
+CREATE INDEX IF NOT EXISTS idx_tags ON graphs USING GIN(tags);
 
 -- Co-spectral pairs table
 CREATE TABLE IF NOT EXISTS cospectral_pairs (

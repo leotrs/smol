@@ -46,7 +46,10 @@ CREATE TABLE IF NOT EXISTS graphs (
     degree_sequence         TEXT,  -- JSON array
     betweenness_centrality  TEXT,  -- JSON array
     closeness_centrality    TEXT,  -- JSON array
-    eigenvector_centrality  TEXT   -- JSON array
+    eigenvector_centrality  TEXT,  -- JSON array
+
+    -- Tags (JSON array, e.g., ["complete", "regular", "eulerian"])
+    tags                    TEXT DEFAULT '[]'
 );
 
 -- Indexes for common queries
@@ -61,6 +64,13 @@ CREATE INDEX IF NOT EXISTS idx_graphs_bipartite ON graphs(is_bipartite);
 CREATE INDEX IF NOT EXISTS idx_graphs_planar ON graphs(is_planar);
 CREATE INDEX IF NOT EXISTS idx_graphs_regular ON graphs(is_regular);
 CREATE INDEX IF NOT EXISTS idx_graphs_min_degree ON graphs(min_degree);
+CREATE INDEX IF NOT EXISTS idx_graphs_diameter ON graphs(diameter);
+
+-- Composite indexes for cospectral mate queries (n + spectral_hash)
+CREATE INDEX IF NOT EXISTS idx_n_adj_hash ON graphs(n, adj_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_n_lap_hash ON graphs(n, lap_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_n_nb_hash ON graphs(n, nb_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_n_nbl_hash ON graphs(n, nbl_spectral_hash);
 
 -- Stats cache table
 CREATE TABLE IF NOT EXISTS stats_cache (

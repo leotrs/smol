@@ -58,6 +58,7 @@ class GraphFull(BaseModel):
     properties: GraphProperties
     spectra: Spectra
     cospectral_mates: CospectralMates
+    tags: list[str] = []
 
 
 class GraphSummary(BaseModel):

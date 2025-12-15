@@ -1,5 +1,7 @@
 """SMOL API - Spectral graph database."""
 
+import logging
+import time
 from pathlib import Path
 
 import networkx as nx
@@ -7,6 +9,13 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+    datefmt="%H:%M:%S",
+)
+logger = logging.getLogger("smol")
 
 from .database import (
     fetch_cospectral_mates,
@@ -33,13 +42,23 @@ app = FastAPI(
     version="0.1.0",
 )
 
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start = time.perf_counter()
+    response = await call_next(request)
+    elapsed = time.perf_counter() - start
+    if not request.url.path.startswith("/static"):
+        logger.info(f"{request.method} {request.url.path} {response.status_code} {elapsed*1000:.0f}ms")
+    return response
+
+
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
 
 def wants_html(request: Request) -> bool:
     """Check if request wants HTML (browser or HTMX) vs JSON (API)."""
-    # HTMX requests always want HTML
     if request.headers.get("hx-request"):
         return True
     accept = request.headers.get("accept", "")
@@ -89,6 +108,7 @@ def row_to_graph_full(row: dict, mates: dict[str, list[str]]) -> GraphFull:
             nbl_hash=row["nbl_spectral_hash"],
         ),
         cospectral_mates=CospectralMates(**mates),
+        tags=row.get("tags") or [],
     )
 
 
@@ -131,7 +151,12 @@ async def home(request: Request):
 @app.get("/graph/{graph6}")
 async def get_graph_by_id(graph6: str, request: Request):
     """Look up a graph by its graph6 string."""
-    row = fetch_graph(graph6)
+    t0 = time.perf_counter()
+
+    row = await fetch_graph(graph6)
+    t1 = time.perf_counter()
+    logger.info(f"  fetch_graph: {(t1-t0)*1000:.0f}ms")
+
     if not row:
         raise HTTPException(status_code=404, detail=f"Graph '{graph6}' not found")
 
@@ -141,13 +166,21 @@ async def get_graph_by_id(graph6: str, request: Request):
         "nb": row["nb_spectral_hash"],
         "nbl": row["nbl_spectral_hash"],
     }
-    mates = fetch_cospectral_mates(graph6, row["n"], hashes)
+    mates = await fetch_cospectral_mates(graph6, row["n"], hashes)
+    t2 = time.perf_counter()
+    logger.info(f"  fetch_cospectral_mates: {(t2-t1)*1000:.0f}ms")
+
     graph = row_to_graph_full(row, mates)
+    t3 = time.perf_counter()
+    logger.info(f"  row_to_graph_full: {(t3-t2)*1000:.0f}ms")
 
     if wants_html(request):
-        return templates.TemplateResponse(
+        resp = templates.TemplateResponse(
             request, "graph_detail.html", {"graph": graph}
         )
+        t4 = time.perf_counter()
+        logger.info(f"  template render: {(t4-t3)*1000:.0f}ms")
+        return resp
     return graph
 
 
@@ -157,7 +190,7 @@ async def random_graph():
     from fastapi.responses import RedirectResponse
     from urllib.parse import quote
 
-    row = fetch_random_graph()
+    row = await fetch_random_graph()
     if not row:
         raise HTTPException(status_code=404, detail="No graphs in database")
     return RedirectResponse(url=f"/graph/{quote(row['graph6'], safe='')}", status_code=302)
@@ -172,7 +205,7 @@ async def random_cospectral(matrix: str = "adj"):
     if matrix not in ("adj", "lap", "nb", "nbl"):
         raise HTTPException(status_code=400, detail="Invalid matrix type")
 
-    graphs = fetch_random_cospectral_class(matrix)
+    graphs = await fetch_random_cospectral_class(matrix)
     if not graphs:
         raise HTTPException(status_code=404, detail="No cospectral pairs found")
 
@@ -207,9 +240,9 @@ async def list_graphs(
     bipartite = bipartite == "true" if bipartite else None
     planar = planar == "true" if planar else None
     regular = regular == "true" if regular else None
-    # Direct lookup by graph6
+
     if graph6:
-        row = fetch_graph(graph6)
+        row = await fetch_graph(graph6)
         if not row:
             if wants_html(request):
                 return templates.TemplateResponse(
@@ -222,7 +255,7 @@ async def list_graphs(
             "nb": row["nb_spectral_hash"],
             "nbl": row["nbl_spectral_hash"],
         }
-        mates = fetch_cospectral_mates(graph6, row["n"], hashes)
+        mates = await fetch_cospectral_mates(graph6, row["n"], hashes)
         graph = row_to_graph_full(row, mates)
         if wants_html(request):
             return templates.TemplateResponse(
@@ -230,7 +263,7 @@ async def list_graphs(
             )
         return [graph]
 
-    rows = query_graphs(
+    rows = await query_graphs(
         n=n,
         n_min=n_min,
         n_max=n_max,
@@ -269,7 +302,7 @@ async def compare_graphs(
     all_hashes = {"adj": set(), "lap": set(), "nb": set(), "nbl": set()}
 
     for g6 in graph6_list:
-        row = fetch_graph(g6)
+        row = await fetch_graph(g6)
         if not row:
             raise HTTPException(status_code=404, detail=f"Graph '{g6}' not found")
 
@@ -282,7 +315,7 @@ async def compare_graphs(
         for matrix, h in hashes.items():
             all_hashes[matrix].add(h)
 
-        mates = fetch_cospectral_mates(g6, row["n"], hashes)
+        mates = await fetch_cospectral_mates(g6, row["n"], hashes)
         full_graphs.append(row_to_graph_full(row, mates))
 
     comparison = {
@@ -325,7 +358,7 @@ async def glossary(request: Request):
 @app.get("/about")
 async def about(request: Request):
     """About page with statistics."""
-    data = get_stats()
+    data = await get_stats()
     stats = Stats(**data)
 
     if wants_html(request):
@@ -338,7 +371,7 @@ async def about(request: Request):
 @app.get("/stats")
 async def stats(request: Request):
     """Get database statistics (API)."""
-    data = get_stats()
+    data = await get_stats()
     result = Stats(**data)
 
     if wants_html(request):
@@ -359,7 +392,7 @@ async def similar_graphs(
     if matrix not in ("adj", "lap", "nb", "nbl"):
         raise HTTPException(status_code=400, detail="Invalid matrix type")
 
-    results = fetch_similar_graphs(graph6, matrix=matrix, limit=limit)
+    results = await fetch_similar_graphs(graph6, matrix=matrix, limit=limit)
 
     if not results:
         raise HTTPException(status_code=404, detail=f"Graph '{graph6}' not found or no similar graphs")
