@@ -60,3 +60,8 @@ dev = [
     "pytest-cov>=7.0.0",
     "ruff>=0.14.9",
 ]
+
+[tool.pytest.ini_options]
+markers = [
+    "needs_db: marks tests that require a populated database (skip in CI)",
+]

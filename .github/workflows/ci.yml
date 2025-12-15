@@ -48,7 +48,10 @@ jobs:
           PGPASSWORD: postgres
           PGDATABASE: smol
 
-      - name: Run checks (lint + tests)
-        run: just check
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Run tests (excluding DB-dependent tests)
+        run: uv run pytest -m "not needs_db" -v
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/smol

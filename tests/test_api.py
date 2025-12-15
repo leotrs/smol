@@ -1,10 +1,13 @@
 """Tests for the API endpoints."""
 
+import pytest
 from fastapi.testclient import TestClient
 
 from api.main import app
 
 client = TestClient(app)
+
+needs_db = pytest.mark.needs_db
 
 
 class TestHomeEndpoint:
@@ -16,6 +19,7 @@ class TestHomeEndpoint:
         assert "Search" in response.text
 
 
+@needs_db
 class TestGraphEndpoint:
     def test_graph_returns_json_by_default(self):
         response = client.get("/graph/D%3F%7B")  # D?{
@@ -95,6 +99,7 @@ class TestGraphEndpoint:
         assert "DEo" in mates["adj"]
 
 
+@needs_db
 class TestGraphsEndpoint:
     def test_graphs_query_by_n(self):
         response = client.get("/graphs?n=5&limit=10")
@@ -141,6 +146,7 @@ class TestGraphsEndpoint:
         assert response.status_code == 422  # Validation error, limit > 1000
 
 
+@needs_db
 class TestCompareEndpoint:
     def test_compare_two_graphs(self):
         response = client.get("/compare?graphs=D%3F%7B,DEo")
@@ -191,6 +197,7 @@ class TestGlossaryEndpoint:
         assert "cospectral" in response.text
 
 
+@needs_db
 class TestAboutEndpoint:
     def test_about_returns_html_for_browser(self):
         response = client.get("/about", headers={"Accept": "text/html"})
@@ -208,6 +215,7 @@ class TestAboutEndpoint:
         assert "cospectral_counts" in data
 
 
+@needs_db
 class TestStatsEndpoint:
     def test_stats_returns_json(self):
         response = client.get("/stats")
@@ -229,6 +237,7 @@ class TestStatsEndpoint:
         assert "nbl" in cospectral
 
 
+@needs_db
 class TestRandomEndpoints:
     def test_random_graph_redirects(self):
         response = client.get("/random", follow_redirects=False)
@@ -261,6 +270,7 @@ class TestRandomEndpoints:
         assert "invalid matrix" in response.json()["detail"].lower()
 
 
+@needs_db
 class TestGraphsEdgeCases:
     def test_graphs_empty_params(self):
         # Empty string params should be treated as None
@@ -290,6 +300,7 @@ class TestGraphsEdgeCases:
             assert g["m"] == 5
 
 
+@needs_db
 class TestGraphSpecialCharacters:
     def test_graph_with_question_mark(self):
         # D?{ contains a question mark
@@ -310,6 +321,7 @@ class TestGraphSpecialCharacters:
         assert "D?{" in response.text or "D?{" in response.text
 
 
+@needs_db
 class TestCompareEdgeCases:
     def test_compare_same_graph_twice(self):
         response = client.get("/compare?graphs=D%3F%7B,D%3F%7B")
@@ -349,6 +361,7 @@ class TestHomeSearch:
         assert "Random graph" in response.text
         assert "Random cospectral family" in response.text
 
+    @needs_db
     def test_home_example_graphs_exist(self):
         """Verify all example graphs on home page exist in database."""
         from urllib.parse import quote
@@ -365,6 +378,7 @@ class TestHomeSearch:
             assert response.status_code == 200, f"Example graph {g6} not found"
 
 
+@needs_db
 class TestComparePropertyDiffs:
     def test_compare_highlights_different_properties(self):
         """Compare endpoint should flag properties that differ between graphs."""
@@ -417,6 +431,7 @@ class TestComparePropertyDiffs:
         assert "/similar/" in response.text
 
 
+@needs_db
 class TestSimilarEndpoint:
     def test_similar_returns_json(self):
         response = client.get("/similar/D%3F%7B")
