@@ -9,36 +9,74 @@ Requirements:
     pip install requests
 
 Usage:
+    # First, start the API server:
+    just serve
+    # Then run this script:
     python basic_api.py
 """
 
+import sys
+from urllib.parse import quote
+
 import requests
 
-BASE_URL = "http://localhost:8000"  # Change to production URL when deployed
+BASE_URL = "http://127.0.0.1:8000"  # Change to production URL when deployed
 
 
 def lookup_graph(graph6: str) -> dict:
     """Look up a graph by its graph6 encoding."""
-    response = requests.get(f"{BASE_URL}/graph/{graph6}")
-    response.raise_for_status()
-    return response.json()
+    encoded = quote(graph6, safe="")
+    try:
+        response = requests.get(f"{BASE_URL}/graph/{encoded}")
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.ConnectionError as e:
+        print(f"Error: Cannot connect to {BASE_URL}")
+        print("Make sure the API server is running: just serve")
+        print(f"Details: {e}")
+        sys.exit(1)
+    except requests.exceptions.HTTPError as e:
+        print(f"Error: API returned {e.response.status_code}")
+        print(f"Details: {e.response.text}")
+        sys.exit(1)
 
 
 def query_graphs(params: dict) -> list:
     """Query graphs by properties."""
-    response = requests.get(f"{BASE_URL}/graphs", params=params)
-    response.raise_for_status()
-    return response.json()
+    try:
+        response = requests.get(f"{BASE_URL}/graphs", params=params)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.ConnectionError as e:
+        print(f"Error: Cannot connect to {BASE_URL}")
+        print("Make sure the API server is running: just serve")
+        print(f"Details: {e}")
+        sys.exit(1)
+    except requests.exceptions.HTTPError as e:
+        print(f"Error: API returned {e.response.status_code}")
+        print(f"Details: {e.response.text}")
+        sys.exit(1)
 
 
 def get_stats() -> dict:
     """Get database statistics."""
-    response = requests.get(f"{BASE_URL}/stats")
-    response.raise_for_status()
-    return response.json()
+    try:
+        response = requests.get(f"{BASE_URL}/stats")
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.ConnectionError as e:
+        print(f"Error: Cannot connect to {BASE_URL}")
+        print("Make sure the API server is running: just serve")
+        print(f"Details: {e}")
+        sys.exit(1)
+    except requests.exceptions.HTTPError as e:
+        print(f"Error: API returned {e.response.status_code}")
+        print(f"Details: {e.response.text}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
+
     # Example 1: Look up K_5 (complete graph on 5 vertices)
     print("=" * 60)
     print("Example 1: Look up K_5 (graph6: D~{)")

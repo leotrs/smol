@@ -16,7 +16,7 @@ Usage:
 import requests
 from urllib.parse import quote
 
-BASE_URL = "http://localhost:8000"  # Change to production URL when deployed
+BASE_URL = "http://127.0.0.1:8000"  # Change to production URL when deployed
 
 
 def compare_graphs(graph6_list: list[str]) -> dict:
@@ -54,34 +54,36 @@ def query_graphs(params: dict) -> list:
 
 
 if __name__ == "__main__":
-    # Example 1: Compare two cospectral graphs
+    # Example 1: Find and compare cospectral graphs
     print("=" * 60)
-    print("Example 1: Compare adjacency-cospectral graphs")
+    print("Example 1: Find adjacency-cospectral graphs")
     print("=" * 60)
 
-    # These two 8-vertex graphs are cospectral for the adjacency matrix
-    g1 = get_graph("GCpbLg")
-    if g1.get("cospectral_mates", {}).get("adj"):
-        mate = g1["cospectral_mates"]["adj"][0]
-        comparison = compare_graphs([g1["graph6"], mate])
+    # Search for a graph that has adjacency-cospectral mates
+    print("Searching for graphs with cospectral mates...")
+    graphs = query_graphs({"n": 8, "limit": 100})
+    found = False
+    for g in graphs:
+        full = get_graph(g["graph6"])
+        if full.get("cospectral_mates", {}).get("adj"):
+            mate = full["cospectral_mates"]["adj"][0]
+            comparison = compare_graphs([full["graph6"], mate])
 
-        print(f"Graph 1: {g1['graph6']} ({g1['m']} edges)")
-        print(f"Graph 2: {mate}")
-        print("\nSpectral comparison:")
-        for matrix, status in comparison["spectral_comparison"].items():
-            print(f"  {matrix}: {status}")
+            print("\nFound cospectral pair!")
+            print(f"Graph 1: {full['graph6']} ({full['m']} edges)")
+            print(f"Graph 2: {mate}")
+            print("\nSpectral comparison:")
+            for matrix, status in comparison["spectral_comparison"].items():
+                print(f"  {matrix}: {status}")
 
-        print("\nAdjacency eigenvalues (same for both):")
-        print(f"  {comparison['graphs'][0]['spectra']['adj_eigenvalues']}")
-    else:
-        print("Looking for a graph with cospectral mates...")
-        # Find a graph that has cospectral mates
-        graphs = query_graphs({"n": 8, "limit": 50})
-        for g in graphs:
-            full = get_graph(g["graph6"])
-            if full.get("cospectral_mates", {}).get("adj"):
-                print(f"Found: {full['graph6']} has adj-cospectral mate: {full['cospectral_mates']['adj'][0]}")
-                break
+            print("\nAdjacency eigenvalues (same for both):")
+            eigs = comparison['graphs'][0]['spectra']['adj_eigenvalues']
+            print(f"  {[round(e, 4) for e in eigs]}")
+            found = True
+            break
+
+    if not found:
+        print("No cospectral pairs found in first 100 graphs of n=8")
     print()
 
     # Example 2: Find graphs distinguished by non-backtracking but not adjacency
@@ -125,7 +127,8 @@ if __name__ == "__main__":
 
     print(f"Graphs similar to {c6} (6-cycle) by adjacency spectrum:")
     for s in similar:
-        print(f"  {s['graph6']}: distance={s['distance']:.4f}, edges={s['m']}")
+        g = s['graph']
+        print(f"  {g['graph6']}: distance={s['distance']:.4f}, edges={g['m']}")
     print()
 
     # Example 4: Analyze a family of graphs
