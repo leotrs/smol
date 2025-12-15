@@ -1,7 +1,7 @@
 # Fly.io configuration for SMOL
 # See https://fly.io/docs/reference/configuration/
 
-app = "smol-graphs"
+app = "smol-graphs-db"
 primary_region = "iad"
 
 [build]
