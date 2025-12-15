@@ -51,11 +51,57 @@ def compute_stats(conn) -> dict:
         )
         cospectral[matrix] = {str(r[0]): r[1] for r in cur.fetchall()}
 
+    # Network property computation progress
+    cur.execute(
+        """
+        SELECT
+            COUNT(*) as total,
+            COUNT(clique_number) as has_clique,
+            COUNT(global_clustering) as has_clustering,
+            COUNT(degree_sequence) as has_degree_seq
+        FROM graphs
+        """
+    )
+    row = cur.fetchone()
+    property_stats = {
+        "total": row[0],
+        "computed": row[1],  # use clique_number as proxy
+        "percent": round(100 * row[1] / row[0], 1) if row[0] > 0 else 0,
+    }
+
+    # Property value distributions (only if enough data)
+    property_ranges = {}
+    if row[1] > 1000:  # Only compute if we have enough data
+        for prop, col in [
+            ("clustering", "global_clustering"),
+            ("assortativity", "assortativity"),
+            ("path_length", "avg_path_length"),
+        ]:
+            cur.execute(
+                f"""
+                SELECT
+                    MIN({col})::float,
+                    MAX({col})::float,
+                    AVG({col})::float
+                FROM graphs
+                WHERE {col} IS NOT NULL
+                """
+            )
+            r = cur.fetchone()
+            if r[0] is not None:
+                property_ranges[prop] = {
+                    "min": round(r[0], 4),
+                    "max": round(r[1], 4),
+                    "avg": round(r[2], 4),
+                }
+
     return {
         "total_graphs": total,
         "connected_graphs": connected,
         "counts_by_n": counts_by_n,
         "cospectral_counts": cospectral,
+        "property_stats": property_stats,
+        "property_ranges": property_ranges,
     }
 
 

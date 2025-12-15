@@ -1,4 +1,30 @@
-"""Compute additional graph properties for SMOL database."""
+"""Compute additional graph properties for SMOL database.
+
+This script computes network science properties for graphs that don't have them yet.
+Properties are computed using NetworkX and stored in the PostgreSQL database.
+
+Properties computed:
+- clique_number: Size of the maximum clique (via nx.find_cliques)
+- chromatic_number: Greedy upper bound (via nx.coloring.greedy_color with 'largest_first')
+- algebraic_connectivity: Second-smallest Laplacian eigenvalue (Fiedler value)
+- global_clustering: Transitivity (ratio of triangles to connected triples)
+- avg_local_clustering: Mean of local clustering coefficients
+- avg_path_length: Mean shortest path distance (only for connected graphs)
+- assortativity: Degree assortativity coefficient (Pearson correlation)
+- degree_sequence: Sorted list of degrees (descending)
+- betweenness_centrality: Sorted distribution of betweenness values (ascending)
+- closeness_centrality: Sorted distribution of closeness values (ascending)
+- eigenvector_centrality: Sorted distribution of eigenvector centrality (ascending)
+
+Usage:
+    uv run python scripts/compute_properties.py [--n N] [--batch-size SIZE] [--quiet]
+
+Notes:
+- Uses WITH HOLD cursor to survive transaction commits during batch processing
+- Chromatic number is a greedy upper bound, not exact (exact is NP-hard)
+- Eigenvector centrality may fail for disconnected graphs (returns None)
+- Assortativity is undefined for graphs where all nodes have the same degree
+"""
 
 import argparse
 import psycopg2

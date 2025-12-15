@@ -72,8 +72,22 @@ class CompareResult(BaseModel):
     spectral_comparison: dict[str, str]  # matrix -> "same" or "different"
 
 
+class PropertyStats(BaseModel):
+    total: int
+    computed: int
+    percent: float
+
+
+class PropertyRange(BaseModel):
+    min: float
+    max: float
+    avg: float
+
+
 class Stats(BaseModel):
     total_graphs: int
     connected_graphs: int
     counts_by_n: dict[int, int]
     cospectral_counts: dict[str, dict[int, int]]  # matrix -> n -> count
+    property_stats: PropertyStats | None = None
+    property_ranges: dict[str, PropertyRange] | None = None
