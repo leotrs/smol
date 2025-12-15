@@ -1,5 +1,12 @@
 # SMOL project tasks
 
+# Run linter
+lint:
+    uv run ruff check .
+
+# Run linter and tests
+check: lint test
+
 # Run all tests
 test:
     uv run pytest tests/ -v

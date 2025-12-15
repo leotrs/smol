@@ -93,7 +93,7 @@ def compute_properties(G: nx.Graph) -> dict:
             assortativity = nx.degree_assortativity_coefficient(G)
             if np.isnan(assortativity):
                 assortativity = None
-        except:
+        except (ValueError, ZeroDivisionError):
             assortativity = None
 
     # Degree sequence (sorted descending)
@@ -117,7 +117,7 @@ def compute_properties(G: nx.Graph) -> dict:
         try:
             ec = nx.eigenvector_centrality(G, max_iter=1000)
             eigenvector = sorted(ec.values())
-        except:
+        except nx.PowerIterationFailedConvergence:
             eigenvector = None
 
     return {

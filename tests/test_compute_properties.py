@@ -1,7 +1,6 @@
 """Tests for compute_properties script."""
 
 import networkx as nx
-import pytest
 import sys
 sys.path.insert(0, "scripts")
 from compute_properties import compute_properties, graph6_to_nx
