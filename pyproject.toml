@@ -24,11 +24,6 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Mathematics",
 ]
-
-[project.urls]
-Homepage = "https://github.com/leotrs/smol"
-Repository = "https://github.com/leotrs/smol"
-Issues = "https://github.com/leotrs/smol/issues"
 dependencies = [
     "numpy>=1.24",
     "scipy>=1.10",
@@ -41,6 +36,11 @@ dependencies = [
     "requests>=2.32.5",
     "matplotlib>=3.10.8",
 ]
+
+[project.urls]
+Homepage = "https://github.com/leotrs/smol"
+Repository = "https://github.com/leotrs/smol"
+Issues = "https://github.com/leotrs/smol/issues"
 
 [project.optional-dependencies]
 dev = [
