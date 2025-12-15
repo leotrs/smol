@@ -292,6 +292,8 @@ async def compare_graphs(
     graphs: str = Query(..., description="Comma-separated graph6 strings"),
 ):
     """Compare multiple graphs side-by-side."""
+    t0 = time.perf_counter()
+
     graph6_list = [g.strip() for g in graphs.split(",")]
     if len(graph6_list) < 2:
         raise HTTPException(status_code=400, detail="Need at least 2 graphs to compare")
@@ -317,6 +319,8 @@ async def compare_graphs(
 
         mates = await fetch_cospectral_mates(g6, row["n"], hashes)
         full_graphs.append(row_to_graph_full(row, mates))
+
+    logger.info(f"  compare fetch {len(graph6_list)} graphs: {(time.perf_counter()-t0)*1000:.0f}ms")
 
     comparison = {
         matrix: "same" if len(hashes) == 1 else "different"
@@ -358,7 +362,9 @@ async def glossary(request: Request):
 @app.get("/about")
 async def about(request: Request):
     """About page with statistics."""
+    t0 = time.perf_counter()
     data = await get_stats()
+    logger.info(f"  get_stats: {(time.perf_counter()-t0)*1000:.0f}ms")
     stats = Stats(**data)
 
     if wants_html(request):
@@ -371,7 +377,9 @@ async def about(request: Request):
 @app.get("/stats")
 async def stats(request: Request):
     """Get database statistics (API)."""
+    t0 = time.perf_counter()
     data = await get_stats()
+    logger.info(f"  get_stats: {(time.perf_counter()-t0)*1000:.0f}ms")
     result = Stats(**data)
 
     if wants_html(request):
@@ -389,10 +397,13 @@ async def similar_graphs(
     limit: int = Query(default=10, le=50),
 ):
     """Find graphs with similar spectrum (by L2 distance)."""
+    t0 = time.perf_counter()
+
     if matrix not in ("adj", "lap", "nb", "nbl"):
         raise HTTPException(status_code=400, detail="Invalid matrix type")
 
     results = await fetch_similar_graphs(graph6, matrix=matrix, limit=limit)
+    logger.info(f"  fetch_similar_graphs: {(time.perf_counter()-t0)*1000:.0f}ms")
 
     if not results:
         raise HTTPException(status_code=404, detail=f"Graph '{graph6}' not found or no similar graphs")

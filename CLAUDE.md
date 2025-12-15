@@ -11,6 +11,7 @@ SMOL (Spectra and Matrices Of Little graphs) is a database of all small connecte
 - **Non-backtracking Laplacian**: I - D⁻¹B, random walk on directed edges
 - **Spectral hash**: A 16-character hash of sorted eigenvalues for cospectral detection
 - **Cospectral family**: Graphs sharing the same spectrum for a given matrix type
+- **Tags**: Named graph detection (complete, cycle, path, star, wheel, etc.)
 
 ## Graph Properties
 
@@ -37,8 +38,10 @@ Each graph stores:
 
 - **Backend**: FastAPI with Jinja2 templates
 - **Frontend**: HTMX + Alpine.js, Pico CSS (coral accent #E85A4F), D3.js visualizations
-- **Database**: PostgreSQL
+- **Database**: PostgreSQL (local dev) or SQLite (production on Fly.io)
+- **Async**: aiosqlite for non-blocking SQLite queries
 - **Math**: MathJax for LaTeX rendering in glossary
+- **Deployment**: Fly.io with persistent volume for SQLite
 
 ## Commands
 
@@ -52,15 +55,23 @@ just refresh-stats       # Refresh statistics cache
 just serve               # Run API locally
 just db-stats            # Show graph counts by n
 just check-properties    # Check pending property computations
+
+# Generation (parallel, resumable)
+python scripts/generate.py --n 10 --workers 6  # 6 parallel workers
+python scripts/generate.py --n 10 --resume     # Resume interrupted run
+
+# Tags
+python scripts/compute_tags.py                 # Backfill tags for all graphs
 ```
 
 ## API Endpoints
 
 ```
 GET /                    Home page (search interface)
-GET /graph/{graph6}      Graph detail + cospectral mates
+GET /graph/{graph6}      Graph detail + cospectral mates + tags
 GET /graphs              Query/filter graphs (HTMX partial or JSON)
 GET /compare?graphs=...  Compare multiple graphs
+GET /similar/{graph6}    Find spectrally similar graphs (L2 distance)
 GET /random              Redirect to random graph
 GET /random/cospectral   Redirect to random cospectral family
 GET /glossary            Terminology with MathJax
@@ -101,7 +112,12 @@ Footer on all pages has "Random graph" and "Random cospectral family" links.
 ## Code organization
 
 - `api/` - FastAPI backend with templates
+  - `database.py` - Async database layer (supports PostgreSQL and SQLite)
+  - `main.py` - API routes with request logging
 - `db/` - Core library (matrices, spectra, metadata)
+  - `tags.py` - Named graph detection (complete, cycle, path, star, etc.)
 - `scripts/` - Generation pipeline and stats refresh
-- `sql/` - Database schema
-- `tests/` - Pytest tests
+  - `generate.py` - Parallel graph generation (multiprocessing, resumable)
+  - `compute_tags.py` - Backfill tags for existing graphs
+- `sql/` - Database schema (PostgreSQL and SQLite versions)
+- `tests/` - Pytest tests (156 tests)

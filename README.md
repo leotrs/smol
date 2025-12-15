@@ -28,6 +28,11 @@ For each connected graph on up to 10 vertices, SMOL stores:
 - Average path length, assortativity
 - Centrality distributions (betweenness, closeness, eigenvector)
 
+**Tags (named graph detection):**
+- Complete graphs, cycles, paths, stars, wheels
+- Complete bipartite graphs, trees
+- Petersen graph, Eulerian graphs, regular graphs
+
 ## Scale
 
 | Vertices | Connected Graphs |
@@ -51,24 +56,29 @@ SMOL provides a web interface for exploring graphs:
 
 All endpoints return JSON by default, HTML when accessed via browser.
 
+**Live API:** https://smol-graphs-db.fly.dev
+
 ```bash
 # Look up a graph by graph6
-curl https://smol.example.com/graph/D%3F%7B
+curl https://smol-graphs-db.fly.dev/graph/D%3F%7B
 
 # Query graphs by properties
-curl "https://smol.example.com/graphs?n=7&bipartite=true&limit=10"
+curl "https://smol-graphs-db.fly.dev/graphs?n=7&bipartite=true&limit=10"
 
 # Compare multiple graphs
-curl "https://smol.example.com/compare?graphs=D%3F%7B,DEo"
+curl "https://smol-graphs-db.fly.dev/compare?graphs=D%3F%7B,DEo"
+
+# Find spectrally similar graphs
+curl "https://smol-graphs-db.fly.dev/similar/D%3F%7B?matrix=adj&limit=5"
 
 # Random graph (redirects)
-curl -L https://smol.example.com/random
+curl -L https://smol-graphs-db.fly.dev/random
 
 # Random cospectral family (redirects)
-curl -L https://smol.example.com/random/cospectral
+curl -L https://smol-graphs-db.fly.dev/random/cospectral
 
 # Database statistics
-curl https://smol.example.com/stats
+curl https://smol-graphs-db.fly.dev/stats
 ```
 
 ## Local Development
@@ -129,38 +139,33 @@ Default: `dbname=smol` (local)
 ```
 smol/
 ├── api/                 # FastAPI backend
-│   ├── main.py          # Routes and app
-│   ├── database.py      # Database queries
+│   ├── main.py          # Routes with request logging
+│   ├── database.py      # Async database layer (PG + SQLite)
 │   ├── models.py        # Pydantic models
 │   └── templates/       # Jinja2 + HTMX templates
-│       ├── base.html    # Layout with Pico CSS
-│       ├── home.html    # Search interface
-│       ├── graph_detail.html
-│       ├── graph_list.html
-│       ├── compare.html
-│       ├── glossary.html
-│       └── about.html
 ├── db/                  # Core library
 │   ├── matrices.py      # Matrix computations
 │   ├── spectrum.py      # Eigenvalue computation
 │   ├── metadata.py      # Graph properties
-│   └── graph_data.py    # GraphRecord processing
+│   ├── graph_data.py    # GraphRecord processing
+│   └── tags.py          # Named graph detection
 ├── scripts/
-│   ├── generate.py          # Graph generation pipeline
+│   ├── generate.py          # Parallel graph generation (resumable)
 │   ├── compute_properties.py # Network science properties
+│   ├── compute_tags.py      # Backfill tags for graphs
 │   └── refresh_stats.py     # Update statistics cache
 ├── sql/
-│   └── schema.sql           # Database schema
-└── tests/
-    ├── test_api.py          # API tests
-    └── test_compute_properties.py
+│   ├── schema.sql           # PostgreSQL schema
+│   └── schema_sqlite.sql    # SQLite schema
+└── tests/                   # 156 tests
 ```
 
 ## Tech Stack
 
 - **Backend**: FastAPI with Jinja2 templates
 - **Frontend**: HTMX + Alpine.js, Pico CSS, D3.js for graph visualization
-- **Database**: PostgreSQL
+- **Database**: PostgreSQL (local dev) or SQLite with aiosqlite (production)
+- **Deployment**: Fly.io with persistent volume
 - **Math rendering**: MathJax
 
 ## License

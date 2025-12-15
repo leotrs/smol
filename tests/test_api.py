@@ -78,6 +78,13 @@ class TestGraphEndpoint:
         assert "closeness_centrality" in props
         assert "eigenvector_centrality" in props
 
+    def test_graph_has_tags(self):
+        """Tags field should be present in response (may be empty list)."""
+        response = client.get("/graph/D%3F%7B")
+        data = response.json()
+        assert "tags" in data
+        assert isinstance(data["tags"], list)
+
     def test_graph_spectra(self):
         response = client.get("/graph/D%3F%7B")
         data = response.json()
