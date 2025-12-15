@@ -17,7 +17,13 @@ For each connected graph on up to 10 vertices, SMOL stores:
 - Bipartiteness, planarity, regularity
 - Diameter, radius, girth
 - Degree sequence (min/max)
-- Triangle count
+- Triangle count, clique number, chromatic number
+
+**Network science properties:**
+- Algebraic connectivity (Fiedler value)
+- Global and local clustering coefficients
+- Average path length, assortativity
+- Centrality distributions (betweenness, closeness, eigenvector)
 
 ## Scale
 
@@ -83,30 +89,25 @@ createdb smol
 psql smol < sql/schema.sql
 ```
 
-### Generate graphs
+### Common commands
+
+Uses [just](https://github.com/casey/just) for task running:
 
 ```bash
-# Generate graphs for n=1 through n=8
-uv run python scripts/generate.py --n-min 1 --n-max 8
-
-# Generate just n=9
-uv run python scripts/generate.py --n-min 9 --n-max 9
-
-# Refresh statistics cache
-uv run python scripts/refresh_stats.py
+just serve              # Run API locally (http://localhost:8000)
+just test               # Run tests
+just test-cov           # Run tests with coverage
+just generate           # Generate graphs n=1 to n=8
+just generate 9 10      # Generate graphs for specific range
+just compute-properties # Compute network science properties
+just refresh-stats      # Refresh statistics cache
+just db-stats           # Show graph counts by n
 ```
 
-### Run the API locally
+Or run commands directly:
 
 ```bash
 uv run uvicorn api.main:app --reload
-```
-
-Then visit http://localhost:8000
-
-### Run tests
-
-```bash
 uv run pytest tests/ -v
 ```
 
@@ -142,12 +143,14 @@ smol/
 │   ├── metadata.py      # Graph properties
 │   └── graph_data.py    # GraphRecord processing
 ├── scripts/
-│   ├── generate.py      # Graph generation pipeline
-│   └── refresh_stats.py # Update statistics cache
+│   ├── generate.py          # Graph generation pipeline
+│   ├── compute_properties.py # Network science properties
+│   └── refresh_stats.py     # Update statistics cache
 ├── sql/
-│   └── schema.sql       # Database schema
+│   └── schema.sql           # Database schema
 └── tests/
-    └── test_api.py      # API tests
+    ├── test_api.py          # API tests
+    └── test_compute_properties.py
 ```
 
 ## Tech Stack
@@ -156,3 +159,7 @@ smol/
 - **Frontend**: HTMX + Alpine.js, Pico CSS, D3.js for graph visualization
 - **Database**: PostgreSQL
 - **Math rendering**: MathJax
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.
