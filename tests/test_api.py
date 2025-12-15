@@ -57,6 +57,24 @@ class TestGraphEndpoint:
         assert props["is_planar"] is True
         assert props["diameter"] == 2
 
+    def test_graph_has_network_science_properties(self):
+        """New network science properties should be present in response."""
+        response = client.get("/graph/D%3F%7B")
+        data = response.json()
+        props = data["properties"]
+        # These fields should exist (may be null if not computed)
+        assert "clique_number" in props
+        assert "chromatic_number" in props
+        assert "algebraic_connectivity" in props
+        assert "global_clustering" in props
+        assert "avg_local_clustering" in props
+        assert "avg_path_length" in props
+        assert "assortativity" in props
+        assert "degree_sequence" in props
+        assert "betweenness_centrality" in props
+        assert "closeness_centrality" in props
+        assert "eigenvector_centrality" in props
+
     def test_graph_spectra(self):
         response = client.get("/graph/D%3F%7B")
         data = response.json()
@@ -351,9 +369,9 @@ class TestHomeSearch:
 class TestComparePropertyDiffs:
     def test_compare_highlights_different_properties(self):
         """Compare endpoint should flag properties that differ between graphs."""
-        # Find two graphs with same n but different diameter
+        # D~{ (K5, diameter=1) vs DQo (P5, diameter=4)
         response = client.get(
-            "/compare?graphs=ICpfbjNvW,ICpfbjNzg",
+            "/compare?graphs=D~%7B,DQo",
             headers={"Accept": "text/html"}
         )
         assert response.status_code == 200

@@ -18,7 +18,7 @@
         </div>
     </div>
     <div>
-        <h3>Properties</h3>
+        <h3>Structural Properties</h3>
         <dl class="property-grid">
             <dt>Bipartite</dt>
             <dd>{{ "Yes" if graph.properties.is_bipartite else "No" }}</dd>
@@ -43,7 +43,47 @@
 
             <dt>Triangles</dt>
             <dd>{{ graph.properties.triangle_count }}</dd>
+
+            {% if graph.properties.clique_number %}
+            <dt>Clique number</dt>
+            <dd>{{ graph.properties.clique_number }}</dd>
+            {% endif %}
+
+            {% if graph.properties.chromatic_number %}
+            <dt>Chromatic number</dt>
+            <dd>{{ graph.properties.chromatic_number }}{% if graph.properties.chromatic_number > graph.properties.clique_number %}<span class="muted" data-tooltip="Upper bound from greedy coloring">*</span>{% endif %}</dd>
+            {% endif %}
         </dl>
+
+        {% if graph.properties.global_clustering is not none or graph.properties.avg_path_length is not none %}
+        <h3 style="margin-top: 1.5rem;">Network Properties</h3>
+        <dl class="property-grid">
+            {% if graph.properties.algebraic_connectivity is not none %}
+            <dt>Algebraic connectivity</dt>
+            <dd>{{ "%.4f"|format(graph.properties.algebraic_connectivity) }}</dd>
+            {% endif %}
+
+            {% if graph.properties.global_clustering is not none %}
+            <dt>Global clustering</dt>
+            <dd>{{ "%.4f"|format(graph.properties.global_clustering) }}</dd>
+            {% endif %}
+
+            {% if graph.properties.avg_local_clustering is not none %}
+            <dt>Avg local clustering</dt>
+            <dd>{{ "%.4f"|format(graph.properties.avg_local_clustering) }}</dd>
+            {% endif %}
+
+            {% if graph.properties.avg_path_length is not none %}
+            <dt>Avg path length</dt>
+            <dd>{{ "%.4f"|format(graph.properties.avg_path_length) }}</dd>
+            {% endif %}
+
+            {% if graph.properties.assortativity is not none %}
+            <dt>Degree assortativity</dt>
+            <dd>{{ "%.4f"|format(graph.properties.assortativity) }}</dd>
+            {% endif %}
+        </dl>
+        {% endif %}
     </div>
 </div>
 
@@ -575,6 +615,87 @@ function copyEigenvalues(btn) {
 }
 </script>
 
+{% if graph.properties.degree_sequence or graph.properties.betweenness_centrality %}
+<h3 style="margin-top: 2rem;">Distributions</h3>
+<div class="distributions-section">
+    {% if graph.properties.degree_sequence %}
+    <div class="distribution-item">
+        <button class="distribution-expand" onclick="toggleDistribution(this)" aria-label="Show degree sequence">
+            <span class="distribution-label">Degree sequence</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="distribution-content">
+            <code>[{{ graph.properties.degree_sequence | join(', ') }}]</code>
+            <button class="copy-btn-small" onclick="copyDistribution(this)" aria-label="Copy">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if graph.properties.betweenness_centrality %}
+    <div class="distribution-item">
+        <button class="distribution-expand" onclick="toggleDistribution(this)" aria-label="Show betweenness centrality">
+            <span class="distribution-label">Betweenness centrality</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="distribution-content">
+            <code>[{% for c in graph.properties.betweenness_centrality %}{{ "%.4f"|format(c) }}{% if not loop.last %}, {% endif %}{% endfor %}]</code>
+            <button class="copy-btn-small" onclick="copyDistribution(this)" aria-label="Copy">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if graph.properties.closeness_centrality %}
+    <div class="distribution-item">
+        <button class="distribution-expand" onclick="toggleDistribution(this)" aria-label="Show closeness centrality">
+            <span class="distribution-label">Closeness centrality</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="distribution-content">
+            <code>[{% for c in graph.properties.closeness_centrality %}{{ "%.4f"|format(c) }}{% if not loop.last %}, {% endif %}{% endfor %}]</code>
+            <button class="copy-btn-small" onclick="copyDistribution(this)" aria-label="Copy">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if graph.properties.eigenvector_centrality %}
+    <div class="distribution-item">
+        <button class="distribution-expand" onclick="toggleDistribution(this)" aria-label="Show eigenvector centrality">
+            <span class="distribution-label">Eigenvector centrality</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="distribution-content">
+            <code>[{% for c in graph.properties.eigenvector_centrality %}{{ "%.4f"|format(c) }}{% if not loop.last %}, {% endif %}{% endfor %}]</code>
+            <button class="copy-btn-small" onclick="copyDistribution(this)" aria-label="Copy">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+<script>
+function toggleDistribution(btn) {
+    const item = btn.closest('.distribution-item');
+    const content = item.querySelector('.distribution-content');
+    const isOpen = content.classList.toggle('open');
+    btn.classList.toggle('open', isOpen);
+}
+
+function copyDistribution(btn) {
+    const code = btn.parentElement.querySelector('code').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+        btn.classList.add('copied');
+        setTimeout(() => btn.classList.remove('copied'), 1500);
+    });
+}
+</script>
+{% endif %}
+
 <div class="section-header" style="margin-top: 2rem;">
     <h3>Cospectral Mates</h3>
     <a href="/similar/{{ graph.graph6 | urlencode }}" class="find-similar-link">Find similar spectra</a>
@@ -729,7 +850,18 @@ const graphData = {
         radius: {{ graph.properties.radius | tojson }},
         min_degree: {{ graph.properties.min_degree }},
         max_degree: {{ graph.properties.max_degree }},
-        triangle_count: {{ graph.properties.triangle_count }}
+        triangle_count: {{ graph.properties.triangle_count }},
+        clique_number: {{ graph.properties.clique_number | tojson }},
+        chromatic_number: {{ graph.properties.chromatic_number | tojson }},
+        algebraic_connectivity: {{ graph.properties.algebraic_connectivity | tojson }},
+        global_clustering: {{ graph.properties.global_clustering | tojson }},
+        avg_local_clustering: {{ graph.properties.avg_local_clustering | tojson }},
+        avg_path_length: {{ graph.properties.avg_path_length | tojson }},
+        assortativity: {{ graph.properties.assortativity | tojson }},
+        degree_sequence: {{ graph.properties.degree_sequence | tojson }},
+        betweenness_centrality: {{ graph.properties.betweenness_centrality | tojson }},
+        closeness_centrality: {{ graph.properties.closeness_centrality | tojson }},
+        eigenvector_centrality: {{ graph.properties.eigenvector_centrality | tojson }}
     },
     spectra: {
         adj_eigenvalues: {{ graph.spectra.adj_eigenvalues | tojson }},

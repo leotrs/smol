@@ -31,6 +31,10 @@ def fetch_graph(graph6: str) -> dict[str, Any] | None:
                    is_bipartite, is_planar, is_regular,
                    diameter, girth, radius,
                    min_degree, max_degree, triangle_count,
+                   clique_number, chromatic_number,
+                   algebraic_connectivity, global_clustering, avg_local_clustering,
+                   avg_path_length, assortativity,
+                   degree_sequence, betweenness_centrality, closeness_centrality, eigenvector_centrality,
                    adj_eigenvalues, adj_spectral_hash,
                    lap_eigenvalues, lap_spectral_hash,
                    nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
@@ -122,7 +126,11 @@ def query_graphs(
             SELECT graph6, n, m,
                    is_bipartite, is_planar, is_regular,
                    diameter, girth, radius,
-                   min_degree, max_degree, triangle_count
+                   min_degree, max_degree, triangle_count,
+                   clique_number, chromatic_number,
+                   algebraic_connectivity, global_clustering, avg_local_clustering,
+                   avg_path_length, assortativity,
+                   degree_sequence, betweenness_centrality, closeness_centrality, eigenvector_centrality
             FROM graphs
             WHERE {where}
             ORDER BY n, m, graph6
@@ -153,6 +161,10 @@ def fetch_random_graph() -> dict[str, Any] | None:
                        is_bipartite, is_planar, is_regular,
                        diameter, girth, radius,
                        min_degree, max_degree, triangle_count,
+                       clique_number, chromatic_number,
+                       algebraic_connectivity, global_clustering, avg_local_clustering,
+                       avg_path_length, assortativity,
+                       degree_sequence, betweenness_centrality, closeness_centrality, eigenvector_centrality,
                        adj_eigenvalues, adj_spectral_hash,
                        lap_eigenvalues, lap_spectral_hash,
                        nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,

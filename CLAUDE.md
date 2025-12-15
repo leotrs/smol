@@ -12,6 +12,27 @@ SMOL (Spectra and Matrices Of Little graphs) is a database of all small connecte
 - **Spectral hash**: A 16-character hash of sorted eigenvalues for cospectral detection
 - **Cospectral family**: Graphs sharing the same spectrum for a given matrix type
 
+## Graph Properties
+
+Each graph stores:
+
+**Structural properties:**
+- `is_bipartite`, `is_planar`, `is_regular` (boolean flags)
+- `diameter`, `girth`, `radius` (integer, nullable)
+- `min_degree`, `max_degree`, `triangle_count`
+- `clique_number`, `chromatic_number` (greedy upper bound)
+
+**Network science properties:**
+- `algebraic_connectivity` (second smallest Laplacian eigenvalue)
+- `global_clustering` (transitivity)
+- `avg_local_clustering` (average of local clustering coefficients)
+- `avg_path_length` (only for connected graphs)
+- `assortativity` (degree assortativity coefficient)
+
+**Distributions (sorted arrays):**
+- `degree_sequence` (sorted descending)
+- `betweenness_centrality`, `closeness_centrality`, `eigenvector_centrality`
+
 ## Tech Stack
 
 - **Backend**: FastAPI with Jinja2 templates
@@ -22,17 +43,15 @@ SMOL (Spectra and Matrices Of Little graphs) is a database of all small connecte
 ## Commands
 
 ```bash
-# Run tests
-uv run pytest tests/ -v
-
-# Generate graphs (n=1 to n=8)
-uv run python scripts/generate.py --n-min 1 --n-max 8
-
-# Refresh statistics cache
-uv run python scripts/refresh_stats.py
-
-# Run API locally
-uv run uvicorn api.main:app --reload
+just test                # Run all tests
+just test-cov            # Run tests with coverage
+just generate            # Generate graphs (n=1 to n=8)
+just generate 9 10       # Generate graphs for specific range
+just compute-properties  # Compute network science properties
+just refresh-stats       # Refresh statistics cache
+just serve               # Run API locally
+just db-stats            # Show graph counts by n
+just check-properties    # Check pending property computations
 ```
 
 ## API Endpoints

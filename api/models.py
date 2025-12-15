@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 
 class GraphProperties(BaseModel):
+    # Structural properties
     is_bipartite: bool
     is_planar: bool
     is_regular: bool
@@ -13,6 +14,20 @@ class GraphProperties(BaseModel):
     min_degree: int
     max_degree: int
     triangle_count: int
+    # Graph-theoretic properties
+    clique_number: int | None = None
+    chromatic_number: int | None = None
+    # Network science properties
+    algebraic_connectivity: float | None = None
+    global_clustering: float | None = None
+    avg_local_clustering: float | None = None
+    avg_path_length: float | None = None
+    assortativity: float | None = None
+    # Distributions (sorted arrays)
+    degree_sequence: list[int] | None = None
+    betweenness_centrality: list[float] | None = None
+    closeness_centrality: list[float] | None = None
+    eigenvector_centrality: list[float] | None = None
 
 
 class Spectra(BaseModel):

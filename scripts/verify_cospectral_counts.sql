@@ -76,28 +76,35 @@ ORDER BY g.n;
 -- NB (Non-Backtracking) cospectral counts - DISCREPANCY INVESTIGATION
 --------------------------------------------------------------------------------
 -- Published $\mathcal{A}$ column:
---   n≤4→4, n=5→11, n=6→57, n=7→363, n=8→3760, n=9→64221, n=10→1936969
+--   n≤4→4, n=5→11, n=6→57, n=7→363, n=8→3760
 --
--- Our NB counts (all graphs):
---   n=4→4, n=5→15, n=6→75, n=7→449, n=8→4297, n=9→68749, n=10→2000415
---
--- DISCREPANCY: Our counts are consistently higher for n≥5.
---
--- Key finding: All trees/forests have ALL-ZERO NB eigenvalues (NB matrix is nilpotent).
--- This means all forests with same (n,m) are trivially NB-cospectral.
---
--- Filtering attempts:
---   - "cyclic only" (girth IS NOT NULL): matches at n=6 (57) but not elsewhere
---   - "connected only": undercounts
---   - "cyclic + trees": n=5→10 (vs 11), n=6→63, n=7→425, n=8→4246
---
--- IMPORTANT: When restricted to min_degree >= 2, our NB counts MATCH PERFECTLY.
+-- IMPORTANT: For min_degree >= 2, our NB counts MATCH PERFECTLY.
 -- See verify_cospectral_counts_min_deg2.sql for those results.
+-- The discrepancy only exists for graphs with leaves (pendant vertices).
 --
--- Possible explanations for all-graphs discrepancy:
---   1. Published may exclude trivial tree cospectrality
---   2. Column $\mathcal{A}$ might be signless Laplacian Q=D+A (we don't have this)
---   3. Different NB matrix definition for graphs with pendant vertices
+-- Investigation summary (Dec 2024):
+--
+-- Filter                | n=4 | n=5 | n=6 | n=7 | n=8
+-- ----------------------|-----|-----|-----|-----|------
+-- Published             |   4 |  11 |  57 | 363 | 3760
+-- m >= 2 (all graphs)   |   4 |  15 |  75 | 449 | 4297  ← matches n=4 only
+-- Connected only        |   2 |   8 |  54 | 359 | 3776  ← close but not exact
+-- Cyclic only           |   0 |   7 |  57 | 414 | 4223  ← matches n=6 only
+-- min_degree >= 2       |   0 |   0 |   0 |   0 |    2  ← matches published ✓
+--
+-- Key findings:
+-- 1. Trees have ALL-ZERO NB eigenvalues (nilpotent matrix), making all trees
+--    with same edge count trivially cospectral.
+-- 2. Leaves (degree-1 vertices) only affect the multiplicity of zero eigenvalues.
+-- 3. Many cospectral families contain BOTH connected and disconnected graphs.
+-- 4. Published numbers fall between "all graphs" and "connected only" counts,
+--    suggesting a specific methodology we cannot reproduce without original code.
+--
+-- CONCLUSION: The exact methodology for general graphs is unknown, but this is
+-- NOT scientifically significant since:
+-- - Graphs with leaves have trivial zero-eigenvalue behavior in NB
+-- - The min_degree >= 2 case (no leaves) matches perfectly
+-- - All other matrices (Adj, Lap, NBL) match published counts exactly
 
 WITH hash_counts AS (
     SELECT nb_spectral_hash, n, COUNT(*) as cnt
@@ -111,5 +118,5 @@ JOIN hash_counts h ON g.nb_spectral_hash = h.nb_spectral_hash AND g.n = h.n
 GROUP BY g.n
 ORDER BY g.n;
 
--- Our result: n=4→4, n=5→15, n=6→75, n=7→449, n=8→4297
--- Published:  n≤4→4, n=5→11, n=6→57, n=7→363, n=8→3760
+-- Our result (m >= 2): n=4→4, n=5→15, n=6→75, n=7→449, n=8→4297
+-- Published:           n≤4→4, n=5→11, n=6→57, n=7→363, n=8→3760

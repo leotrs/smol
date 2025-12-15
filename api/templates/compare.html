@@ -204,6 +204,48 @@ function renderGraphs() {
             <td>Triangles</td>
             {% for g in result.graphs %}<td>{{ g.properties.triangle_count }}</td>{% endfor %}
         </tr>
+        {% if result.graphs[0].properties.clique_number is not none %}
+        <tr{% if prop_diffs.clique_number %} class="row-diff"{% endif %}>
+            <td>Clique number</td>
+            {% for g in result.graphs %}<td>{{ g.properties.clique_number if g.properties.clique_number else "-" }}</td>{% endfor %}
+        </tr>
+        {% endif %}
+        {% if result.graphs[0].properties.chromatic_number is not none %}
+        <tr{% if prop_diffs.chromatic_number %} class="row-diff"{% endif %}>
+            <td>Chromatic number</td>
+            {% for g in result.graphs %}<td>{{ g.properties.chromatic_number if g.properties.chromatic_number else "-" }}</td>{% endfor %}
+        </tr>
+        {% endif %}
+        {% if result.graphs[0].properties.algebraic_connectivity is not none %}
+        <tr{% if prop_diffs.algebraic_connectivity %} class="row-diff"{% endif %}>
+            <td>Algebraic connectivity</td>
+            {% for g in result.graphs %}<td>{{ "%.4f"|format(g.properties.algebraic_connectivity) if g.properties.algebraic_connectivity is not none else "-" }}</td>{% endfor %}
+        </tr>
+        {% endif %}
+        {% if result.graphs[0].properties.global_clustering is not none %}
+        <tr{% if prop_diffs.global_clustering %} class="row-diff"{% endif %}>
+            <td>Global clustering</td>
+            {% for g in result.graphs %}<td>{{ "%.4f"|format(g.properties.global_clustering) if g.properties.global_clustering is not none else "-" }}</td>{% endfor %}
+        </tr>
+        {% endif %}
+        {% if result.graphs[0].properties.avg_local_clustering is not none %}
+        <tr{% if prop_diffs.avg_local_clustering %} class="row-diff"{% endif %}>
+            <td>Avg local clustering</td>
+            {% for g in result.graphs %}<td>{{ "%.4f"|format(g.properties.avg_local_clustering) if g.properties.avg_local_clustering is not none else "-" }}</td>{% endfor %}
+        </tr>
+        {% endif %}
+        {% if result.graphs[0].properties.avg_path_length is not none %}
+        <tr{% if prop_diffs.avg_path_length %} class="row-diff"{% endif %}>
+            <td>Avg path length</td>
+            {% for g in result.graphs %}<td>{{ "%.4f"|format(g.properties.avg_path_length) if g.properties.avg_path_length is not none else "-" }}</td>{% endfor %}
+        </tr>
+        {% endif %}
+        {% if result.graphs[0].properties.assortativity is not none %}
+        <tr{% if prop_diffs.assortativity %} class="row-diff"{% endif %}>
+            <td>Degree assortativity</td>
+            {% for g in result.graphs %}<td>{{ "%.4f"|format(g.properties.assortativity) if g.properties.assortativity is not none else "-" }}</td>{% endfor %}
+        </tr>
+        {% endif %}
     </tbody>
 </table>
 </div>
