@@ -227,7 +227,7 @@ def main():
     print(f"Creating SQLite database: {args.output}")
     sqlite_conn = create_sqlite_db(args.output)
 
-    print(f"Connecting to PostgreSQL...")
+    print("Connecting to PostgreSQL...")
     pg_conn = get_pg_connection()
 
     export_graphs(sqlite_conn, pg_conn, args.max_n, args.batch_size)

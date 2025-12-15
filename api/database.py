@@ -487,8 +487,6 @@ def fetch_similar_graphs(
 
 def get_stats() -> dict[str, Any]:
     """Get database statistics from cache."""
-    ph = _placeholder()
-
     with get_db() as conn:
         cur = conn.cursor()
 
