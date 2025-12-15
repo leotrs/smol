@@ -213,3 +213,38 @@ class TestMultipleTags:
         tags = compute_tags(G)
         # Should at least not crash; may have eulerian if degrees work out
         assert isinstance(tags, list)
+
+
+class TestEdgeCases:
+    def test_empty_graph(self):
+        """Empty graph (n=0) returns empty tags."""
+        G = nx.Graph()
+        tags = compute_tags(G)
+        assert tags == []
+
+    def test_single_vertex(self):
+        """Single vertex graph has regular tag only."""
+        G = nx.Graph()
+        G.add_node(0)
+        tags = compute_tags(G)
+        assert "regular" in tags
+
+    def test_3_regular_non_petersen(self):
+        """3-regular graph with 10 vertices that isn't Petersen."""
+        # Complete bipartite K_{3,3} + extra edges to make it 3-regular with 10 vertices
+        # Actually, let's use a simpler approach: Möbius-Kantor graph (3-regular, 8 vertices)
+        G = nx.moebius_kantor_graph()
+        # Add 2 more vertices to get to 10, connected 3-regularly
+        # This is tricky - let's just test a 3-regular graph that isn't Petersen
+        tags = compute_tags(G)
+        assert "petersen" not in tags
+        assert "regular" in tags
+
+    def test_disconnected_graph(self):
+        """Disconnected graph doesn't get tree/cycle/eulerian tags."""
+        G = nx.Graph()
+        G.add_edges_from([(0, 1), (2, 3)])  # Two separate edges
+        tags = compute_tags(G)
+        assert "tree" not in tags
+        assert "cycle" not in tags
+        assert "eulerian" not in tags

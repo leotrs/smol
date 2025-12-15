@@ -157,7 +157,7 @@ smol/
 ├── sql/
 │   ├── schema.sql           # PostgreSQL schema
 │   └── schema_sqlite.sql    # SQLite schema
-└── tests/                   # 156 tests
+└── tests/                   # 161 tests
 ```
 
 ## Tech Stack
@@ -167,6 +167,19 @@ smol/
 - **Database**: PostgreSQL (local dev) or SQLite with aiosqlite (production)
 - **Deployment**: Fly.io with persistent volume
 - **Math rendering**: MathJax
+
+## Verification
+
+Cospectral counts have been verified against published data for all four matrix types:
+
+| Matrix | Status |
+|--------|--------|
+| Adjacency | ✓ Perfect match |
+| Laplacian (normalized) | ✓ Perfect match (n≥5) |
+| Non-backtracking | Partial (matches for min_degree≥2) |
+| NB Laplacian | ✓ Perfect match |
+
+See `scripts/verify_cospectral_counts*.sql` for details.
 
 ## License
 
