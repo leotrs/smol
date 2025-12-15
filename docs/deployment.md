@@ -225,11 +225,12 @@ primary_region = "iad"  # or nearest to you
 ### 2.4 Deploy
 
 ```bash
-# Create app
-fly apps create smol-graphs
+# Create app (name must be globally unique on Fly.io)
+fly apps create smol-graphs-db
 
-# Create persistent volume (1GB for n≤9, increase later for n=10)
-fly volumes create smol_data --region iad --size 1
+# Create persistent volume (2GB for n≤9, increase later for n=10)
+fly volumes create smol_data --region iad --size 2 --app smol-graphs-db
+# Answer 'y' to the single-volume warning (acceptable for research tool)
 
 # Deploy
 fly deploy
@@ -242,15 +243,18 @@ fly logs
 ### 2.5 Upload database
 
 ```bash
-# Option A: SFTP into the machine
-fly ssh console
-# Then wget/curl the DB from somewhere
+# First, check if placeholder file exists and remove it
+fly ssh console --app smol-graphs-db
+rm -f /data/smol.db
+exit
 
-# Option B: Use fly ssh sftp
-fly ssh sftp shell
+# Upload via SFTP (takes several minutes for 1GB file)
+fly ssh sftp shell --app smol-graphs-db
 put smol.db /data/smol.db
+quit
 
-# Option C: Include small DB in Docker image (not recommended for large DBs)
+# Restart to pick up the database
+fly apps restart smol-graphs-db
 ```
 
 ### 2.6 Custom domain (optional)
@@ -266,14 +270,14 @@ fly certs add smol.leotrs.com
 
 ```bash
 # Test endpoints
-curl https://smol-graphs.fly.dev/
-curl https://smol-graphs.fly.dev/graph/D%3F%7B
-curl https://smol-graphs.fly.dev/stats
-curl https://smol-graphs.fly.dev/random
+curl https://smol-graphs-db.fly.dev/
+curl https://smol-graphs-db.fly.dev/graph/D%3F%7B
+curl https://smol-graphs-db.fly.dev/stats
+curl https://smol-graphs-db.fly.dev/random
 
 # Monitor
-fly logs
-fly status
+fly logs --app smol-graphs-db
+fly status --app smol-graphs-db
 ```
 
 ## Phase 4: Monitor Costs
@@ -302,17 +306,17 @@ When ready to add n=10:
 
 ### View logs
 ```bash
-fly logs
+fly logs --app smol-graphs-db
 ```
 
 ### SSH into machine
 ```bash
-fly ssh console
+fly ssh console --app smol-graphs-db
 ```
 
 ### Restart
 ```bash
-fly apps restart smol-graphs
+fly apps restart smol-graphs-db
 ```
 
 ### Update application
@@ -323,7 +327,7 @@ fly deploy
 
 ### Backup database
 ```bash
-fly ssh sftp shell
+fly ssh sftp shell --app smol-graphs-db
 get /data/smol.db ./smol-backup.db
 ```
 
