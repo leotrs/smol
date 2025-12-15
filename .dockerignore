@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Data files (will be mounted separately)
+*.db
+*.sqlite
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Examples and scripts not needed in production
+examples/
+scripts/
+notebooks/
+sql/
+
+# CI/CD
+.github/
+
+# Misc
+.DS_Store
+*.log

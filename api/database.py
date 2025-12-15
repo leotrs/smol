@@ -1,32 +1,100 @@
-"""Database access layer for the API."""
+"""Database access layer for the API.
 
+Supports both PostgreSQL and SQLite backends.
+Set DATABASE_URL to either:
+  - PostgreSQL: postgresql://user:pass@host:5432/db or dbname=smol
+  - SQLite: sqlite:///path/to/file.db
+"""
+
+import json
 import os
+import sqlite3
 from contextlib import contextmanager
 from typing import Any
 
-import psycopg2
-from psycopg2.extras import RealDictCursor
+DATABASE_URL = os.environ.get("DATABASE_URL", "dbname=smol")
+
+# Detect backend type
+IS_SQLITE = DATABASE_URL.startswith("sqlite:")
 
 
-def get_connection_string() -> str:
-    return os.environ.get("DATABASE_URL", "dbname=smol")
+def _get_sqlite_path() -> str:
+    """Extract file path from sqlite:/// URL."""
+    return DATABASE_URL.replace("sqlite:///", "").replace("sqlite:", "")
 
 
 @contextmanager
 def get_db():
-    conn = psycopg2.connect(get_connection_string())
-    try:
-        yield conn
-    finally:
-        conn.close()
+    """Get database connection (works with both PG and SQLite)."""
+    if IS_SQLITE:
+        conn = sqlite3.connect(_get_sqlite_path())
+        conn.row_factory = sqlite3.Row
+        try:
+            yield conn
+        finally:
+            conn.close()
+    else:
+        import psycopg2
+        conn = psycopg2.connect(DATABASE_URL)
+        try:
+            yield conn
+        finally:
+            conn.close()
+
+
+def _placeholder() -> str:
+    """Return the correct placeholder for the current backend."""
+    return "?" if IS_SQLITE else "%s"
+
+
+def _parse_row(row: Any) -> dict[str, Any] | None:
+    """Convert database row to dict, handling SQLite JSON fields."""
+    if row is None:
+        return None
+
+    if IS_SQLITE:
+        d = dict(row)
+        # Parse JSON array fields
+        json_fields = [
+            "adj_eigenvalues", "lap_eigenvalues",
+            "nb_eigenvalues_re", "nb_eigenvalues_im",
+            "nbl_eigenvalues_re", "nbl_eigenvalues_im",
+            "degree_sequence", "betweenness_centrality",
+            "closeness_centrality", "eigenvector_centrality",
+        ]
+        for field in json_fields:
+            if field in d and d[field] is not None:
+                d[field] = json.loads(d[field])
+        # Convert integer booleans
+        for field in ["is_bipartite", "is_planar", "is_regular"]:
+            if field in d:
+                d[field] = bool(d[field])
+        return d
+    else:
+        return dict(row)
+
+
+def _parse_rows(rows: list) -> list[dict[str, Any]]:
+    """Convert list of database rows to list of dicts."""
+    return [_parse_row(row) for row in rows]
+
+
+def _get_cursor(conn):
+    """Get appropriate cursor for the backend."""
+    if IS_SQLITE:
+        return conn.cursor()
+    else:
+        from psycopg2.extras import RealDictCursor
+        return conn.cursor(cursor_factory=RealDictCursor)
 
 
 def fetch_graph(graph6: str) -> dict[str, Any] | None:
     """Fetch a single graph by graph6 string."""
+    ph = _placeholder()
     with get_db() as conn:
-        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur = _get_cursor(conn)
         cur.execute(
-            """
+            f"""
             SELECT graph6, n, m,
                    is_bipartite, is_planar, is_regular,
                    diameter, girth, radius,
@@ -40,17 +108,18 @@ def fetch_graph(graph6: str) -> dict[str, Any] | None:
                    nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
                    nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash
             FROM graphs
-            WHERE graph6 = %s
+            WHERE graph6 = {ph}
             """,
             (graph6,),
         )
-        return cur.fetchone()
+        return _parse_row(cur.fetchone())
 
 
 def fetch_cospectral_mates(
     graph6: str, n: int, hashes: dict[str, str]
 ) -> dict[str, list[str]]:
     """Fetch cospectral mates for each matrix type."""
+    ph = _placeholder()
     mates = {}
     with get_db() as conn:
         cur = conn.cursor()
@@ -59,7 +128,7 @@ def fetch_cospectral_mates(
             cur.execute(
                 f"""
                 SELECT graph6 FROM graphs
-                WHERE {hash_col} = %s AND graph6 != %s AND n = %s
+                WHERE {hash_col} = {ph} AND graph6 != {ph} AND n = {ph}
                 """,
                 (hash_val, graph6, n),
             )
@@ -82,6 +151,7 @@ def query_graphs(
     offset: int = 0,
 ) -> list[dict[str, Any]]:
     """Query graphs with filters."""
+    ph = _placeholder()
     conditions = []
     params = []
 
@@ -89,38 +159,38 @@ def query_graphs(
         conditions.append("diameter IS NOT NULL")
 
     if n is not None:
-        conditions.append("n = %s")
+        conditions.append(f"n = {ph}")
         params.append(n)
     if n_min is not None:
-        conditions.append("n >= %s")
+        conditions.append(f"n >= {ph}")
         params.append(n_min)
     if n_max is not None:
-        conditions.append("n <= %s")
+        conditions.append(f"n <= {ph}")
         params.append(n_max)
     if m is not None:
-        conditions.append("m = %s")
+        conditions.append(f"m = {ph}")
         params.append(m)
     if m_min is not None:
-        conditions.append("m >= %s")
+        conditions.append(f"m >= {ph}")
         params.append(m_min)
     if m_max is not None:
-        conditions.append("m <= %s")
+        conditions.append(f"m <= {ph}")
         params.append(m_max)
     if bipartite is not None:
-        conditions.append("is_bipartite = %s")
-        params.append(bipartite)
+        conditions.append(f"is_bipartite = {ph}")
+        params.append((1 if bipartite else 0) if IS_SQLITE else bipartite)
     if planar is not None:
-        conditions.append("is_planar = %s")
-        params.append(planar)
+        conditions.append(f"is_planar = {ph}")
+        params.append((1 if planar else 0) if IS_SQLITE else planar)
     if regular is not None:
-        conditions.append("is_regular = %s")
-        params.append(regular)
+        conditions.append(f"is_regular = {ph}")
+        params.append((1 if regular else 0) if IS_SQLITE else regular)
 
-    where = " AND ".join(conditions) if conditions else "TRUE"
+    where = " AND ".join(conditions) if conditions else "1=1"
     params.extend([limit, offset])
 
     with get_db() as conn:
-        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur = _get_cursor(conn)
         cur.execute(
             f"""
             SELECT graph6, n, m,
@@ -134,16 +204,18 @@ def query_graphs(
             FROM graphs
             WHERE {where}
             ORDER BY n, m, graph6
-            LIMIT %s OFFSET %s
+            LIMIT {ph} OFFSET {ph}
             """,
             params,
         )
-        return cur.fetchall()
+        return _parse_rows(cur.fetchall())
 
 
 def fetch_random_graph() -> dict[str, Any] | None:
     """Fetch a random connected graph."""
     import random
+    ph = _placeholder()
+
     with get_db() as conn:
         cur = conn.cursor()
         cur.execute("SELECT MIN(id), MAX(id) FROM graphs WHERE diameter IS NOT NULL")
@@ -152,11 +224,11 @@ def fetch_random_graph() -> dict[str, Any] | None:
             return None
         min_id, max_id = int(row[0]), int(row[1])
 
-        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur = _get_cursor(conn)
         for _ in range(10):  # retry a few times in case of gaps
             rand_id = random.randint(min_id, max_id)
             cur.execute(
-                """
+                f"""
                 SELECT graph6, n, m,
                        is_bipartite, is_planar, is_regular,
                        diameter, girth, radius,
@@ -170,20 +242,21 @@ def fetch_random_graph() -> dict[str, Any] | None:
                        nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
                        nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash
                 FROM graphs
-                WHERE id >= %s AND diameter IS NOT NULL
+                WHERE id >= {ph} AND diameter IS NOT NULL
                 LIMIT 1
                 """,
                 (rand_id,),
             )
             row = cur.fetchone()
             if row:
-                return row
+                return _parse_row(row)
         return None
 
 
 def fetch_random_cospectral_class(matrix: str = "adj") -> list[str]:
     """Fetch a random cospectral class (graphs sharing same spectrum)."""
     import random
+    ph = _placeholder()
     hash_col = f"{matrix}_spectral_hash"
 
     with get_db() as conn:
@@ -202,7 +275,7 @@ def fetch_random_cospectral_class(matrix: str = "adj") -> list[str]:
             cur.execute(
                 f"""
                 SELECT {hash_col}, n FROM graphs
-                WHERE id >= %s AND diameter IS NOT NULL
+                WHERE id >= {ph} AND diameter IS NOT NULL
                 LIMIT 1
                 """,
                 (rand_id,),
@@ -213,11 +286,11 @@ def fetch_random_cospectral_class(matrix: str = "adj") -> list[str]:
 
             hash_val, n = row
 
-            # Check if this hash has multiple graphs (using index)
+            # Check if this hash has multiple graphs
             cur.execute(
                 f"""
                 SELECT graph6 FROM graphs
-                WHERE {hash_col} = %s AND n = %s AND diameter IS NOT NULL
+                WHERE {hash_col} = {ph} AND n = {ph} AND diameter IS NOT NULL
                 ORDER BY graph6
                 LIMIT 10
                 """,
@@ -241,6 +314,7 @@ def fetch_similar_graphs(
     Only searches graphs with same n (vertex count).
     """
     import math
+    ph = _placeholder()
 
     # Get target graph
     target = fetch_graph(graph6)
@@ -263,74 +337,140 @@ def fetch_similar_graphs(
         target_eigs = [math.sqrt(r**2 + i**2) for r, i in zip(target_re, target_im)]
         target_eigs.sort()
         target_hash = target[f"{matrix}_spectral_hash"]
-        eig_col = None  # handled separately
+        eig_col = None
         hash_col = f"{matrix}_spectral_hash"
 
     with get_db() as conn:
-        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur = _get_cursor(conn)
 
-        # First get cospectral mates (same hash) - these should always appear
-        # Then sample additional random graphs
-        if eig_col:
-            cur.execute(
-                f"""
-                (SELECT graph6, n, m,
-                       is_bipartite, is_planar, is_regular,
-                       diameter, girth, radius,
-                       min_degree, max_degree, triangle_count,
-                       {eig_col}
-                FROM graphs
-                WHERE n = %s AND {hash_col} = %s AND graph6 != %s
-                LIMIT 50)
-                UNION ALL
-                (SELECT graph6, n, m,
-                       is_bipartite, is_planar, is_regular,
-                       diameter, girth, radius,
-                       min_degree, max_degree, triangle_count,
-                       {eig_col}
-                FROM graphs
-                WHERE n = %s AND {hash_col} != %s AND graph6 != %s
-                ORDER BY random()
-                LIMIT 450)
-                """,
-                (n, target_hash, graph6, n, target_hash, graph6),
-            )
+        if IS_SQLITE:
+            # SQLite doesn't support UNION ALL with ORDER BY random() the same way
+            # Use separate queries
+            if eig_col:
+                cur.execute(
+                    f"""
+                    SELECT graph6, n, m,
+                           is_bipartite, is_planar, is_regular,
+                           diameter, girth, radius,
+                           min_degree, max_degree, triangle_count,
+                           {eig_col}
+                    FROM graphs
+                    WHERE n = {ph} AND {hash_col} = {ph} AND graph6 != {ph}
+                    LIMIT 50
+                    """,
+                    (n, target_hash, graph6),
+                )
+                cospectral = cur.fetchall()
+
+                cur.execute(
+                    f"""
+                    SELECT graph6, n, m,
+                           is_bipartite, is_planar, is_regular,
+                           diameter, girth, radius,
+                           min_degree, max_degree, triangle_count,
+                           {eig_col}
+                    FROM graphs
+                    WHERE n = {ph} AND {hash_col} != {ph} AND graph6 != {ph}
+                    ORDER BY random()
+                    LIMIT 450
+                    """,
+                    (n, target_hash, graph6),
+                )
+                others = cur.fetchall()
+                candidates = list(cospectral) + list(others)
+            else:
+                cur.execute(
+                    f"""
+                    SELECT graph6, n, m,
+                           is_bipartite, is_planar, is_regular,
+                           diameter, girth, radius,
+                           min_degree, max_degree, triangle_count,
+                           {matrix}_eigenvalues_re, {matrix}_eigenvalues_im
+                    FROM graphs
+                    WHERE n = {ph} AND {hash_col} = {ph} AND graph6 != {ph}
+                    LIMIT 50
+                    """,
+                    (n, target_hash, graph6),
+                )
+                cospectral = cur.fetchall()
+
+                cur.execute(
+                    f"""
+                    SELECT graph6, n, m,
+                           is_bipartite, is_planar, is_regular,
+                           diameter, girth, radius,
+                           min_degree, max_degree, triangle_count,
+                           {matrix}_eigenvalues_re, {matrix}_eigenvalues_im
+                    FROM graphs
+                    WHERE n = {ph} AND {hash_col} != {ph} AND graph6 != {ph}
+                    ORDER BY random()
+                    LIMIT 450
+                    """,
+                    (n, target_hash, graph6),
+                )
+                others = cur.fetchall()
+                candidates = list(cospectral) + list(others)
         else:
-            # For complex eigenvalues
-            cur.execute(
-                f"""
-                (SELECT graph6, n, m,
-                       is_bipartite, is_planar, is_regular,
-                       diameter, girth, radius,
-                       min_degree, max_degree, triangle_count,
-                       {matrix}_eigenvalues_re, {matrix}_eigenvalues_im
-                FROM graphs
-                WHERE n = %s AND {hash_col} = %s AND graph6 != %s
-                LIMIT 50)
-                UNION ALL
-                (SELECT graph6, n, m,
-                       is_bipartite, is_planar, is_regular,
-                       diameter, girth, radius,
-                       min_degree, max_degree, triangle_count,
-                       {matrix}_eigenvalues_re, {matrix}_eigenvalues_im
-                FROM graphs
-                WHERE n = %s AND {hash_col} != %s AND graph6 != %s
-                ORDER BY random()
-                LIMIT 450)
-                """,
-                (n, target_hash, graph6, n, target_hash, graph6),
-            )
-
-        candidates = cur.fetchall()
+            # PostgreSQL version with UNION ALL
+            if eig_col:
+                cur.execute(
+                    f"""
+                    (SELECT graph6, n, m,
+                           is_bipartite, is_planar, is_regular,
+                           diameter, girth, radius,
+                           min_degree, max_degree, triangle_count,
+                           {eig_col}
+                    FROM graphs
+                    WHERE n = {ph} AND {hash_col} = {ph} AND graph6 != {ph}
+                    LIMIT 50)
+                    UNION ALL
+                    (SELECT graph6, n, m,
+                           is_bipartite, is_planar, is_regular,
+                           diameter, girth, radius,
+                           min_degree, max_degree, triangle_count,
+                           {eig_col}
+                    FROM graphs
+                    WHERE n = {ph} AND {hash_col} != {ph} AND graph6 != {ph}
+                    ORDER BY random()
+                    LIMIT 450)
+                    """,
+                    (n, target_hash, graph6, n, target_hash, graph6),
+                )
+            else:
+                cur.execute(
+                    f"""
+                    (SELECT graph6, n, m,
+                           is_bipartite, is_planar, is_regular,
+                           diameter, girth, radius,
+                           min_degree, max_degree, triangle_count,
+                           {matrix}_eigenvalues_re, {matrix}_eigenvalues_im
+                    FROM graphs
+                    WHERE n = {ph} AND {hash_col} = {ph} AND graph6 != {ph}
+                    LIMIT 50)
+                    UNION ALL
+                    (SELECT graph6, n, m,
+                           is_bipartite, is_planar, is_regular,
+                           diameter, girth, radius,
+                           min_degree, max_degree, triangle_count,
+                           {matrix}_eigenvalues_re, {matrix}_eigenvalues_im
+                    FROM graphs
+                    WHERE n = {ph} AND {hash_col} != {ph} AND graph6 != {ph}
+                    ORDER BY random()
+                    LIMIT 450)
+                    """,
+                    (n, target_hash, graph6, n, target_hash, graph6),
+                )
+            candidates = cur.fetchall()
 
     # Compute L2 distances
     results = []
     for row in candidates:
+        row_dict = _parse_row(row)
         if eig_col:
-            eigs = row[eig_col]
+            eigs = row_dict[eig_col]
         else:
-            re_vals = row[f"{matrix}_eigenvalues_re"]
-            im_vals = row[f"{matrix}_eigenvalues_im"]
+            re_vals = row_dict[f"{matrix}_eigenvalues_re"]
+            im_vals = row_dict[f"{matrix}_eigenvalues_im"]
             eigs = sorted([math.sqrt(r**2 + i**2) for r, i in zip(re_vals, im_vals)])
 
         if len(eigs) != len(target_eigs):
@@ -338,7 +478,7 @@ def fetch_similar_graphs(
 
         # L2 distance
         dist = math.sqrt(sum((a - b) ** 2 for a, b in zip(eigs, target_eigs)))
-        results.append((dict(row), dist))
+        results.append((row_dict, dist))
 
     # Sort by distance and return top N
     results.sort(key=lambda x: x[1])
@@ -347,6 +487,8 @@ def fetch_similar_graphs(
 
 def get_stats() -> dict[str, Any]:
     """Get database statistics from cache."""
+    ph = _placeholder()
+
     with get_db() as conn:
         cur = conn.cursor()
 
@@ -357,6 +499,9 @@ def get_stats() -> dict[str, Any]:
         row = cur.fetchone()
         if row:
             stats = row[0]
+            # Handle SQLite returning string vs PG returning dict
+            if isinstance(stats, str):
+                stats = json.loads(stats)
             # Convert string keys back to int for counts_by_n
             if isinstance(stats.get("counts_by_n"), dict):
                 stats["counts_by_n"] = {
@@ -389,17 +534,17 @@ def get_stats() -> dict[str, Any]:
         cospectral = {}
         for matrix in ["adj", "lap", "nb", "nbl"]:
             hash_col = f"{matrix}_spectral_hash"
+            # SQLite-compatible query
             cur.execute(
                 f"""
-                WITH groups AS (
-                    SELECT n, {hash_col}, COUNT(*) as cnt
+                SELECT n, COUNT(*) as cospectral_count
+                FROM (
+                    SELECT n, {hash_col}
                     FROM graphs
                     WHERE diameter IS NOT NULL
-                    GROUP BY n, m, {hash_col}
+                    GROUP BY n, {hash_col}
                     HAVING COUNT(*) > 1
                 )
-                SELECT n, SUM(cnt)::int as cospectral_count
-                FROM groups
                 GROUP BY n
                 ORDER BY n
                 """
