@@ -1,5 +1,8 @@
 # SMOL: Spectra and Matrices Of Little Graphs
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+
 A database of all small connected graphs with their spectral properties.
 
 ## What's in the database
