@@ -2,7 +2,7 @@
 
 ## What is this project?
 
-SMOL (Spectra and Matrices Of Little graphs) is a database of all small connected simple undirected graphs (up to 10 vertices, ~12M graphs) with their spectral properties. It's designed for spectral graph theory research.
+SMOL (Spectra and Matrices Of Little graphs) is a database of all small simple undirected graphs (up to 10 vertices, ~12M graphs) with their spectral properties. It's designed for spectral graph theory research.
 
 ## Key concepts
 

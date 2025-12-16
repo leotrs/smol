@@ -84,7 +84,13 @@ CREATE INDEX IF NOT EXISTS idx_extra ON graphs USING GIN(extra);
 -- GIN index on tags for array containment queries
 CREATE INDEX IF NOT EXISTS idx_tags ON graphs USING GIN(tags);
 
--- Co-spectral pairs table
+-- Pre-computed cospectral pairs table
+-- Stores all pairs of graphs that share the same spectrum for a given matrix type.
+-- For a cospectral family of k graphs, we store C(k,2) = k*(k-1)/2 pairs.
+-- This redundancy is intentional: it enables O(1) lookup of all cospectral mates
+-- for any graph, without needing to scan the entire graphs table.
+-- Example: family {A, B, C} stores pairs (A,B), (A,C), (B,C).
+-- Populated by scripts/compute_cospectral_pairs.py
 CREATE TABLE IF NOT EXISTS cospectral_pairs (
     id              BIGSERIAL PRIMARY KEY,
     graph1_id       BIGINT NOT NULL REFERENCES graphs(id),

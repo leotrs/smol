@@ -171,30 +171,56 @@ async def fetch_graph(graph6: str) -> dict[str, Any] | None:
 async def fetch_cospectral_mates(
     graph6: str, n: int, hashes: dict[str, str]
 ) -> dict[str, list[str]]:
-    """Fetch cospectral mates for each matrix type."""
+    """Fetch cospectral mates for each matrix type using pre-computed pairs."""
     ph = _placeholder()
-    mates = {}
+    mates = {m: [] for m in hashes}
+
     async with get_db() as conn:
-        for matrix, hash_val in hashes.items():
-            hash_col = f"{matrix}_spectral_hash"
-            if IS_SQLITE:
+        if IS_SQLITE:
+            # Get graph id first
+            cursor = await conn.execute(
+                f"SELECT id FROM graphs WHERE graph6 = {ph}", (graph6,)
+            )
+            row = await cursor.fetchone()
+            if not row:
+                return mates
+            graph_id = row[0]
+
+            for matrix in hashes:
                 cursor = await conn.execute(
                     f"""
-                    SELECT graph6 FROM graphs
-                    WHERE {hash_col} = {ph} AND graph6 != {ph} AND n = {ph}
+                    SELECT g.graph6 FROM cospectral_pairs cp
+                    JOIN graphs g ON g.id = CASE
+                        WHEN cp.graph1_id = {ph} THEN cp.graph2_id
+                        ELSE cp.graph1_id
+                    END
+                    WHERE (cp.graph1_id = {ph} OR cp.graph2_id = {ph})
+                      AND cp.matrix_type = {ph}
                     """,
-                    (hash_val, graph6, n),
+                    (graph_id, graph_id, graph_id, matrix),
                 )
                 rows = await cursor.fetchall()
                 mates[matrix] = [r[0] for r in rows]
-            else:
-                cur = conn.cursor()
+        else:
+            cur = conn.cursor()
+            cur.execute(f"SELECT id FROM graphs WHERE graph6 = {ph}", (graph6,))
+            row = cur.fetchone()
+            if not row:
+                return mates
+            graph_id = row[0]
+
+            for matrix in hashes:
                 cur.execute(
                     f"""
-                    SELECT graph6 FROM graphs
-                    WHERE {hash_col} = {ph} AND graph6 != {ph} AND n = {ph}
+                    SELECT g.graph6 FROM cospectral_pairs cp
+                    JOIN graphs g ON g.id = CASE
+                        WHEN cp.graph1_id = {ph} THEN cp.graph2_id
+                        ELSE cp.graph1_id
+                    END
+                    WHERE (cp.graph1_id = {ph} OR cp.graph2_id = {ph})
+                      AND cp.matrix_type = {ph}
                     """,
-                    (hash_val, graph6, n),
+                    (graph_id, graph_id, graph_id, matrix),
                 )
                 mates[matrix] = [r[0] for r in cur.fetchall()]
     return mates
@@ -385,79 +411,88 @@ async def fetch_random_graph() -> dict[str, Any] | None:
 
 
 async def fetch_random_cospectral_class(matrix: str = "adj") -> list[str]:
-    """Fetch a random cospectral class (graphs sharing same spectrum)."""
+    """Fetch a random cospectral class using pre-computed pairs."""
     import random
     ph = _placeholder()
     hash_col = f"{matrix}_spectral_hash"
 
     async with get_db() as conn:
         if IS_SQLITE:
+            # Get id range from cospectral_pairs for this matrix type
             cursor = await conn.execute(
-                "SELECT MIN(id), MAX(id) FROM graphs WHERE diameter IS NOT NULL"
+                f"SELECT MIN(id), MAX(id) FROM cospectral_pairs WHERE matrix_type = {ph}",
+                (matrix,),
             )
             row = await cursor.fetchone()
             if not row or not row[0]:
                 return []
             min_id, max_id = int(row[0]), int(row[1])
 
-            for _ in range(50):
+            for _ in range(20):
                 rand_id = random.randint(min_id, max_id)
                 cursor = await conn.execute(
                     f"""
-                    SELECT {hash_col}, n FROM graphs
-                    WHERE id >= {ph} AND diameter IS NOT NULL
+                    SELECT g1.graph6, g1.{hash_col}, g1.n
+                    FROM cospectral_pairs cp
+                    JOIN graphs g1 ON g1.id = cp.graph1_id
+                    WHERE cp.id >= {ph} AND cp.matrix_type = {ph}
                     LIMIT 1
                     """,
-                    (rand_id,),
+                    (rand_id, matrix),
                 )
                 row = await cursor.fetchone()
                 if not row:
                     continue
 
-                hash_val, n = row
+                _, hash_val, n = row
 
+                # Get all graphs in this cospectral class
                 cursor = await conn.execute(
                     f"""
                     SELECT graph6 FROM graphs
-                    WHERE {hash_col} = {ph} AND n = {ph} AND diameter IS NOT NULL
+                    WHERE {hash_col} = {ph} AND n = {ph}
                     ORDER BY graph6
                     LIMIT 10
                     """,
                     (hash_val, n),
                 )
-                rows = await cursor.fetchall()
-                graphs = [r[0] for r in rows]
+                graphs = [r[0] for r in await cursor.fetchall()]
                 if len(graphs) > 1:
                     return graphs
             return []
         else:
             cur = conn.cursor()
-            cur.execute("SELECT MIN(id), MAX(id) FROM graphs WHERE diameter IS NOT NULL")
+            cur.execute(
+                f"SELECT MIN(id), MAX(id) FROM cospectral_pairs WHERE matrix_type = {ph}",
+                (matrix,),
+            )
             row = cur.fetchone()
             if not row or not row[0]:
                 return []
             min_id, max_id = int(row[0]), int(row[1])
 
-            for _ in range(50):
+            for _ in range(20):
                 rand_id = random.randint(min_id, max_id)
                 cur.execute(
                     f"""
-                    SELECT {hash_col}, n FROM graphs
-                    WHERE id >= {ph} AND diameter IS NOT NULL
+                    SELECT g1.graph6, g1.{hash_col}, g1.n
+                    FROM cospectral_pairs cp
+                    JOIN graphs g1 ON g1.id = cp.graph1_id
+                    WHERE cp.id >= {ph} AND cp.matrix_type = {ph}
                     LIMIT 1
                     """,
-                    (rand_id,),
+                    (rand_id, matrix),
                 )
                 row = cur.fetchone()
                 if not row:
                     continue
 
-                hash_val, n = row
+                _, hash_val, n = row
 
                 cur.execute(
                     f"""
                     SELECT graph6 FROM graphs
-                    WHERE {hash_col} = {ph} AND n = {ph} AND diameter IS NOT NULL
+                    WHERE {hash_col} = {ph} AND n = {ph}
                     ORDER BY graph6
                     LIMIT 10
                     """,
@@ -692,17 +727,14 @@ async def get_stats() -> dict[str, Any]:
                 hash_col = f"{matrix}_spectral_hash"
                 cursor = await conn.execute(
                     f"""
-                    SELECT n, COUNT(*) as cospectral_count
-                    FROM (
-                        SELECT n, {hash_col}
-                        FROM graphs
-                        WHERE diameter IS NOT NULL
-                        GROUP BY n, {hash_col}
-                        HAVING COUNT(*) > 1
-                    )
-                    GROUP BY n
-                    ORDER BY n
-                    """
+                    SELECT g.n, COUNT(DISTINCT g.{hash_col})
+                    FROM cospectral_pairs cp
+                    JOIN graphs g ON g.id = cp.graph1_id
+                    WHERE cp.matrix_type = {ph}
+                    GROUP BY g.n
+                    ORDER BY g.n
+                    """,
+                    (matrix,),
                 )
                 cospectral[matrix] = {r[0]: r[1] for r in await cursor.fetchall()}
         else:
@@ -727,17 +759,14 @@ async def get_stats() -> dict[str, Any]:
                 hash_col = f"{matrix}_spectral_hash"
                 cur.execute(
                     f"""
-                    SELECT n, COUNT(*) as cospectral_count
-                    FROM (
-                        SELECT n, {hash_col}
-                        FROM graphs
-                        WHERE diameter IS NOT NULL
-                        GROUP BY n, {hash_col}
-                        HAVING COUNT(*) > 1
-                    ) sub
-                    GROUP BY n
-                    ORDER BY n
-                    """
+                    SELECT g.n, COUNT(DISTINCT g.{hash_col})
+                    FROM cospectral_pairs cp
+                    JOIN graphs g ON g.id = cp.graph1_id
+                    WHERE cp.matrix_type = {ph}
+                    GROUP BY g.n
+                    ORDER BY g.n
+                    """,
+                    (matrix,),
                 )
                 cospectral[matrix] = {r[0]: r[1] for r in cur.fetchall()}
 

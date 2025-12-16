@@ -3,15 +3,17 @@
 Generate spectral graph database entries using geng.
 
 Usage:
-    python generate.py --n 8              # Generate all connected graphs on 8 vertices
+    python generate.py --n 8              # Generate all graphs on 8 vertices
     python generate.py --n 8 --dry-run    # Count without inserting
     python generate.py --n 1 --n 8        # Generate for n=1 through n=8
     python generate.py --n 10 --workers 8 # Use 8 parallel workers
+    python generate.py --n 10 --m 18      # Generate only graphs with exactly 18 edges
 
 Features:
     - Parallel processing by default (uses all CPU cores)
     - Resumable: skips graphs already in the database
     - Progress reporting with ETA
+    - Optional edge count filter (--m)
 """
 
 import argparse
@@ -27,13 +29,14 @@ from db.graph_data import process_graph, graph_from_graph6
 from db.database import connect, init_schema
 
 
-def generate_graphs(n: int, connected: bool = True) -> Iterator[str]:
+def generate_graphs(n: int, m: int | None = None, connected: bool = False) -> Iterator[str]:
     """
     Generate all non-isomorphic simple graphs on n vertices using geng.
 
     Args:
         n: Number of vertices
-        connected: If True, generate only connected graphs
+        m: Exact number of edges (optional)
+        connected: If True, generate only connected graphs (default: False, all graphs)
 
     Yields:
         graph6 strings
@@ -41,6 +44,8 @@ def generate_graphs(n: int, connected: bool = True) -> Iterator[str]:
     cmd = ["geng", "-q", str(n)]
     if connected:
         cmd.insert(2, "-c")
+    if m is not None:
+        cmd.append(f"{m}:{m}")
 
     proc = subprocess.Popen(
         cmd,
@@ -74,6 +79,7 @@ def process_single_graph(graph6_str: str) -> dict | None:
 
 def process_and_insert(
     n: int,
+    m: int | None = None,
     batch_size: int = 1000,
     dry_run: bool = False,
     verbose: bool = True,
@@ -81,10 +87,11 @@ def process_and_insert(
     resume: bool = True,
 ) -> int:
     """
-    Generate and insert all graphs for a given n.
+    Generate and insert all graphs for a given n (and optionally m edges).
 
     Args:
         n: Number of vertices
+        m: Exact number of edges (optional)
         batch_size: Number of graphs to process before inserting
         dry_run: If True, process but don't insert
         verbose: Print progress
@@ -103,11 +110,14 @@ def process_and_insert(
     else:
         conn = None
 
+    # Label for output
+    label = f"n={n}" if m is None else f"n={n},m={m}"
+
     # Get existing graphs for resumability
     existing = set()
     if resume and not dry_run and conn:
         if verbose:
-            print(f"n={n}: Checking for existing graphs...", end=" ", flush=True)
+            print(f"{label}: Checking for existing graphs...", end=" ", flush=True)
         existing = get_existing_graphs(conn, n)
         if verbose:
             if existing:
@@ -117,11 +127,11 @@ def process_and_insert(
 
     # Collect graphs to process (filtering out existing)
     if verbose:
-        print(f"n={n}: Generating graph list from geng...", end=" ", flush=True)
+        print(f"{label}: Generating graph list from geng...", end=" ", flush=True)
 
     graphs_to_process = []
     total_generated = 0
-    for graph6_str in generate_graphs(n):
+    for graph6_str in generate_graphs(n, m=m):
         total_generated += 1
         if graph6_str not in existing:
             graphs_to_process.append(graph6_str)
@@ -131,7 +141,7 @@ def process_and_insert(
 
     if not graphs_to_process:
         if verbose:
-            print(f"n={n}: All graphs already in database, nothing to do")
+            print(f"{label}: All graphs already in database, nothing to do")
         if conn:
             conn.close()
         return 0
@@ -142,7 +152,7 @@ def process_and_insert(
     start_time = time.time()
 
     if verbose:
-        print(f"n={n}: Processing with {workers} workers...")
+        print(f"{label}: Processing with {workers} workers...")
 
     with mp.Pool(workers) as pool:
         for result in pool.imap(process_single_graph, graphs_to_process, chunksize=100):
@@ -164,7 +174,7 @@ def process_and_insert(
                     eta = remaining / rate if rate > 0 else 0
                     eta_str = format_time(eta)
                     print(
-                        f"\rn={n}: {total:,}/{len(graphs_to_process):,} "
+                        f"\r{label}: {total:,}/{len(graphs_to_process):,} "
                         f"({100*total/len(graphs_to_process):.1f}%) "
                         f"[{rate:.1f}/s, ETA {eta_str}]",
                         end="",
@@ -179,7 +189,7 @@ def process_and_insert(
         elapsed = time.time() - start_time
         rate = total / elapsed if elapsed > 0 else 0
         print(
-            f"\rn={n}: {total:,} graphs completed in {format_time(elapsed)} ({rate:.1f}/s)"
+            f"\r{label}: {total:,} graphs completed in {format_time(elapsed)} ({rate:.1f}/s)"
             + " " * 20
         )
 
@@ -250,6 +260,12 @@ Examples:
         help="Number of vertices (can specify multiple times for range)",
     )
     parser.add_argument(
+        "--m",
+        type=int,
+        default=None,
+        help="Exact number of edges (optional, filters geng output)",
+    )
+    parser.add_argument(
         "--batch-size",
         type=int,
         default=1000,
@@ -287,6 +303,7 @@ Examples:
     for n in n_values:
         count = process_and_insert(
             n,
+            m=args.m,
             batch_size=args.batch_size,
             dry_run=args.dry_run,
             verbose=not args.quiet,
