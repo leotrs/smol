@@ -485,6 +485,7 @@ class TestSimilarEndpoint:
 
 
 class TestErrorPages:
+    @pytest.mark.needs_db
     def test_404_returns_html_for_browser(self):
         """404 errors should return HTML error page for browser requests."""
         response = client.get("/graph/INVALID_GRAPH", headers={"Accept": "text/html"})
@@ -494,6 +495,7 @@ class TestErrorPages:
         assert "not found" in response.text.lower()
         assert "Back to Search" in response.text
 
+    @pytest.mark.needs_db
     def test_404_returns_json_for_api(self):
         """404 errors should return JSON for API requests."""
         response = client.get("/graph/INVALID_GRAPH")
