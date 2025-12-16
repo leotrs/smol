@@ -6,7 +6,6 @@ from pathlib import Path
 
 import networkx as nx
 from fastapi import FastAPI, HTTPException, Query, Request
-from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
