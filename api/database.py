@@ -189,7 +189,7 @@ async def fetch_cospectral_mates(
             for matrix in hashes:
                 cursor = await conn.execute(
                     f"""
-                    SELECT g.graph6 FROM cospectral_pairs cp
+                    SELECT g.graph6 FROM cospectral_mates cp
                     JOIN graphs g ON g.id = CASE
                         WHEN cp.graph1_id = {ph} THEN cp.graph2_id
                         ELSE cp.graph1_id
@@ -212,7 +212,7 @@ async def fetch_cospectral_mates(
             for matrix in hashes:
                 cur.execute(
                     f"""
-                    SELECT g.graph6 FROM cospectral_pairs cp
+                    SELECT g.graph6 FROM cospectral_mates cp
                     JOIN graphs g ON g.id = CASE
                         WHEN cp.graph1_id = {ph} THEN cp.graph2_id
                         ELSE cp.graph1_id
@@ -418,9 +418,9 @@ async def fetch_random_cospectral_class(matrix: str = "adj") -> list[str]:
 
     async with get_db() as conn:
         if IS_SQLITE:
-            # Get id range from cospectral_pairs for this matrix type
+            # Get id range from cospectral_mates for this matrix type
             cursor = await conn.execute(
-                f"SELECT MIN(id), MAX(id) FROM cospectral_pairs WHERE matrix_type = {ph}",
+                f"SELECT MIN(id), MAX(id) FROM cospectral_mates WHERE matrix_type = {ph}",
                 (matrix,),
             )
             row = await cursor.fetchone()
@@ -433,7 +433,7 @@ async def fetch_random_cospectral_class(matrix: str = "adj") -> list[str]:
                 cursor = await conn.execute(
                     f"""
                     SELECT g1.graph6, g1.{hash_col}, g1.n
-                    FROM cospectral_pairs cp
+                    FROM cospectral_mates cp
                     JOIN graphs g1 ON g1.id = cp.graph1_id
                     WHERE cp.id >= {ph} AND cp.matrix_type = {ph}
                     LIMIT 1
@@ -463,7 +463,7 @@ async def fetch_random_cospectral_class(matrix: str = "adj") -> list[str]:
         else:
             cur = conn.cursor()
             cur.execute(
-                f"SELECT MIN(id), MAX(id) FROM cospectral_pairs WHERE matrix_type = {ph}",
+                f"SELECT MIN(id), MAX(id) FROM cospectral_mates WHERE matrix_type = {ph}",
                 (matrix,),
             )
             row = cur.fetchone()
@@ -476,7 +476,7 @@ async def fetch_random_cospectral_class(matrix: str = "adj") -> list[str]:
                 cur.execute(
                     f"""
                     SELECT g1.graph6, g1.{hash_col}, g1.n
-                    FROM cospectral_pairs cp
+                    FROM cospectral_mates cp
                     JOIN graphs g1 ON g1.id = cp.graph1_id
                     WHERE cp.id >= {ph} AND cp.matrix_type = {ph}
                     LIMIT 1
@@ -676,6 +676,7 @@ async def fetch_similar_graphs(
 
 async def get_stats() -> dict[str, Any]:
     """Get database statistics from cache."""
+    ph = _placeholder()
     async with get_db() as conn:
         if IS_SQLITE:
             cursor = await conn.execute(
@@ -728,7 +729,7 @@ async def get_stats() -> dict[str, Any]:
                 cursor = await conn.execute(
                     f"""
                     SELECT g.n, COUNT(DISTINCT g.{hash_col})
-                    FROM cospectral_pairs cp
+                    FROM cospectral_mates cp
                     JOIN graphs g ON g.id = cp.graph1_id
                     WHERE cp.matrix_type = {ph}
                     GROUP BY g.n
@@ -760,7 +761,7 @@ async def get_stats() -> dict[str, Any]:
                 cur.execute(
                     f"""
                     SELECT g.n, COUNT(DISTINCT g.{hash_col})
-                    FROM cospectral_pairs cp
+                    FROM cospectral_mates cp
                     JOIN graphs g ON g.id = cp.graph1_id
                     WHERE cp.matrix_type = {ph}
                     GROUP BY g.n
