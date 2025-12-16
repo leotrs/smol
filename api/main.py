@@ -6,7 +6,8 @@ from pathlib import Path
 
 import networkx as nx
 from fastapi import FastAPI, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -55,6 +56,32 @@ async def log_requests(request: Request, call_next):
 
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Render HTML error pages for browser requests."""
+    if wants_html(request):
+        error_messages = {
+            404: "The graph or page you're looking for doesn't exist.",
+            400: "The request was invalid or malformed.",
+            500: "Something went wrong on our end.",
+            408: "The request took too long to process.",
+        }
+        return templates.TemplateResponse(
+            request,
+            "error.html",
+            {
+                "code": exc.status_code,
+                "title": exc.detail or "Error",
+                "message": error_messages.get(exc.status_code, "An error occurred."),
+            },
+            status_code=exc.status_code,
+        )
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
 
 
 def wants_html(request: Request) -> bool:

@@ -35,7 +35,7 @@
 
     <div class="tab-content" x-show="tab === 'search'">
         <p class="tab-hint">Find graphs by structural properties.</p>
-        <form hx-get="/graphs" hx-target="#results" hx-trigger="submit">
+        <form hx-get="/graphs" hx-target="#results" hx-trigger="submit" hx-indicator="#loading-indicator">
             <div class="filter-row">
                 <label>
                     <span>Vertices</span>

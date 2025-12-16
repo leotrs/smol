@@ -482,3 +482,76 @@ class TestSimilarEndpoint:
         assert response.status_code == 200
         assert "text/html" in response.headers["content-type"]
         assert "Similar" in response.text
+
+
+class TestErrorPages:
+    def test_404_returns_html_for_browser(self):
+        """404 errors should return HTML error page for browser requests."""
+        response = client.get("/graph/INVALID_GRAPH", headers={"Accept": "text/html"})
+        assert response.status_code == 404
+        assert "text/html" in response.headers["content-type"]
+        assert "404" in response.text
+        assert "not found" in response.text.lower()
+        assert "Back to Search" in response.text
+
+    def test_404_returns_json_for_api(self):
+        """404 errors should return JSON for API requests."""
+        response = client.get("/graph/INVALID_GRAPH")
+        assert response.status_code == 404
+        assert "application/json" in response.headers["content-type"]
+        assert "detail" in response.json()
+
+    def test_400_returns_html_for_browser(self):
+        """400 errors should return HTML error page for browser requests."""
+        response = client.get("/compare?graphs=single", headers={"Accept": "text/html"})
+        assert response.status_code == 400
+        assert "text/html" in response.headers["content-type"]
+        assert "400" in response.text
+
+    def test_400_returns_json_for_api(self):
+        """400 errors should return JSON for API requests."""
+        response = client.get("/compare?graphs=single")
+        assert response.status_code == 400
+        assert "application/json" in response.headers["content-type"]
+
+
+class TestLoadingIndicator:
+    def test_base_template_has_loading_indicator(self):
+        """Base template should include loading indicator element."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert 'id="loading-indicator"' in response.text
+        assert "htmx-indicator" in response.text
+        assert "Loading..." in response.text
+
+    def test_loading_indicator_hidden_by_default(self):
+        """Loading indicator should be hidden by default via htmx-indicator class."""
+        response = client.get("/")
+        assert response.status_code == 200
+        import re
+        # htmx-indicator must have display: none
+        htmx_ind = re.search(r'\.htmx-indicator\s*\{[^}]*\}', response.text)
+        assert htmx_ind, ".htmx-indicator CSS rule must exist"
+        assert "display" in htmx_ind.group() and "none" in htmx_ind.group()
+        # loading-overlay must NOT set display (would override htmx-indicator)
+        overlay = re.search(r'\.loading-overlay\s*\{[^}]*\}', response.text)
+        assert overlay, ".loading-overlay CSS rule must exist"
+        assert "display" not in overlay.group(), ".loading-overlay must not set display property"
+
+    def test_base_template_has_error_toast(self):
+        """Base template should include error toast element."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert 'id="error-toast"' in response.text
+
+    def test_htmx_timeout_configured(self):
+        """HTMX should be configured with 30s timeout."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert "htmx.config.timeout = 30000" in response.text
+
+    def test_search_form_has_indicator(self):
+        """Search form should reference loading indicator."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert 'hx-indicator="#loading-indicator"' in response.text

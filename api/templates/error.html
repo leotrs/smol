@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - SMOL{% endblock %}
+
+{% block content %}
+<div style="text-align: center; padding: 3rem 1rem;">
+    <h1 style="font-size: 4rem; margin-bottom: 0.5rem; color: var(--pico-muted-color);">{{ code }}</h1>
+    <h2 style="margin-bottom: 1rem;">{{ title }}</h2>
+    <p style="color: var(--pico-muted-color); margin-bottom: 2rem;">{{ message }}</p>
+    <a href="/" role="button">Back to Search</a>
+</div>
+{% endblock %}

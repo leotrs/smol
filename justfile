@@ -29,11 +29,11 @@ refresh-stats:
 
 # Run API server locally
 serve:
-    uv run uvicorn api.main:app --reload
+    uv run uvicorn api.main:app --reload --host 127.0.0.1
 
 # Run API server on specific port
 serve-port port:
-    uv run uvicorn api.main:app --reload --port {{port}}
+    uv run uvicorn api.main:app --reload --host 127.0.0.1 --port {{port}}
 
 # Check how many graphs need property computation
 check-properties:
