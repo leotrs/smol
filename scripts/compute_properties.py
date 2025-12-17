@@ -85,8 +85,12 @@ def compute_properties(G: nx.Graph) -> dict:
     else:
         avg_path_length = None  # undefined for disconnected
 
-    # Degree assortativity
-    if m < 2:
+    # Degree sequence (sorted descending)
+    degrees = [d for _, d in G.degree()]
+    degree_sequence = sorted(degrees, reverse=True) if n > 0 else []
+
+    # Degree assortativity (undefined for regular graphs where all degrees are equal)
+    if m < 2 or (degrees and min(degrees) == max(degrees)):
         assortativity = None
     else:
         try:
@@ -95,9 +99,6 @@ def compute_properties(G: nx.Graph) -> dict:
                 assortativity = None
         except (ValueError, ZeroDivisionError):
             assortativity = None
-
-    # Degree sequence (sorted descending)
-    degree_sequence = sorted([d for _, d in G.degree()], reverse=True) if n > 0 else []
 
     # Centrality distributions (sorted ascending by value)
     if n == 0:
