@@ -42,3 +42,11 @@ check-properties:
 # Database stats
 db-stats:
     psql smol -c "SELECT n, COUNT(*) as graphs FROM graphs GROUP BY n ORDER BY n"
+
+# Deploy database to Fly.io (resumable)
+deploy-db *args:
+    uv run python scripts/deploy_db.py {{args}}
+
+# Deploy database (skip PostgreSQL export, use existing smol.db)
+deploy-db-file file="smol.db":
+    uv run python scripts/deploy_db.py --skip-export --sqlite-path {{file}}

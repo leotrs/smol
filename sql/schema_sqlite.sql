@@ -39,17 +39,24 @@ CREATE TABLE IF NOT EXISTS graphs (
 
     -- Network science properties
     algebraic_connectivity  REAL,
+    clustering_coefficient  REAL,
+    assortativity           REAL,
     global_clustering       REAL,
     avg_local_clustering    REAL,
     avg_path_length         REAL,
-    assortativity           REAL,
     degree_sequence         TEXT,  -- JSON array
     betweenness_centrality  TEXT,  -- JSON array
     closeness_centrality    TEXT,  -- JSON array
     eigenvector_centrality  TEXT,  -- JSON array
 
     -- Tags (JSON array, e.g., ["complete", "regular", "eulerian"])
-    tags                    TEXT DEFAULT '[]'
+    tags                    TEXT DEFAULT '[]',
+
+    -- Extra data (JSON object for future extensions)
+    extra                   TEXT DEFAULT '{}',
+
+    -- Timestamp
+    created_at              TEXT
 );
 
 -- Indexes for common queries

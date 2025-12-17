@@ -62,6 +62,11 @@ python scripts/generate.py --n 10 --resume     # Resume interrupted run
 
 # Tags
 python scripts/compute_tags.py                 # Backfill tags for all graphs
+
+# Deployment
+just deploy-db                                 # Export PG to SQLite and deploy to Fly.io
+just deploy-db --max-n 9                       # Deploy only graphs with n <= 9
+just deploy-db --skip-export                   # Skip export, use existing smol.db
 ```
 
 ## API Endpoints
