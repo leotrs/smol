@@ -63,6 +63,10 @@ python scripts/generate.py --n 10 --resume     # Resume interrupted run
 # Tags
 python scripts/compute_tags.py                 # Backfill tags for all graphs
 
+# Cospectrality analysis
+python scripts/cospectral_tables.py            # Generate cospectrality tables
+python scripts/cospectral_tables.py --max-n 9  # Limit to n <= 9
+
 # Deployment
 just deploy-db                                 # Export PG to SQLite and deploy to Fly.io
 just deploy-db --max-n 9                       # Deploy only graphs with n <= 9
@@ -113,6 +117,7 @@ Footer on all pages has "Random graph" and "Random cospectral family" links.
 - Connection: `DATABASE_URL` env var or `dbname=smol` (local)
 - Schema: `sql/schema.sql`
 - Stats cached in `stats_cache` table (refresh with `scripts/refresh_stats.py`)
+- Cospectral pairs pre-computed in `cospectral_mates` table for fast lookup
 
 ## Code organization
 
@@ -125,4 +130,4 @@ Footer on all pages has "Random graph" and "Random cospectral family" links.
   - `generate.py` - Parallel graph generation (multiprocessing, resumable)
   - `compute_tags.py` - Backfill tags for existing graphs
 - `sql/` - Database schema (PostgreSQL and SQLite versions)
-- `tests/` - Pytest tests (156 tests)
+- `tests/` - Pytest tests (183 tests)

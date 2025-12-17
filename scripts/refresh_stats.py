@@ -31,18 +31,23 @@ def compute_stats(conn) -> dict:
     )
     counts_by_n = {str(r[0]): r[1] for r in cur.fetchall()}
 
-    # Cospectral counts from pre-computed index table
+    # Cospectral counts from pre-computed pairs table
     cospectral = {}
     for matrix in ["adj", "lap", "nb", "nbl"]:
         cur.execute(
             """
-            SELECT n, COUNT(*) as cospectral_count
-            FROM cospectral_index
-            WHERE matrix_type = %s
-            GROUP BY n
-            ORDER BY n
+            WITH all_graphs AS (
+                SELECT graph1_id as gid FROM cospectral_mates WHERE matrix_type = %s
+                UNION
+                SELECT graph2_id FROM cospectral_mates WHERE matrix_type = %s
+            )
+            SELECT g.n, COUNT(*) as cospectral_count
+            FROM all_graphs a
+            JOIN graphs g ON a.gid = g.id
+            GROUP BY g.n
+            ORDER BY g.n
             """,
-            (matrix,),
+            (matrix, matrix),
         )
         cospectral[matrix] = {str(r[0]): r[1] for r in cur.fetchall()}
 

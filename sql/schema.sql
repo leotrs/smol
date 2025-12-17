@@ -105,24 +105,6 @@ CREATE INDEX IF NOT EXISTS idx_mates_matrix ON cospectral_mates(matrix_type);
 CREATE INDEX IF NOT EXISTS idx_mates_graph1 ON cospectral_mates(graph1_id);
 CREATE INDEX IF NOT EXISTS idx_mates_graph2 ON cospectral_mates(graph2_id);
 
--- Cospectral index table
--- One row per graph that has at least one cospectral mate.
--- Denormalizes n, m, min_degree for instant aggregate queries.
--- Populated by scripts/compute_cospectral_tables.py
-CREATE TABLE IF NOT EXISTS cospectral_index (
-    graph_id        BIGINT NOT NULL REFERENCES graphs(id),
-    n               SMALLINT NOT NULL,
-    m               SMALLINT NOT NULL,
-    min_degree      SMALLINT NOT NULL,
-    matrix_type     VARCHAR(3) NOT NULL CHECK (matrix_type IN ('adj', 'lap', 'nb', 'nbl')),
-    PRIMARY KEY (graph_id, matrix_type)
-);
-
-CREATE INDEX IF NOT EXISTS idx_cospectral_n ON cospectral_index(matrix_type, n);
-CREATE INDEX IF NOT EXISTS idx_cospectral_m ON cospectral_index(matrix_type, m);
-CREATE INDEX IF NOT EXISTS idx_cospectral_n_mindeg ON cospectral_index(matrix_type, n, min_degree);
-CREATE INDEX IF NOT EXISTS idx_cospectral_m_mindeg ON cospectral_index(matrix_type, m, min_degree);
-
 -- Stats cache table
 CREATE TABLE IF NOT EXISTS stats_cache (
     key             VARCHAR(64) PRIMARY KEY,
