@@ -4,24 +4,29 @@ import hashlib
 import numpy as np
 from numpy.linalg import eigvalsh, eigvals
 
+PRECISION = 8
+
 
 def compute_real_eigenvalues(matrix: np.ndarray) -> np.ndarray:
     """
     Compute eigenvalues of a symmetric real matrix.
-    Returns sorted eigenvalues (ascending).
+    Returns sorted eigenvalues (ascending), rounded to PRECISION decimals.
     """
     if matrix.size == 0:
         return np.array([], dtype=np.float64)
     eigs = eigvalsh(matrix)
-    return np.sort(eigs)
+    eigs = np.sort(eigs)
+    eigs = np.round(eigs, decimals=PRECISION)
+    eigs = np.where(eigs == 0, 0.0, eigs)  # Handle -0.0
+    return eigs
 
 
-def compute_complex_eigenvalues(matrix: np.ndarray, precision: int = 6) -> np.ndarray:
+def compute_complex_eigenvalues(matrix: np.ndarray) -> np.ndarray:
     """
     Compute ALL eigenvalues of a general (possibly non-symmetric) matrix.
 
     Returns all eigenvalues (including both members of conjugate pairs),
-    rounded to specified precision and sorted by (real part, imaginary part).
+    rounded to PRECISION decimals and sorted by (real part, imaginary part).
     """
     if matrix.size == 0:
         return np.array([], dtype=np.complex128)
@@ -29,8 +34,8 @@ def compute_complex_eigenvalues(matrix: np.ndarray, precision: int = 6) -> np.nd
     eigs = eigvals(matrix)
 
     # Round to ensure consistent handling of near-zero values
-    re = np.round(eigs.real, decimals=precision)
-    im = np.round(eigs.imag, decimals=precision)
+    re = np.round(eigs.real, decimals=PRECISION)
+    im = np.round(eigs.imag, decimals=PRECISION)
     re = np.where(re == 0, 0.0, re)
     im = np.where(im == 0, 0.0, im)
     eigs_rounded = re + 1j * im
@@ -53,13 +58,15 @@ def _half_spectrum(eigenvalues: np.ndarray) -> np.ndarray:
     return eigenvalues[eigenvalues.imag >= 0]
 
 
-def spectral_hash_real(eigenvalues: np.ndarray, precision: int = 6) -> str:
+def spectral_hash_real(eigenvalues: np.ndarray) -> str:
     """
     Compute a hash of real eigenvalues for co-spectral detection.
 
+    Eigenvalues should already be rounded to PRECISION decimals by
+    compute_real_eigenvalues, with no -0.0 values.
+
     Args:
-        eigenvalues: Sorted array of real eigenvalues
-        precision: Number of decimal places for rounding
+        eigenvalues: Sorted array of real eigenvalues (pre-rounded, no -0.0)
 
     Returns:
         16-character hex hash
@@ -67,14 +74,11 @@ def spectral_hash_real(eigenvalues: np.ndarray, precision: int = 6) -> str:
     if eigenvalues.size == 0:
         return hashlib.sha256(b"empty").hexdigest()[:16]
 
-    rounded = np.round(eigenvalues, decimals=precision)
-    rounded = np.where(rounded == 0, 0.0, rounded)  # Handle -0.0
-
-    canonical = ",".join(f"{x:.{precision}f}" for x in rounded)
+    canonical = ",".join(f"{x:.{PRECISION}f}" for x in eigenvalues)
     return hashlib.sha256(canonical.encode()).hexdigest()[:16]
 
 
-def spectral_hash_complex(eigenvalues: np.ndarray, precision: int = 6) -> str:
+def spectral_hash_complex(eigenvalues: np.ndarray) -> str:
     """
     Compute a hash of complex eigenvalues for co-spectral detection.
 
@@ -82,9 +86,11 @@ def spectral_hash_complex(eigenvalues: np.ndarray, precision: int = 6) -> str:
     (keeping eigenvalues with non-negative imaginary part) before hashing,
     since conjugate pairs are redundant for cospectrality comparison.
 
+    Eigenvalues should already be rounded to PRECISION decimals by
+    compute_complex_eigenvalues.
+
     Args:
-        eigenvalues: Array of complex eigenvalues (full spectrum)
-        precision: Number of decimal places for formatting
+        eigenvalues: Array of complex eigenvalues (full spectrum, pre-rounded)
 
     Returns:
         16-character hex hash
@@ -96,7 +102,7 @@ def spectral_hash_complex(eigenvalues: np.ndarray, precision: int = 6) -> str:
     half = _half_spectrum(eigenvalues)
 
     canonical = ",".join(
-        f"({r:.{precision}f},{i:.{precision}f})"
+        f"({r:.{PRECISION}f},{i:.{PRECISION}f})"
         for r, i in zip(half.real, half.imag)
     )
     return hashlib.sha256(canonical.encode()).hexdigest()[:16]
