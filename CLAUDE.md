@@ -118,6 +118,17 @@ Footer on all pages has "Random graph" and "Random cospectral family" links.
 - Schema: `sql/schema.sql`
 - Stats cached in `stats_cache` table (refresh with `scripts/refresh_stats.py`)
 - Cospectral pairs pre-computed in `cospectral_mates` table for fast lookup
+- Database contains ALL graphs (connected and disconnected)
+
+## Known discrepancy with reference paper
+
+Our NB/NBL cospectral counts differ slightly from published tables. Closest match:
+
+**NB (Ã):** "All graphs" matches exactly at n=4, diverges at larger n (+4528 at n=9)
+
+**NBL (L̃):** "All graphs" matches exactly at n=4,5, diverges slightly (+296 at n=9)
+
+The source of divergence is unidentified. Possibilities: precision differences (we use 8 decimals), different graph sets, or errors in the reference.
 
 ## Code organization
 
