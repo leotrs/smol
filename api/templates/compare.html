@@ -180,17 +180,15 @@ function renderGraphs() {
             <td>Edges</td>
             {% for g in result.graphs %}<td>{{ g.m }}</td>{% endfor %}
         </tr>
-        <tr{% if prop_diffs.is_bipartite %} class="row-diff"{% endif %}>
-            <td>Bipartite</td>
-            {% for g in result.graphs %}<td>{{ "Yes" if g.properties.is_bipartite else "No" }}</td>{% endfor %}
-        </tr>
-        <tr{% if prop_diffs.is_planar %} class="row-diff"{% endif %}>
-            <td>Planar</td>
-            {% for g in result.graphs %}<td>{{ "Yes" if g.properties.is_planar else "No" }}</td>{% endfor %}
-        </tr>
-        <tr{% if prop_diffs.is_regular %} class="row-diff"{% endif %}>
-            <td>Regular</td>
-            {% for g in result.graphs %}<td>{{ "Yes" if g.properties.is_regular else "No" }}</td>{% endfor %}
+        <tr{% if prop_diffs.is_bipartite or prop_diffs.is_planar or prop_diffs.is_regular or prop_diffs.tags %} class="row-diff"{% endif %}>
+            <td>Tags</td>
+            {% for g in result.graphs %}
+            {% set all_tags = g.tags | default([]) | list %}
+            {% if g.properties.is_bipartite and 'bipartite' not in all_tags %}{% set _ = all_tags.append('bipartite') %}{% endif %}
+            {% if g.properties.is_planar and 'planar' not in all_tags %}{% set _ = all_tags.append('planar') %}{% endif %}
+            {% if g.properties.is_regular and 'regular' not in all_tags %}{% set _ = all_tags.append('regular') %}{% endif %}
+            <td>{% for tag in all_tags | sort %}<span class="tag tag-sm">{{ tag }}</span>{% endfor %}</td>
+            {% endfor %}
         </tr>
         <tr{% if prop_diffs.diameter %} class="row-diff"{% endif %}>
             <td>Diameter</td>

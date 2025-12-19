@@ -3,93 +3,58 @@
 {% block title %}{{ graph.graph6 }} - SMOL{% endblock %}
 
 {% block content %}
-<hgroup>
-    <h1><code>{{ graph.graph6 }}</code></h1>
-    <p>{{ graph.n }} vertices, {{ graph.m }} edges</p>
-</hgroup>
-{% if graph.tags %}
-<div class="graph-tags">
-    {% for tag in graph.tags %}
-    <span class="tag">{{ tag }}</span>
-    {% endfor %}
-</div>
-{% endif %}
+{% set all_tags = graph.tags | default([]) | list %}
+{% if graph.properties.is_bipartite and 'bipartite' not in all_tags %}{% set _ = all_tags.append('bipartite') %}{% endif %}
+{% if graph.properties.is_planar and 'planar' not in all_tags %}{% set _ = all_tags.append('planar') %}{% endif %}
+{% if graph.properties.is_regular and 'regular' not in all_tags %}{% set _ = all_tags.append('regular') %}{% endif %}
 
-<div class="grid">
-    <div>
+<div class="graph-hero">
+    <div class="graph-hero-viz">
         <div class="viz-container">
-            <div id="graph-viz" class="graph-viz" style="width: 300px; height: 300px;"></div>
+            <div id="graph-viz" class="graph-viz"></div>
             <button class="viz-reset-btn" onclick="resetGraphViz()" title="Reset view">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
             </button>
         </div>
     </div>
-    <div>
-        <h3>Structural Properties</h3>
-        <dl class="property-grid">
-            <dt>Bipartite</dt>
-            <dd>{{ "Yes" if graph.properties.is_bipartite else "No" }}</dd>
-
-            <dt>Planar</dt>
-            <dd>{{ "Yes" if graph.properties.is_planar else "No" }}</dd>
-
-            <dt>Regular</dt>
-            <dd>{{ "Yes" if graph.properties.is_regular else "No" }}</dd>
-
-            <dt>Diameter</dt>
-            <dd>{{ graph.properties.diameter if graph.properties.diameter else "∞" }}</dd>
-
-            <dt>Girth</dt>
-            <dd>{{ graph.properties.girth if graph.properties.girth else "∞ (acyclic)" }}</dd>
-
-            <dt>Radius</dt>
-            <dd>{{ graph.properties.radius if graph.properties.radius else "-" }}</dd>
-
-            <dt>Degree range</dt>
-            <dd>[{{ graph.properties.min_degree }}, {{ graph.properties.max_degree }}]</dd>
-
-            <dt>Triangles</dt>
-            <dd>{{ graph.properties.triangle_count }}</dd>
-
-            {% if graph.properties.clique_number %}
-            <dt>Clique number</dt>
-            <dd>{{ graph.properties.clique_number }}</dd>
-            {% endif %}
-
-            {% if graph.properties.chromatic_number %}
-            <dt>Chromatic number</dt>
-            <dd>{{ graph.properties.chromatic_number }}{% if graph.properties.chromatic_number > graph.properties.clique_number %}<span class="muted" data-tooltip="Upper bound from greedy coloring">*</span>{% endif %}</dd>
-            {% endif %}
-        </dl>
-
-        {% if graph.properties.global_clustering is not none or graph.properties.avg_path_length is not none %}
-        <h3 style="margin-top: 1.5rem;">Network Properties</h3>
-        <dl class="property-grid">
-            {% if graph.properties.algebraic_connectivity is not none %}
-            <dt>Algebraic connectivity</dt>
-            <dd>{{ "%.4f"|format(graph.properties.algebraic_connectivity) }}</dd>
-            {% endif %}
-
-            {% if graph.properties.global_clustering is not none %}
-            <dt>Global clustering</dt>
-            <dd>{{ "%.4f"|format(graph.properties.global_clustering) }}</dd>
-            {% endif %}
-
-            {% if graph.properties.avg_local_clustering is not none %}
-            <dt>Avg local clustering</dt>
-            <dd>{{ "%.4f"|format(graph.properties.avg_local_clustering) }}</dd>
-            {% endif %}
-
-            {% if graph.properties.avg_path_length is not none %}
-            <dt>Avg path length</dt>
-            <dd>{{ "%.4f"|format(graph.properties.avg_path_length) }}</dd>
-            {% endif %}
-
-            {% if graph.properties.assortativity is not none %}
-            <dt>Degree assortativity</dt>
-            <dd>{{ "%.4f"|format(graph.properties.assortativity) }}</dd>
-            {% endif %}
-        </dl>
+    <div class="graph-hero-info">
+        <hgroup>
+            <h1><code>{{ graph.graph6 }}</code></h1>
+            <p>{{ graph.n }} vertices, {{ graph.m }} edges</p>
+        </hgroup>
+        <div class="property-grid-compact">
+            <div class="property-col">
+                <dl>
+                    <dt>Diameter</dt>
+                    <dd>{{ graph.properties.diameter if graph.properties.diameter else "∞" }}</dd>
+                    <dt>Girth</dt>
+                    <dd>{{ graph.properties.girth if graph.properties.girth else "∞" }}</dd>
+                    <dt>Radius</dt>
+                    <dd>{{ graph.properties.radius if graph.properties.radius else "-" }}</dd>
+                    <dt>Degree range</dt>
+                    <dd>[{{ graph.properties.min_degree }}, {{ graph.properties.max_degree }}]</dd>
+                    <dt>Triangles</dt>
+                    <dd>{{ graph.properties.triangle_count }}</dd>
+                    {% if graph.properties.clique_number %}<dt>ω</dt><dd>{{ graph.properties.clique_number }}</dd>{% endif %}
+                    {% if graph.properties.chromatic_number %}<dt>χ</dt><dd>{{ graph.properties.chromatic_number }}{% if graph.properties.chromatic_number > graph.properties.clique_number %}<span class="muted">*</span>{% endif %}</dd>{% endif %}
+                </dl>
+            </div>
+            <div class="property-col">
+                <dl>
+                    {% if graph.properties.algebraic_connectivity is not none %}<dt>Alg. conn.</dt><dd>{{ "%.4f"|format(graph.properties.algebraic_connectivity) }}</dd>{% endif %}
+                    {% if graph.properties.global_clustering is not none %}<dt>Clustering</dt><dd>{{ "%.4f"|format(graph.properties.global_clustering) }}</dd>{% endif %}
+                    {% if graph.properties.avg_local_clustering is not none %}<dt>Avg local clust.</dt><dd>{{ "%.4f"|format(graph.properties.avg_local_clustering) }}</dd>{% endif %}
+                    {% if graph.properties.avg_path_length is not none %}<dt>Avg path len.</dt><dd>{{ "%.4f"|format(graph.properties.avg_path_length) }}</dd>{% endif %}
+                    {% if graph.properties.assortativity is not none %}<dt>Assortativity</dt><dd>{{ "%.4f"|format(graph.properties.assortativity) }}</dd>{% endif %}
+                </dl>
+            </div>
+        </div>
+        {% if all_tags %}
+        <div class="graph-tags">
+            {% for tag in all_tags | sort %}
+            <span class="tag">{{ tag }}</span>
+            {% endfor %}
+        </div>
         {% endif %}
     </div>
 </div>
@@ -404,7 +369,7 @@ function renderGraph() {
     const n = {{ graph.n }};
     const edges = {{ graph.edges | tojson }};
 
-    const width = 300, height = 300;
+    const width = 280, height = 280;
     const nodes = Array.from({length: n}, (_, i) => ({id: i}));
     const links = edges.map(([s, t]) => ({source: s, target: t}));
 

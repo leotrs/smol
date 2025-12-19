@@ -217,12 +217,76 @@
             color: #9B1C1C;
         }
 
+        /* Graph hero section */
+        .graph-hero {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .graph-hero-viz {
+            flex-shrink: 0;
+        }
+
+        .graph-hero-viz .graph-viz {
+            width: 280px;
+            height: 280px;
+        }
+
+        .graph-hero-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .graph-hero-info hgroup {
+            margin-bottom: 1rem;
+        }
+
+        .graph-hero-info hgroup h1 {
+            margin-bottom: 0.25rem;
+        }
+
+        .property-grid-compact {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .property-col dl {
+            display: grid;
+            grid-template-columns: auto auto;
+            gap: 0.25rem 1rem;
+            margin: 0;
+            font-size: 0.875rem;
+        }
+
+        .property-col dt {
+            color: var(--pico-muted-color);
+            font-weight: normal;
+        }
+
+        .property-col dd {
+            margin: 0;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        @media (max-width: 768px) {
+            .graph-hero {
+                flex-direction: column;
+                align-items: center;
+            }
+            .property-grid-compact {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+
         /* Graph tags */
         .graph-tags {
             display: flex;
             flex-wrap: wrap;
             gap: 0.5rem;
-            margin-bottom: 1.5rem;
         }
 
         .tag {
@@ -234,6 +298,12 @@
             background: var(--pico-primary-focus);
             color: var(--pico-primary);
             border: 1px solid var(--pico-primary-border);
+        }
+
+        .tag-sm {
+            padding: 0.1rem 0.4rem;
+            font-size: 0.65rem;
+            margin-right: 0.2rem;
         }
 
         article p:last-child {

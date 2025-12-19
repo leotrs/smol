@@ -9,22 +9,22 @@
             <th>graph6</th>
             <th>n</th>
             <th>m</th>
-            <th>Bipartite</th>
-            <th>Planar</th>
-            <th>Regular</th>
+            <th>Tags</th>
             <th>Diameter</th>
             <th>Girth</th>
         </tr>
     </thead>
     <tbody>
         {% for g in graphs %}
+        {% set all_tags = g.tags | default([]) | list %}
+        {% if g.properties.is_bipartite and 'bipartite' not in all_tags %}{% set _ = all_tags.append('bipartite') %}{% endif %}
+        {% if g.properties.is_planar and 'planar' not in all_tags %}{% set _ = all_tags.append('planar') %}{% endif %}
+        {% if g.properties.is_regular and 'regular' not in all_tags %}{% set _ = all_tags.append('regular') %}{% endif %}
         <tr>
             <td><a href="/graph/{{ g.graph6 | urlencode }}"><code>{{ g.graph6 }}</code></a></td>
             <td>{{ g.n }}</td>
             <td>{{ g.m }}</td>
-            <td>{{ "Yes" if g.properties.is_bipartite else "No" }}</td>
-            <td>{{ "Yes" if g.properties.is_planar else "No" }}</td>
-            <td>{{ "Yes" if g.properties.is_regular else "No" }}</td>
+            <td>{% for tag in all_tags | sort %}<span class="tag tag-sm">{{ tag }}</span>{% endfor %}</td>
             <td>{{ g.properties.diameter if g.properties.diameter else "-" }}</td>
             <td>{{ g.properties.girth if g.properties.girth else "-" }}</td>
         </tr>
