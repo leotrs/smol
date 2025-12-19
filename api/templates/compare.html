@@ -24,6 +24,32 @@
 {% endfor %}
 </div>
 
+<h3>Spectra</h3>
+{% if result.graphs|length > 1 %}
+<div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1.5rem; margin-bottom: 0.75rem;">
+    {% for g in result.graphs %}
+    <button class="spectrum-pill active" data-graph="{{ loop.index0 }}" onclick="toggleCompareGraphMarkers(this, {{ loop.index0 }})">
+        <span class="graph-marker-icon" data-marker="{{ loop.index0 }}"></span>
+        <code style="font-size: 0.75rem; margin-left: 0.25rem;">{{ g.graph6 }}</code>
+    </button>
+    {% endfor %}
+</div>
+{% endif %}
+<div style="display: flex; gap: 2rem;">
+    <div class="viz-container" style="flex: 1;">
+        <div id="compare-spectrum-real-plot" style="height: 280px;"></div>
+        <button class="viz-reset-btn" onclick="resetCompareSpectrumRealPlot()" title="Reset view">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        </button>
+    </div>
+    <div class="viz-container" style="flex: 1;">
+        <div id="compare-spectrum-complex-plot" style="height: 280px;"></div>
+        <button class="viz-reset-btn" onclick="resetCompareSpectrumComplexPlot()" title="Reset view">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        </button>
+    </div>
+</div>
+
 <article>
     <header>
         <strong>{% if result.graphs|length == 2 %}Spectral Distance{% else %}Spectral Comparison{% endif %}</strong>
@@ -166,8 +192,732 @@ function renderGraphs() {
         });
     });
 }
+
+let compareSpectrumRealPlotState = null;
+let compareSpectrumComplexPlotState = null;
+
+function renderCompareSpectrumRealPlot() {
+    const graphs = {{ result.graphs | tojson }};
+    const container = document.getElementById('compare-spectrum-real-plot');
+    if (!container || graphs.length === 0) return;
+
+    container.innerHTML = '';
+
+    const graphsSpectra = graphs.map((g, idx) => ({
+        graphIndex: idx,
+        graph6: g.graph6,
+        spectra: {
+            adj: g.spectra.adj_eigenvalues.map(re => ({re, im: 0})),
+            kirchhoff: (g.spectra.kirchhoff_eigenvalues || []).map(re => ({re, im: 0})),
+            signless: (g.spectra.signless_eigenvalues || []).map(re => ({re, im: 0})),
+            lap: g.spectra.lap_eigenvalues.map(re => ({re, im: 0}))
+        }
+    }));
+
+    const width = container.clientWidth || 500;
+    const height = 280;
+    const margin = {top: 10, right: 20, bottom: 45, left: 80};
+    const plotWidth = width - margin.left - margin.right;
+    const plotHeight = height - margin.top - margin.bottom;
+
+    const matrices = ['adj', 'kirchhoff', 'signless', 'lap'];
+    const laneHeight = plotHeight / matrices.length;
+
+    // Collect all real eigenvalues to determine x-axis domain
+    const allReals = [];
+    graphsSpectra.forEach(gs => {
+        matrices.forEach(matrix => {
+            gs.spectra[matrix].forEach(p => allReals.push(p.re));
+        });
+    });
+
+    const reExtent = d3.extent(allReals);
+    const rePadding = (reExtent[1] - reExtent[0]) * 0.1 || 0.5;
+
+    const xScale = d3.scaleLinear()
+        .domain([reExtent[0] - rePadding, reExtent[1] + rePadding])
+        .range([0, plotWidth]);
+
+    const svg = d3.select('#compare-spectrum-real-plot')
+        .append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .style('cursor', 'grab');
+
+    svg.append('defs').append('clipPath')
+        .attr('id', 'real-plot-clip')
+        .append('rect')
+        .attr('width', plotWidth)
+        .attr('height', plotHeight);
+
+    const g = svg.append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+
+    const plotArea = g.append('g')
+        .attr('clip-path', 'url(#real-plot-clip)');
+
+    const content = plotArea.append('g');
+
+    let transform = {x: 0, y: 0, k: 1};
+    const baseRadius = 4;
+
+    function updatePlotTransform() {
+        content.attr('transform', `translate(${transform.x},0) scale(${transform.k},1)`);
+        content.selectAll('.eigenvalue-dot').attr('r', baseRadius / transform.k);
+        content.selectAll('.eigenvalue-symbol').attr('d', d => d3.symbol().type(d.symbolType).size(50 / (transform.k * transform.k)));
+    }
+
+    compareSpectrumRealPlotState = { transform, update: updatePlotTransform };
+
+    svg.call(d3.drag()
+        .on('start', () => svg.style('cursor', 'grabbing'))
+        .on('drag', (event) => {
+            transform.x += event.dx;
+            updatePlotTransform();
+        })
+        .on('end', () => svg.style('cursor', 'grab')));
+
+    svg.on('wheel', (event) => {
+        event.preventDefault();
+        const scaleFactor = event.deltaY > 0 ? 0.9 : 1.1;
+        const newK = Math.max(0.2, Math.min(5, transform.k * scaleFactor));
+        const [mx] = d3.pointer(event, plotArea.node());
+        transform.x = mx - (mx - transform.x) * (newK / transform.k);
+        transform.k = newK;
+        updatePlotTransform();
+    });
+
+    const tooltip = d3.select('body').append('div')
+        .attr('class', 'spectrum-tooltip')
+        .style('position', 'absolute')
+        .style('visibility', 'hidden')
+        .style('background', 'var(--pico-card-background-color)')
+        .style('border', '1px solid var(--pico-muted-border-color)')
+        .style('border-radius', '4px')
+        .style('padding', '4px 8px')
+        .style('font-size', '12px')
+        .style('pointer-events', 'none')
+        .style('z-index', '1000');
+
+    const style = getComputedStyle(document.documentElement);
+    const axisColor = style.getPropertyValue('--pico-muted-color').trim() || '#666';
+    const borderColor = style.getPropertyValue('--pico-muted-border-color').trim() || '#ddd';
+
+    const xAxis = g.append('g')
+        .attr('transform', `translate(0,${plotHeight})`)
+        .call(d3.axisBottom(xScale).ticks(6));
+    xAxis.selectAll('text').attr('fill', axisColor).attr('stroke', 'none');
+    xAxis.selectAll('line, path').attr('stroke', borderColor);
+
+    g.append('text')
+        .attr('x', plotWidth / 2)
+        .attr('y', plotHeight + 35)
+        .attr('text-anchor', 'middle')
+        .attr('fill', axisColor)
+        .attr('font-size', '11px')
+        .text('Eigenvalue');
+
+    const colors = {
+        adj: style.getPropertyValue('--spectrum-adj').trim(),
+        kirchhoff: style.getPropertyValue('--spectrum-kirchhoff').trim() || '#8B4513',
+        signless: style.getPropertyValue('--spectrum-signless').trim() || '#F97316',
+        lap: style.getPropertyValue('--spectrum-lap').trim()
+    };
+
+    const labels = {adj: 'adj', kirchhoff: 'kir', signless: 'sgl', lap: 'lap'};
+
+    const markerShapes = [
+        { name: 'circle', type: null },
+        { name: 'square', type: null },
+        { name: 'triangle', type: d3.symbolTriangle },
+        { name: 'diamond', type: d3.symbolDiamond },
+        { name: 'cross', type: d3.symbolCross },
+        { name: 'star', type: d3.symbolStar }
+    ];
+
+    // Draw lanes and labels
+    matrices.forEach((matrix, i) => {
+        const laneY = i * laneHeight;
+
+        // Label
+        g.append('text')
+            .attr('x', -10)
+            .attr('y', laneY + laneHeight / 2)
+            .attr('text-anchor', 'end')
+            .attr('dominant-baseline', 'middle')
+            .attr('fill', colors[matrix])
+            .attr('font-size', '11px')
+            .attr('font-weight', '600')
+            .text(labels[matrix]);
+
+        // Draw horizontal axis lines for each graph at their respective heights
+        const numGraphs = graphsSpectra.length;
+        const tickValues = xScale.ticks(6);
+        for (let graphIdx = 0; graphIdx < numGraphs; graphIdx++) {
+            const yPos = laneY + laneHeight * ((graphIdx + 1) / (numGraphs + 1));
+            content.append('line')
+                .attr('x1', 0)
+                .attr('x2', plotWidth)
+                .attr('y1', yPos)
+                .attr('y2', yPos)
+                .attr('stroke', borderColor)
+                .attr('stroke-opacity', 0.4)
+                .attr('stroke-width', 1);
+
+            // Add tick marks at each tick position
+            tickValues.forEach(tickValue => {
+                const tickX = xScale(tickValue);
+                content.append('line')
+                    .attr('x1', tickX)
+                    .attr('x2', tickX)
+                    .attr('y1', yPos - 3)
+                    .attr('y2', yPos + 3)
+                    .attr('stroke', borderColor)
+                    .attr('stroke-opacity', 0.4)
+                    .attr('stroke-width', 1);
+            });
+        }
+
+        // Draw eigenvalues for each graph at different heights within the lane
+        graphsSpectra.forEach((gs, graphIdx) => {
+            const markerInfo = markerShapes[graphIdx % markerShapes.length];
+            const points = gs.spectra[matrix];
+
+            // Distribute graphs vertically within the lane
+            const numGraphs = graphsSpectra.length;
+            const yPos = laneY + laneHeight * ((graphIdx + 1) / (numGraphs + 1));
+
+            if (markerInfo.name === 'circle') {
+                content.append('g')
+                    .attr('class', `spectrum-points spectrum-${matrix} graph-${graphIdx}`)
+                    .selectAll('circle')
+                    .data(points)
+                    .join('circle')
+                    .attr('class', 'eigenvalue-dot')
+                    .attr('cx', d => xScale(d.re))
+                    .attr('cy', yPos)
+                    .attr('r', baseRadius)
+                    .attr('fill', colors[matrix])
+                    .attr('opacity', 0.7)
+                    .style('cursor', 'pointer')
+                    .on('mouseover', (event, d) => {
+                        tooltip.style('visibility', 'visible')
+                            .html(`<strong>${labels[matrix]}:</strong> ${d.re.toFixed(4)}<br/><code style="font-size:10px;">${gs.graph6}</code>`);
+                        d3.select(event.target).attr('r', 6 / transform.k).attr('opacity', 1);
+                    })
+                    .on('mousemove', (event) => {
+                        tooltip.style('top', (event.pageY - 10) + 'px').style('left', (event.pageX + 10) + 'px');
+                    })
+                    .on('mouseout', (event) => {
+                        tooltip.style('visibility', 'hidden');
+                        d3.select(event.target).attr('r', baseRadius / transform.k).attr('opacity', 0.7);
+                    });
+            } else if (markerInfo.name === 'square') {
+                content.append('g')
+                    .attr('class', `spectrum-points spectrum-${matrix} graph-${graphIdx}`)
+                    .selectAll('rect')
+                    .data(points)
+                    .join('rect')
+                    .attr('class', 'eigenvalue-dot')
+                    .attr('x', d => xScale(d.re) - baseRadius)
+                    .attr('y', yPos - baseRadius)
+                    .attr('width', baseRadius * 2)
+                    .attr('height', baseRadius * 2)
+                    .attr('fill', colors[matrix])
+                    .attr('opacity', 0.7)
+                    .style('cursor', 'pointer')
+                    .on('mouseover', (event, d) => {
+                        tooltip.style('visibility', 'visible')
+                            .html(`<strong>${labels[matrix]}:</strong> ${d.re.toFixed(4)}<br/><code style="font-size:10px;">${gs.graph6}</code>`);
+                        d3.select(event.target).attr('width', 12 / transform.k).attr('height', 12 / transform.k)
+                            .attr('x', d => xScale(d.re) - 6 / transform.k)
+                            .attr('y', yPos - 6 / transform.k)
+                            .attr('opacity', 1);
+                    })
+                    .on('mousemove', (event) => {
+                        tooltip.style('top', (event.pageY - 10) + 'px').style('left', (event.pageX + 10) + 'px');
+                    })
+                    .on('mouseout', (event, d) => {
+                        tooltip.style('visibility', 'hidden');
+                        d3.select(event.target)
+                            .attr('width', baseRadius * 2 / transform.k)
+                            .attr('height', baseRadius * 2 / transform.k)
+                            .attr('x', xScale(d.re) - baseRadius / transform.k)
+                            .attr('y', yPos - baseRadius / transform.k)
+                            .attr('opacity', 0.7);
+                    });
+            } else {
+                content.append('g')
+                    .attr('class', `spectrum-points spectrum-${matrix} graph-${graphIdx}`)
+                    .selectAll('path')
+                    .data(points.map(p => ({...p, symbolType: markerInfo.type})))
+                    .join('path')
+                    .attr('class', 'eigenvalue-symbol')
+                    .attr('d', d3.symbol().type(markerInfo.type).size(50))
+                    .attr('transform', d => `translate(${xScale(d.re)},${yPos})`)
+                    .attr('fill', colors[matrix])
+                    .attr('opacity', 0.7)
+                    .style('cursor', 'pointer')
+                    .on('mouseover', (event, d) => {
+                        tooltip.style('visibility', 'visible')
+                            .html(`<strong>${labels[matrix]}:</strong> ${d.re.toFixed(4)}<br/><code style="font-size:10px;">${gs.graph6}</code>`);
+                        d3.select(event.target).attr('d', d3.symbol().type(markerInfo.type).size(100 / (transform.k * transform.k)))
+                            .attr('opacity', 1);
+                    })
+                    .on('mousemove', (event) => {
+                        tooltip.style('top', (event.pageY - 10) + 'px').style('left', (event.pageX + 10) + 'px');
+                    })
+                    .on('mouseout', (event) => {
+                        tooltip.style('visibility', 'hidden');
+                        d3.select(event.target).attr('d', d3.symbol().type(markerInfo.type).size(50 / (transform.k * transform.k)))
+                            .attr('opacity', 0.7);
+                    });
+            }
+        });
+    });
+
+    return () => tooltip.remove();
+}
+
+function renderCompareSpectrumComplexPlot() {
+    const graphs = {{ result.graphs | tojson }};
+    const container = document.getElementById('compare-spectrum-complex-plot');
+    if (!container || graphs.length === 0) return;
+
+    container.innerHTML = '';
+
+    // Only complex eigenvalue matrices
+    const graphsSpectra = graphs.map((g, idx) => ({
+        graphIndex: idx,
+        graph6: g.graph6,
+        spectra: {
+            nb: g.spectra.nb_eigenvalues_re.map((re, i) => ({re, im: g.spectra.nb_eigenvalues_im[i]})),
+            nbl: g.spectra.nbl_eigenvalues_re.map((re, i) => ({re, im: g.spectra.nbl_eigenvalues_im[i]}))
+        }
+    }));
+
+    const width = container.clientWidth || 500;
+    const height = 280;
+    const margin = {top: 20, right: 20, bottom: 40, left: 50};
+    const plotWidth = width - margin.left - margin.right;
+    const plotHeight = height - margin.top - margin.bottom;
+
+    // Mirror complex eigenvalues to show conjugate pairs
+    function withConjugates(points) {
+        const result = [];
+        points.forEach(p => {
+            result.push(p);
+            if (Math.abs(p.im) > 1e-10) {
+                result.push({re: p.re, im: -p.im});
+            }
+        });
+        return result;
+    }
+
+    // Prepare plot data with conjugates (only complex matrices)
+    const plotData = graphsSpectra.map(gs => ({
+        ...gs,
+        plotSpectra: {
+            nb: withConjugates(gs.spectra.nb),
+            nbl: withConjugates(gs.spectra.nbl)
+        }
+    }));
+
+    // Collect all points for domain calculation
+    const allPoints = [];
+    plotData.forEach(gs => {
+        Object.values(gs.plotSpectra).forEach(points => {
+            allPoints.push(...points);
+        });
+    });
+
+    const reExtent = d3.extent(allPoints, d => d.re);
+    let imExtent = d3.extent(allPoints, d => d.im);
+
+    // Make y-axis symmetric around 0
+    const imMax = Math.max(Math.abs(imExtent[0]), Math.abs(imExtent[1]));
+    imExtent = [-imMax, imMax];
+
+    const rePadding = (reExtent[1] - reExtent[0]) * 0.1 || 0.5;
+    const imPadding = imMax * 0.1 || 0.5;
+
+    // Calculate data ranges with padding
+    const xDataRange = (reExtent[1] - reExtent[0]) + 2 * rePadding;
+    const yDataRange = 2 * (imMax + imPadding);
+
+    // Force 1:1 aspect ratio by using the same scale for both axes
+    const xPixelsPerUnit = plotWidth / xDataRange;
+    const yPixelsPerUnit = plotHeight / yDataRange;
+    const pixelsPerUnit = Math.min(xPixelsPerUnit, yPixelsPerUnit);
+
+    // Center the data in the available space
+    const xCenter = (reExtent[0] + reExtent[1]) / 2;
+    const yCenter = 0;
+    const xHalfRange = (plotWidth / pixelsPerUnit) / 2;
+    const yHalfRange = (plotHeight / pixelsPerUnit) / 2;
+
+    const xScale = d3.scaleLinear()
+        .domain([xCenter - xHalfRange, xCenter + xHalfRange])
+        .range([0, plotWidth]);
+
+    const yScale = d3.scaleLinear()
+        .domain([yCenter - yHalfRange, yCenter + yHalfRange])
+        .range([plotHeight, 0]);
+
+    const svg = d3.select('#compare-spectrum-complex-plot')
+        .append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .style('cursor', 'grab');
+
+    // Clip path to contain points within plot area
+    svg.append('defs').append('clipPath')
+        .attr('id', 'complex-plot-clip')
+        .append('rect')
+        .attr('width', plotWidth)
+        .attr('height', plotHeight);
+
+    const g = svg.append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+
+    // Container for pannable/zoomable content
+    const plotArea = g.append('g')
+        .attr('clip-path', 'url(#complex-plot-clip)');
+
+    const content = plotArea.append('g');
+
+    // Viewport pan and zoom
+    let transform = {x: 0, y: 0, k: 1};
+    const baseRadius = 4;
+
+    function updatePlotTransform() {
+        content.attr('transform', `translate(${transform.x},${transform.y}) scale(${transform.k})`);
+        // Keep eigenvalue dots at constant visual size by scaling radius inversely
+        content.selectAll('.eigenvalue-dot').attr('r', baseRadius / transform.k);
+        // Keep symbol sizes constant
+        content.selectAll('.eigenvalue-symbol').attr('d', d3.symbol().type(d => d.symbolType).size(50 / (transform.k * transform.k)));
+    }
+
+    // Store for reset button
+    compareSpectrumComplexPlotState = { transform, update: updatePlotTransform };
+
+    svg.call(d3.drag()
+        .on('start', () => svg.style('cursor', 'grabbing'))
+        .on('drag', (event) => {
+            transform.x += event.dx;
+            transform.y += event.dy;
+            updatePlotTransform();
+        })
+        .on('end', () => svg.style('cursor', 'grab')));
+
+    svg.on('wheel', (event) => {
+        event.preventDefault();
+        const scaleFactor = event.deltaY > 0 ? 0.9 : 1.1;
+        const newK = Math.max(0.2, Math.min(5, transform.k * scaleFactor));
+
+        // Get mouse position relative to plot area
+        const [mx, my] = d3.pointer(event, plotArea.node());
+
+        // Zoom centered on mouse position
+        transform.x = mx - (mx - transform.x) * (newK / transform.k);
+        transform.y = my - (my - transform.y) * (newK / transform.k);
+        transform.k = newK;
+
+        updatePlotTransform();
+    });
+
+    // Tooltip
+    const tooltip = d3.select('body').append('div')
+        .attr('class', 'spectrum-tooltip')
+        .style('position', 'absolute')
+        .style('visibility', 'hidden')
+        .style('background', 'var(--pico-card-background-color)')
+        .style('border', '1px solid var(--pico-muted-border-color)')
+        .style('border-radius', '4px')
+        .style('padding', '4px 8px')
+        .style('font-size', '12px')
+        .style('pointer-events', 'none')
+        .style('z-index', '1000');
+
+    const style = getComputedStyle(document.documentElement);
+    const axisColor = style.getPropertyValue('--pico-muted-color').trim() || '#666';
+    const borderColor = style.getPropertyValue('--pico-muted-border-color').trim() || '#ddd';
+
+    // X axis
+    const xAxis = g.append('g')
+        .attr('transform', `translate(0,${plotHeight})`)
+        .call(d3.axisBottom(xScale).ticks(6));
+    xAxis.selectAll('text').attr('fill', axisColor).attr('stroke', 'none');
+    xAxis.selectAll('line, path').attr('stroke', borderColor);
+
+    // Y axis
+    const yAxis = g.append('g')
+        .call(d3.axisLeft(yScale).ticks(6));
+    yAxis.selectAll('text').attr('fill', axisColor).attr('stroke', 'none');
+    yAxis.selectAll('line, path').attr('stroke', borderColor);
+
+    // Axis labels
+    g.append('text')
+        .attr('x', plotWidth / 2)
+        .attr('y', plotHeight + 32)
+        .attr('text-anchor', 'middle')
+        .attr('fill', axisColor)
+        .attr('font-size', '11px')
+        .text('Re');
+
+    g.append('text')
+        .attr('transform', 'rotate(-90)')
+        .attr('x', -plotHeight / 2)
+        .attr('y', -32)
+        .attr('text-anchor', 'middle')
+        .attr('fill', axisColor)
+        .attr('font-size', '11px')
+        .text('Im');
+
+    // Zero lines (in content so they pan)
+    if (xScale.domain()[0] < 0 && xScale.domain()[1] > 0) {
+        content.append('line')
+            .attr('x1', xScale(0))
+            .attr('x2', xScale(0))
+            .attr('y1', 0)
+            .attr('y2', plotHeight)
+            .attr('stroke', axisColor)
+            .attr('stroke-opacity', 0.3)
+            .attr('stroke-dasharray', '4,4');
+    }
+    if (yScale.domain()[0] < 0 && yScale.domain()[1] > 0) {
+        content.append('line')
+            .attr('x1', 0)
+            .attr('x2', plotWidth)
+            .attr('y1', yScale(0))
+            .attr('y2', yScale(0))
+            .attr('stroke', axisColor)
+            .attr('stroke-opacity', 0.3)
+            .attr('stroke-dasharray', '4,4');
+    }
+
+    const colors = {
+        nb: style.getPropertyValue('--spectrum-nb').trim(),
+        nbl: style.getPropertyValue('--spectrum-nbl').trim()
+    };
+
+    const labels = {nb: 'NB', nbl: 'NBL'};
+
+    // Draw unit circle (in content so it pans, but scales with zoom)
+    const circleRadius = Math.abs(xScale(1) - xScale(0));
+    content.append('circle')
+        .attr('class', 'unit-circle')
+        .attr('cx', xScale(0))
+        .attr('cy', yScale(0))
+        .attr('r', circleRadius)
+        .attr('fill', 'none')
+        .attr('stroke', axisColor)
+        .attr('stroke-opacity', 0.2)
+        .attr('stroke-dasharray', '4,4');
+
+    // Format eigenvalue for tooltip
+    function formatEig(d) {
+        const re = d.re.toFixed(4);
+        const im = d.im.toFixed(4);
+        if (Math.abs(d.im) < 1e-10) return re;
+        const sign = d.im >= 0 ? '+' : '';
+        return `${re}${sign}${im}i`;
+    }
+
+    // Different marker shapes for different graphs
+    const markerShapes = [
+        { name: 'circle', type: null },
+        { name: 'square', type: null },
+        { name: 'triangle', type: d3.symbolTriangle },
+        { name: 'diamond', type: d3.symbolDiamond },
+        { name: 'cross', type: d3.symbolCross },
+        { name: 'star', type: d3.symbolStar }
+    ];
+
+    // Draw points for each matrix type and graph (only complex matrices)
+    ['nb', 'nbl'].forEach(matrix => {
+        plotData.forEach((gs, graphIdx) => {
+            const markerInfo = markerShapes[graphIdx % markerShapes.length];
+            const points = gs.plotSpectra[matrix];
+
+            if (markerInfo.name === 'circle') {
+                content.append('g')
+                    .attr('class', `spectrum-points spectrum-${matrix} graph-${graphIdx}`)
+                    .selectAll('circle')
+                    .data(points)
+                    .join('circle')
+                    .attr('class', 'eigenvalue-dot')
+                    .attr('cx', d => xScale(d.re))
+                    .attr('cy', d => yScale(d.im))
+                    .attr('r', baseRadius)
+                    .attr('fill', colors[matrix])
+                    .attr('opacity', 0.7)
+                    .style('cursor', 'pointer')
+                    .on('mouseover', (event, d) => {
+                        tooltip.style('visibility', 'visible')
+                            .html(`<strong>${labels[matrix]}:</strong> ${formatEig(d)}<br/><code style="font-size:10px;">${gs.graph6}</code>`);
+                        d3.select(event.target).attr('r', 6 / transform.k).attr('opacity', 1);
+                    })
+                    .on('mousemove', (event) => {
+                        tooltip.style('top', (event.pageY - 10) + 'px')
+                            .style('left', (event.pageX + 10) + 'px');
+                    })
+                    .on('mouseout', (event) => {
+                        tooltip.style('visibility', 'hidden');
+                        d3.select(event.target).attr('r', baseRadius / transform.k).attr('opacity', 0.7);
+                    });
+            } else if (markerInfo.name === 'square') {
+                content.append('g')
+                    .attr('class', `spectrum-points spectrum-${matrix} graph-${graphIdx}`)
+                    .selectAll('rect')
+                    .data(points)
+                    .join('rect')
+                    .attr('class', 'eigenvalue-dot')
+                    .attr('x', d => xScale(d.re) - baseRadius)
+                    .attr('y', d => yScale(d.im) - baseRadius)
+                    .attr('width', baseRadius * 2)
+                    .attr('height', baseRadius * 2)
+                    .attr('fill', colors[matrix])
+                    .attr('opacity', 0.7)
+                    .style('cursor', 'pointer')
+                    .on('mouseover', (event, d) => {
+                        tooltip.style('visibility', 'visible')
+                            .html(`<strong>${labels[matrix]}:</strong> ${formatEig(d)}<br/><code style="font-size:10px;">${gs.graph6}</code>`);
+                        d3.select(event.target).attr('width', 12 / transform.k).attr('height', 12 / transform.k)
+                            .attr('x', d => xScale(d.re) - 6 / transform.k)
+                            .attr('y', d => yScale(d.im) - 6 / transform.k)
+                            .attr('opacity', 1);
+                    })
+                    .on('mousemove', (event) => {
+                        tooltip.style('top', (event.pageY - 10) + 'px')
+                            .style('left', (event.pageX + 10) + 'px');
+                    })
+                    .on('mouseout', (event, d) => {
+                        tooltip.style('visibility', 'hidden');
+                        d3.select(event.target)
+                            .attr('width', baseRadius * 2 / transform.k)
+                            .attr('height', baseRadius * 2 / transform.k)
+                            .attr('x', xScale(d.re) - baseRadius / transform.k)
+                            .attr('y', yScale(d.im) - baseRadius / transform.k)
+                            .attr('opacity', 0.7);
+                    });
+            } else {
+                content.append('g')
+                    .attr('class', `spectrum-points spectrum-${matrix} graph-${graphIdx}`)
+                    .selectAll('path')
+                    .data(points.map(p => ({...p, symbolType: markerInfo.type})))
+                    .join('path')
+                    .attr('class', 'eigenvalue-symbol')
+                    .attr('d', d3.symbol().type(markerInfo.type).size(50))
+                    .attr('transform', d => `translate(${xScale(d.re)},${yScale(d.im)})`)
+                    .attr('fill', colors[matrix])
+                    .attr('opacity', 0.7)
+                    .style('cursor', 'pointer')
+                    .on('mouseover', (event, d) => {
+                        tooltip.style('visibility', 'visible')
+                            .html(`<strong>${labels[matrix]}:</strong> ${formatEig(d)}<br/><code style="font-size:10px;">${gs.graph6}</code>`);
+                        d3.select(event.target).attr('d', d3.symbol().type(markerInfo.type).size(100 / (transform.k * transform.k)))
+                            .attr('opacity', 1);
+                    })
+                    .on('mousemove', (event) => {
+                        tooltip.style('top', (event.pageY - 10) + 'px')
+                            .style('left', (event.pageX + 10) + 'px');
+                    })
+                    .on('mouseout', (event) => {
+                        tooltip.style('visibility', 'hidden');
+                        d3.select(event.target).attr('d', d3.symbol().type(markerInfo.type).size(50 / (transform.k * transform.k)))
+                            .attr('opacity', 0.7);
+                    });
+            }
+        });
+    });
+
+    // Initialize marker icons in legend
+    if (graphs.length > 1) {
+        document.querySelectorAll('.graph-marker-icon').forEach((icon, idx) => {
+            const markerInfo = markerShapes[idx % markerShapes.length];
+            const svg = d3.create('svg')
+                .attr('width', 12)
+                .attr('height', 12)
+                .style('display', 'inline-block')
+                .style('vertical-align', 'middle');
+
+            if (markerInfo.name === 'circle') {
+                svg.append('circle')
+                    .attr('cx', 6)
+                    .attr('cy', 6)
+                    .attr('r', 4)
+                    .attr('fill', axisColor);
+            } else if (markerInfo.name === 'square') {
+                svg.append('rect')
+                    .attr('x', 2)
+                    .attr('y', 2)
+                    .attr('width', 8)
+                    .attr('height', 8)
+                    .attr('fill', axisColor);
+            } else {
+                svg.append('path')
+                    .attr('d', d3.symbol().type(markerInfo.type).size(50))
+                    .attr('transform', 'translate(6,6)')
+                    .attr('fill', axisColor);
+            }
+
+            icon.appendChild(svg.node());
+        });
+    }
+
+    // Add legend in top-right corner
+    const legend = g.append('g')
+        .attr('class', 'spectrum-legend')
+        .attr('transform', `translate(${plotWidth - 10}, 10)`);
+
+    const legendItems = [
+        { label: 'nb', color: colors.nb },
+        { label: 'nbl', color: colors.nbl }
+    ];
+
+    legendItems.forEach((item, i) => {
+        const legendRow = legend.append('g')
+            .attr('transform', `translate(0, ${i * 18})`);
+
+        legendRow.append('text')
+            .attr('text-anchor', 'end')
+            .attr('fill', item.color)
+            .attr('font-size', '11px')
+            .attr('font-weight', '600')
+            .text(item.label);
+    });
+
+    // Clean up tooltip when plot is re-rendered
+    return () => tooltip.remove();
+}
+
+function toggleCompareGraphMarkers(btn, graphIdx) {
+    btn.classList.toggle('active');
+    const visible = btn.classList.contains('active');
+    d3.selectAll(`.graph-${graphIdx}`)
+        .style('display', visible ? null : 'none');
+}
+
+function resetCompareSpectrumRealPlot() {
+    if (compareSpectrumRealPlotState) {
+        compareSpectrumRealPlotState.transform.x = 0;
+        compareSpectrumRealPlotState.transform.y = 0;
+        compareSpectrumRealPlotState.transform.k = 1;
+        compareSpectrumRealPlotState.update();
+    }
+}
+
+function resetCompareSpectrumComplexPlot() {
+    if (compareSpectrumComplexPlotState) {
+        compareSpectrumComplexPlotState.transform.x = 0;
+        compareSpectrumComplexPlotState.transform.y = 0;
+        compareSpectrumComplexPlotState.transform.k = 1;
+        compareSpectrumComplexPlotState.update();
+    }
+}
 </script>
-<script src="https://d3js.org/d3.v7.min.js" onload="renderGraphs()"></script>
+<script src="https://d3js.org/d3.v7.min.js" onload="renderGraphs(); renderCompareSpectrumRealPlot(); renderCompareSpectrumComplexPlot();"></script>
 
 <h3>Properties</h3>
 <div style="overflow-x: auto;">

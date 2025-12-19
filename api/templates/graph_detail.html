@@ -76,141 +76,58 @@ const spectraData = {
     }))
 };
 
-function renderSpectrumPlot() {
-    const container = document.getElementById('spectrum-plot');
+function renderGraphDetailRealPlot() {
+    const container = document.getElementById('graph-detail-real-plot');
     if (!container) return;
     container.innerHTML = '';
 
-    const width = container.clientWidth || 500;
-    const height = 350;
-    const margin = {top: 20, right: 20, bottom: 40, left: 50};
-    const plotWidth = width - margin.left - margin.right;
-    const plotHeight = height - margin.top - margin.bottom;
-
-    // Mirror complex eigenvalues to show conjugate pairs
-    function withConjugates(points) {
-        const result = [];
-        points.forEach(p => {
-            result.push(p);
-            if (Math.abs(p.im) > 1e-10) {
-                result.push({re: p.re, im: -p.im});
-            }
-        });
-        return result;
-    }
-
-    const plotData = {
+    const matrices = ['adj', 'kirchhoff', 'signless', 'lap'];
+    const graphSpectra = {
         adj: spectraData.adj,
         kirchhoff: spectraData.kirchhoff,
         signless: spectraData.signless,
-        lap: spectraData.lap,
-        nb: withConjugates(spectraData.nb),
-        nbl: withConjugates(spectraData.nbl)
+        lap: spectraData.lap
     };
 
-    const allPoints = [
-        ...plotData.adj,
-        ...plotData.kirchhoff,
-        ...plotData.signless,
-        ...plotData.lap,
-        ...plotData.nb,
-        ...plotData.nbl
-    ];
+    const width = container.clientWidth || 500;
+    const height = 280;
+    const margin = {top: 10, right: 20, bottom: 45, left: 80};
+    const plotWidth = width - margin.left - margin.right;
+    const plotHeight = height - margin.top - margin.bottom;
+    const laneHeight = plotHeight / matrices.length;
 
-    const reExtent = d3.extent(allPoints, d => d.re);
-    let imExtent = d3.extent(allPoints, d => d.im);
+    const allReals = [];
+    matrices.forEach(matrix => {
+        graphSpectra[matrix].forEach(p => allReals.push(p.re));
+    });
 
-    // Make y-axis symmetric around 0
-    const imMax = Math.max(Math.abs(imExtent[0]), Math.abs(imExtent[1]));
-    imExtent = [-imMax, imMax];
-
+    const reExtent = d3.extent(allReals);
     const rePadding = (reExtent[1] - reExtent[0]) * 0.1 || 0.5;
-    const imPadding = imMax * 0.1 || 0.5;
-
-    // Calculate data ranges with padding
-    const xDataRange = (reExtent[1] - reExtent[0]) + 2 * rePadding;
-    const yDataRange = 2 * (imMax + imPadding);
-
-    // Force 1:1 aspect ratio by using the same scale for both axes
-    const xPixelsPerUnit = plotWidth / xDataRange;
-    const yPixelsPerUnit = plotHeight / yDataRange;
-    const pixelsPerUnit = Math.min(xPixelsPerUnit, yPixelsPerUnit);
-
-    // Center the data in the available space
-    const xCenter = (reExtent[0] + reExtent[1]) / 2;
-    const yCenter = 0;
-    const xHalfRange = (plotWidth / pixelsPerUnit) / 2;
-    const yHalfRange = (plotHeight / pixelsPerUnit) / 2;
 
     const xScale = d3.scaleLinear()
-        .domain([xCenter - xHalfRange, xCenter + xHalfRange])
+        .domain([reExtent[0] - rePadding, reExtent[1] + rePadding])
         .range([0, plotWidth]);
 
-    const yScale = d3.scaleLinear()
-        .domain([yCenter - yHalfRange, yCenter + yHalfRange])
-        .range([plotHeight, 0]);
-
-    const svg = d3.select('#spectrum-plot')
+    const svg = d3.select('#graph-detail-real-plot')
         .append('svg')
         .attr('width', width)
-        .attr('height', height)
-        .style('cursor', 'grab');
+        .attr('height', height);
 
-    // Clip path to contain points within plot area
-    svg.append('defs').append('clipPath')
-        .attr('id', 'plot-clip')
-        .append('rect')
-        .attr('width', plotWidth)
-        .attr('height', plotHeight);
+    let transform = d3.zoomIdentity;
+    const zoom = d3.zoom()
+        .scaleExtent([0.5, 10])
+        .on('zoom', (event) => {
+            transform = event.transform;
+            content.attr('transform', transform);
+        });
+
+    svg.call(zoom);
 
     const g = svg.append('g')
         .attr('transform', `translate(${margin.left},${margin.top})`);
 
-    // Container for pannable/zoomable content
-    const plotArea = g.append('g')
-        .attr('clip-path', 'url(#plot-clip)');
+    const content = g.append('g').attr('class', 'plot-content');
 
-    const content = plotArea.append('g');
-
-    // Viewport pan and zoom
-    let transform = {x: 0, y: 0, k: 1};
-    const baseRadius = 4;
-
-    function updatePlotTransform() {
-        content.attr('transform', `translate(${transform.x},${transform.y}) scale(${transform.k})`);
-        // Keep eigenvalue dots at constant visual size by scaling radius inversely
-        content.selectAll('.eigenvalue-dot').attr('r', baseRadius / transform.k);
-    }
-
-    // Store for reset button
-    spectrumPlotState = { transform, update: updatePlotTransform };
-
-    svg.call(d3.drag()
-        .on('start', () => svg.style('cursor', 'grabbing'))
-        .on('drag', (event) => {
-            transform.x += event.dx;
-            transform.y += event.dy;
-            updatePlotTransform();
-        })
-        .on('end', () => svg.style('cursor', 'grab')));
-
-    svg.on('wheel', (event) => {
-        event.preventDefault();
-        const scaleFactor = event.deltaY > 0 ? 0.9 : 1.1;
-        const newK = Math.max(0.2, Math.min(5, transform.k * scaleFactor));
-
-        // Get mouse position relative to plot area
-        const [mx, my] = d3.pointer(event, plotArea.node());
-
-        // Zoom centered on mouse position
-        transform.x = mx - (mx - transform.x) * (newK / transform.k);
-        transform.y = my - (my - transform.y) * (newK / transform.k);
-        transform.k = newK;
-
-        updatePlotTransform();
-    });
-
-    // Tooltip
     const tooltip = d3.select('body').append('div')
         .attr('class', 'spectrum-tooltip')
         .style('position', 'absolute')
@@ -227,27 +144,197 @@ function renderSpectrumPlot() {
     const axisColor = style.getPropertyValue('--pico-muted-color').trim() || '#666';
     const borderColor = style.getPropertyValue('--pico-muted-border-color').trim() || '#ddd';
 
-    // X axis
     const xAxis = g.append('g')
         .attr('transform', `translate(0,${plotHeight})`)
         .call(d3.axisBottom(xScale).ticks(6));
     xAxis.selectAll('text').attr('fill', axisColor).attr('stroke', 'none');
     xAxis.selectAll('line, path').attr('stroke', borderColor);
 
-    // Y axis
+    g.append('text')
+        .attr('x', plotWidth / 2)
+        .attr('y', plotHeight + 35)
+        .attr('text-anchor', 'middle')
+        .attr('fill', axisColor)
+        .attr('font-size', '11px')
+        .text('Eigenvalue');
+
+    const colors = {
+        adj: style.getPropertyValue('--spectrum-adj').trim(),
+        kirchhoff: style.getPropertyValue('--spectrum-kirchhoff').trim() || '#8B4513',
+        signless: style.getPropertyValue('--spectrum-signless').trim() || '#F97316',
+        lap: style.getPropertyValue('--spectrum-lap').trim()
+    };
+
+    const labels = {adj: 'adj', kirchhoff: 'kir', signless: 'sgl', lap: 'lap'};
+
+    matrices.forEach((matrix, i) => {
+        const laneY = i * laneHeight;
+
+        g.append('text')
+            .attr('x', -10)
+            .attr('y', laneY + laneHeight / 2)
+            .attr('text-anchor', 'end')
+            .attr('dominant-baseline', 'middle')
+            .attr('fill', colors[matrix])
+            .attr('font-size', '11px')
+            .attr('font-weight', '600')
+            .text(labels[matrix]);
+
+        const yPos = laneY + laneHeight / 2;
+        const tickValues = xScale.ticks(6);
+
+        content.append('line')
+            .attr('x1', 0)
+            .attr('x2', plotWidth)
+            .attr('y1', yPos)
+            .attr('y2', yPos)
+            .attr('stroke', borderColor)
+            .attr('stroke-opacity', 0.4)
+            .attr('stroke-width', 1);
+
+        tickValues.forEach(tickValue => {
+            const tickX = xScale(tickValue);
+            content.append('line')
+                .attr('x1', tickX)
+                .attr('x2', tickX)
+                .attr('y1', yPos - 3)
+                .attr('y2', yPos + 3)
+                .attr('stroke', borderColor)
+                .attr('stroke-opacity', 0.4)
+                .attr('stroke-width', 1);
+        });
+
+        const points = graphSpectra[matrix];
+        const baseRadius = 3.5;
+
+        content.append('g')
+            .attr('class', `spectrum-points spectrum-${matrix}`)
+            .selectAll('circle')
+            .data(points)
+            .join('circle')
+            .attr('class', 'eigenvalue-dot')
+            .attr('cx', d => xScale(d.re))
+            .attr('cy', yPos)
+            .attr('r', baseRadius)
+            .attr('fill', colors[matrix])
+            .attr('opacity', 0.7)
+            .style('cursor', 'pointer')
+            .on('mouseover', (event, d) => {
+                tooltip.style('visibility', 'visible')
+                    .html(`<strong>${labels[matrix]}:</strong> ${d.re.toFixed(4)}`);
+                d3.select(event.target).attr('r', 6 / transform.k).attr('opacity', 1);
+            })
+            .on('mousemove', (event) => {
+                tooltip.style('top', (event.pageY - 10) + 'px').style('left', (event.pageX + 10) + 'px');
+            })
+            .on('mouseout', (event) => {
+                tooltip.style('visibility', 'hidden');
+                d3.select(event.target).attr('r', baseRadius / transform.k).attr('opacity', 0.7);
+            });
+    });
+
+    return () => tooltip.remove();
+}
+
+function renderGraphDetailComplexPlot() {
+    const container = document.getElementById('graph-detail-complex-plot');
+    if (!container) return;
+    container.innerHTML = '';
+
+    function withConjugates(eigenvalues) {
+        const result = [];
+        eigenvalues.forEach(ev => {
+            result.push(ev);
+            if (Math.abs(ev.im) > 1e-10) {
+                result.push({re: ev.re, im: -ev.im});
+            }
+        });
+        return result;
+    }
+
+    const plotData = {
+        nb: withConjugates(spectraData.nb),
+        nbl: withConjugates(spectraData.nbl)
+    };
+
+    const allPoints = [];
+    ['nb', 'nbl'].forEach(matrix => {
+        plotData[matrix].forEach(p => allPoints.push(p));
+    });
+
+    const width = container.clientWidth || 500;
+    const height = 280;
+    const margin = {top: 20, right: 20, bottom: 40, left: 50};
+    const plotWidth = width - margin.left - margin.right;
+    const plotHeight = height - margin.top - margin.bottom;
+
+    const reExtent = d3.extent(allPoints, d => d.re);
+    const imExtent = d3.extent(allPoints, d => d.im);
+    const rePadding = (reExtent[1] - reExtent[0]) * 0.1 || 0.5;
+    const imPadding = (imExtent[1] - imExtent[0]) * 0.1 || 0.5;
+
+    const xScale = d3.scaleLinear()
+        .domain([reExtent[0] - rePadding, reExtent[1] + rePadding])
+        .range([0, plotWidth]);
+
+    const yScale = d3.scaleLinear()
+        .domain([imExtent[0] - imPadding, imExtent[1] + imPadding])
+        .range([plotHeight, 0]);
+
+    const svg = d3.select('#graph-detail-complex-plot')
+        .append('svg')
+        .attr('width', width)
+        .attr('height', height);
+
+    let transform = d3.zoomIdentity;
+    const zoom = d3.zoom()
+        .scaleExtent([0.5, 10])
+        .on('zoom', (event) => {
+            transform = event.transform;
+            content.attr('transform', transform);
+        });
+
+    svg.call(zoom);
+
+    const g = svg.append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+
+    const content = g.append('g').attr('class', 'plot-content');
+
+    const tooltip = d3.select('body').append('div')
+        .attr('class', 'spectrum-tooltip')
+        .style('position', 'absolute')
+        .style('visibility', 'hidden')
+        .style('background', 'var(--pico-card-background-color)')
+        .style('border', '1px solid var(--pico-muted-border-color)')
+        .style('border-radius', '4px')
+        .style('padding', '4px 8px')
+        .style('font-size', '12px')
+        .style('pointer-events', 'none')
+        .style('z-index', '1000');
+
+    const style = getComputedStyle(document.documentElement);
+    const axisColor = style.getPropertyValue('--pico-muted-color').trim() || '#666';
+    const borderColor = style.getPropertyValue('--pico-muted-border-color').trim() || '#ddd';
+
+    const xAxis = g.append('g')
+        .attr('transform', `translate(0,${plotHeight})`)
+        .call(d3.axisBottom(xScale).ticks(6));
+    xAxis.selectAll('text').attr('fill', axisColor).attr('stroke', 'none');
+    xAxis.selectAll('line, path').attr('stroke', borderColor);
+
     const yAxis = g.append('g')
         .call(d3.axisLeft(yScale).ticks(6));
     yAxis.selectAll('text').attr('fill', axisColor).attr('stroke', 'none');
     yAxis.selectAll('line, path').attr('stroke', borderColor);
 
-    // Axis labels
     g.append('text')
         .attr('x', plotWidth / 2)
         .attr('y', plotHeight + 32)
         .attr('text-anchor', 'middle')
         .attr('fill', axisColor)
         .attr('font-size', '11px')
-        .text('Re(λ)');
+        .text('Re');
 
     g.append('text')
         .attr('transform', 'rotate(-90)')
@@ -256,9 +343,8 @@ function renderSpectrumPlot() {
         .attr('text-anchor', 'middle')
         .attr('fill', axisColor)
         .attr('font-size', '11px')
-        .text('Im(λ)');
+        .text('Im');
 
-    // Zero lines (in content so they pan)
     if (xScale.domain()[0] < 0 && xScale.domain()[1] > 0) {
         content.append('line')
             .attr('x1', xScale(0))
@@ -280,18 +366,6 @@ function renderSpectrumPlot() {
             .attr('stroke-dasharray', '4,4');
     }
 
-    const colors = {
-        adj: style.getPropertyValue('--spectrum-adj').trim(),
-        kirchhoff: style.getPropertyValue('--spectrum-kirchhoff').trim() || '#8B4513',
-        signless: style.getPropertyValue('--spectrum-signless').trim() || '#9370DB',
-        lap: style.getPropertyValue('--spectrum-lap').trim(),
-        nb: style.getPropertyValue('--spectrum-nb').trim(),
-        nbl: style.getPropertyValue('--spectrum-nbl').trim()
-    };
-
-    const labels = {adj: 'Adj', kirchhoff: 'Kirchhoff', signless: 'Signless', lap: 'Lap', nb: 'NB', nbl: 'NBL'};
-
-    // Draw unit circle (in content so it pans, but scales with zoom)
     const circleRadius = Math.abs(xScale(1) - xScale(0));
     content.append('circle')
         .attr('class', 'unit-circle')
@@ -303,7 +377,13 @@ function renderSpectrumPlot() {
         .attr('stroke-opacity', 0.2)
         .attr('stroke-dasharray', '4,4');
 
-    // Format eigenvalue for tooltip
+    const colors = {
+        nb: style.getPropertyValue('--spectrum-nb').trim(),
+        nbl: style.getPropertyValue('--spectrum-nbl').trim()
+    };
+
+    const labels = {nb: 'nb', nbl: 'nbl'};
+
     function formatEig(d) {
         const re = d.re.toFixed(4);
         const im = d.im.toFixed(4);
@@ -312,23 +392,25 @@ function renderSpectrumPlot() {
         return `${re}${sign}${im}i`;
     }
 
-    // Draw points with tooltips
-    ['adj', 'kirchhoff', 'signless', 'lap', 'nb', 'nbl'].forEach(key => {
+    ['nb', 'nbl'].forEach(matrix => {
+        const points = plotData[matrix];
+        const baseRadius = 3.5;
+
         content.append('g')
-            .attr('class', `spectrum-points spectrum-${key}`)
+            .attr('class', `spectrum-points spectrum-${matrix}`)
             .selectAll('circle')
-            .data(plotData[key])
+            .data(points)
             .join('circle')
             .attr('class', 'eigenvalue-dot')
             .attr('cx', d => xScale(d.re))
             .attr('cy', d => yScale(d.im))
             .attr('r', baseRadius)
-            .attr('fill', colors[key])
+            .attr('fill', colors[matrix])
             .attr('opacity', 0.7)
             .style('cursor', 'pointer')
             .on('mouseover', (event, d) => {
                 tooltip.style('visibility', 'visible')
-                    .html(`<strong>${labels[key]}:</strong> ${formatEig(d)}`);
+                    .html(`<strong>${labels[matrix]}:</strong> ${formatEig(d)}`);
                 d3.select(event.target).attr('r', 6 / transform.k).attr('opacity', 1);
             })
             .on('mousemove', (event) => {
@@ -341,15 +423,28 @@ function renderSpectrumPlot() {
             });
     });
 
-    // Clean up tooltip when plot is re-rendered
-    return () => tooltip.remove();
-}
+    const legend = g.append('g')
+        .attr('class', 'spectrum-legend')
+        .attr('transform', `translate(${plotWidth - 10}, 10)`);
 
-function toggleSpectrumPill(btn, key) {
-    btn.classList.toggle('active');
-    const visible = btn.classList.contains('active');
-    d3.selectAll(`.spectrum-${key}`)
-        .style('display', visible ? null : 'none');
+    const legendItems = [
+        { label: 'nb', color: colors.nb },
+        { label: 'nbl', color: colors.nbl }
+    ];
+
+    legendItems.forEach((item, i) => {
+        const legendRow = legend.append('g')
+            .attr('transform', `translate(0, ${i * 18})`);
+
+        legendRow.append('text')
+            .attr('text-anchor', 'end')
+            .attr('fill', item.color)
+            .attr('font-size', '11px')
+            .attr('font-weight', '600')
+            .text(item.label);
+    });
+
+    return () => tooltip.remove();
 }
 
 let graphVizState = null;
@@ -364,13 +459,12 @@ function resetGraphViz() {
     }
 }
 
-function resetSpectrumPlot() {
-    if (spectrumPlotState) {
-        spectrumPlotState.transform.x = 0;
-        spectrumPlotState.transform.y = 0;
-        spectrumPlotState.transform.k = 1;
-        spectrumPlotState.update();
-    }
+function resetGraphDetailRealPlot() {
+    renderGraphDetailRealPlot();
+}
+
+function resetGraphDetailComplexPlot() {
+    renderGraphDetailComplexPlot();
 }
 
 function renderGraph() {
@@ -487,127 +581,32 @@ function renderGraph() {
 <script src="https://d3js.org/d3.v7.min.js" onload="renderGraph()"></script>
 
 <h3>Spectra</h3>
-<div class="spectrum-plot-section">
-    <div class="viz-container" style="flex: 1; max-width: 550px;">
-        <div id="spectrum-plot"></div>
-        <button class="viz-reset-btn" onclick="resetSpectrumPlot()" title="Reset view">
+<div style="display: flex; gap: 2rem; margin-bottom: 1rem;">
+    <div class="viz-container" style="flex: 1;">
+        <div id="graph-detail-real-plot" style="height: 280px;"></div>
+        <button class="viz-reset-btn" onclick="resetGraphDetailRealPlot()" title="Reset view">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
         </button>
     </div>
-    <div class="spectrum-controls">
-        <div class="spectrum-legend-item">
-            <button class="spectrum-pill active" data-spectrum="adj" onclick="toggleSpectrumPill(this, 'adj')">
-                <span class="spectrum-dot" style="background: var(--spectrum-adj);"></span>
-                Adjacency
-            </button>
-            <button class="spectrum-expand" onclick="toggleEigenvalues(this)" aria-label="Show eigenvalues">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-            </button>
-            <div class="spectrum-eigenvalues">
-                <div class="spectrum-eigenvalues-content">
-                    <code>[{% for e in graph.spectra.adj_eigenvalues %}{{ "%.6f"|format(e) }}{% if not loop.last %}, {% endif %}{% endfor %}]</code>
-                    <button class="copy-btn-small" onclick="copyEigenvalues(this)" aria-label="Copy">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-        <div class="spectrum-legend-item">
-            <button class="spectrum-pill active" data-spectrum="kirchhoff" onclick="toggleSpectrumPill(this, 'kirchhoff')">
-                <span class="spectrum-dot" style="background: var(--spectrum-kirchhoff, #8B4513);"></span>
-                Kirchhoff
-            </button>
-            <button class="spectrum-expand" onclick="toggleEigenvalues(this)" aria-label="Show eigenvalues">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-            </button>
-            <div class="spectrum-eigenvalues">
-                <div class="spectrum-eigenvalues-content">
-                    <code>[{% for e in graph.spectra.kirchhoff_eigenvalues %}{{ "%.6f"|format(e) }}{% if not loop.last %}, {% endif %}{% endfor %}]</code>
-                    <button class="copy-btn-small" onclick="copyEigenvalues(this)" aria-label="Copy">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-        <div class="spectrum-legend-item">
-            <button class="spectrum-pill active" data-spectrum="signless" onclick="toggleSpectrumPill(this, 'signless')">
-                <span class="spectrum-dot" style="background: var(--spectrum-signless, #9370DB);"></span>
-                Signless
-            </button>
-            <button class="spectrum-expand" onclick="toggleEigenvalues(this)" aria-label="Show eigenvalues">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-            </button>
-            <div class="spectrum-eigenvalues">
-                <div class="spectrum-eigenvalues-content">
-                    <code>[{% for e in graph.spectra.signless_eigenvalues %}{{ "%.6f"|format(e) }}{% if not loop.last %}, {% endif %}{% endfor %}]</code>
-                    <button class="copy-btn-small" onclick="copyEigenvalues(this)" aria-label="Copy">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-        <div class="spectrum-legend-item">
-            <button class="spectrum-pill active" data-spectrum="lap" onclick="toggleSpectrumPill(this, 'lap')">
-                <span class="spectrum-dot" style="background: var(--spectrum-lap);"></span>
-                Laplacian
-            </button>
-            <button class="spectrum-expand" onclick="toggleEigenvalues(this)" aria-label="Show eigenvalues">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-            </button>
-            <div class="spectrum-eigenvalues">
-                <div class="spectrum-eigenvalues-content">
-                    <code>[{% for e in graph.spectra.lap_eigenvalues %}{{ "%.6f"|format(e) }}{% if not loop.last %}, {% endif %}{% endfor %}]</code>
-                    <button class="copy-btn-small" onclick="copyEigenvalues(this)" aria-label="Copy">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-        <div class="spectrum-legend-item">
-            <button class="spectrum-pill active" data-spectrum="nb" onclick="toggleSpectrumPill(this, 'nb')">
-                <span class="spectrum-dot" style="background: var(--spectrum-nb);"></span>
-                Non-backtracking
-            </button>
-            <button class="spectrum-expand" onclick="toggleEigenvalues(this)" aria-label="Show eigenvalues">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-            </button>
-            <div class="spectrum-eigenvalues">
-                <div class="spectrum-eigenvalues-content">
-                    <code>[{% for i in range(graph.spectra.nb_eigenvalues_re|length) %}{{ "%.6f"|format(graph.spectra.nb_eigenvalues_re[i]) }}{% if graph.spectra.nb_eigenvalues_im[i] >= 0 %}+{% endif %}{{ "%.6f"|format(graph.spectra.nb_eigenvalues_im[i]) }}j{% if not loop.last %}, {% endif %}{% endfor %}]</code>
-                    <button class="copy-btn-small" onclick="copyEigenvalues(this)" aria-label="Copy">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-        <div class="spectrum-legend-item">
-            <button class="spectrum-pill active" data-spectrum="nbl" onclick="toggleSpectrumPill(this, 'nbl')">
-                <span class="spectrum-dot" style="background: var(--spectrum-nbl);"></span>
-                NB-Laplacian
-            </button>
-            <button class="spectrum-expand" onclick="toggleEigenvalues(this)" aria-label="Show eigenvalues">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-            </button>
-            <div class="spectrum-eigenvalues">
-                <div class="spectrum-eigenvalues-content">
-                    <code>[{% for i in range(graph.spectra.nbl_eigenvalues_re|length) %}{{ "%.6f"|format(graph.spectra.nbl_eigenvalues_re[i]) }}{% if graph.spectra.nbl_eigenvalues_im[i] >= 0 %}+{% endif %}{{ "%.6f"|format(graph.spectra.nbl_eigenvalues_im[i]) }}j{% if not loop.last %}, {% endif %}{% endfor %}]</code>
-                    <button class="copy-btn-small" onclick="copyEigenvalues(this)" aria-label="Copy">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                    </button>
-                </div>
-            </div>
-        </div>
+    <div class="viz-container" style="flex: 1;">
+        <div id="graph-detail-complex-plot" style="height: 280px;"></div>
+        <button class="viz-reset-btn" onclick="resetGraphDetailComplexPlot()" title="Reset view">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        </button>
     </div>
+</div>
 </div>
 <script>
 if (typeof d3 !== 'undefined') {
-    renderSpectrumPlot();
+    renderGraphDetailRealPlot();
+    renderGraphDetailComplexPlot();
 } else {
     document.addEventListener('DOMContentLoaded', () => {
         const checkD3 = setInterval(() => {
             if (typeof d3 !== 'undefined') {
                 clearInterval(checkD3);
-                renderSpectrumPlot();
+                renderGraphDetailRealPlot();
+                renderGraphDetailComplexPlot();
             }
         }, 50);
     });
