@@ -127,7 +127,7 @@ def test_to_db_tuple():
     tup = record.to_db_tuple()
 
     assert isinstance(tup, tuple)
-    assert len(tup) == 22  # All fields for DB insert
+    assert len(tup) == 26  # All fields for DB insert (includes kirchhoff and signless)
     assert tup[0] == 3  # n
     assert tup[1] == 2  # m
 

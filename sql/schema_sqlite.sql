@@ -7,12 +7,20 @@ CREATE TABLE IF NOT EXISTS graphs (
     graph6              TEXT NOT NULL UNIQUE,
 
     -- Adjacency spectrum (JSON array)
-    adj_eigenvalues     TEXT NOT NULL,
-    adj_spectral_hash   TEXT NOT NULL,
+    adj_eigenvalues         TEXT NOT NULL,
+    adj_spectral_hash       TEXT NOT NULL,
 
-    -- Laplacian spectrum (JSON array)
-    lap_eigenvalues     TEXT NOT NULL,
-    lap_spectral_hash   TEXT NOT NULL,
+    -- Kirchhoff (combinatorial) Laplacian spectrum (JSON array)
+    kirchhoff_eigenvalues   TEXT NOT NULL,
+    kirchhoff_spectral_hash TEXT NOT NULL,
+
+    -- Signless Laplacian spectrum (JSON array)
+    signless_eigenvalues    TEXT NOT NULL,
+    signless_spectral_hash  TEXT NOT NULL,
+
+    -- Normalized Laplacian spectrum (JSON array)
+    lap_eigenvalues         TEXT NOT NULL,
+    lap_spectral_hash       TEXT NOT NULL,
 
     -- Non-backtracking spectrum (JSON arrays for complex)
     nb_eigenvalues_re   TEXT NOT NULL,
@@ -39,15 +47,10 @@ CREATE TABLE IF NOT EXISTS graphs (
 
     -- Network science properties
     algebraic_connectivity  REAL,
-    clustering_coefficient  REAL,
-    assortativity           REAL,
     global_clustering       REAL,
     avg_local_clustering    REAL,
     avg_path_length         REAL,
-    degree_sequence         TEXT,  -- JSON array
-    betweenness_centrality  TEXT,  -- JSON array
-    closeness_centrality    TEXT,  -- JSON array
-    eigenvector_centrality  TEXT,  -- JSON array
+    assortativity           REAL,
 
     -- Tags (JSON array, e.g., ["complete", "regular", "eulerian"])
     tags                    TEXT DEFAULT '[]',
@@ -64,6 +67,8 @@ CREATE INDEX IF NOT EXISTS idx_graphs_n ON graphs(n);
 CREATE INDEX IF NOT EXISTS idx_graphs_n_m ON graphs(n, m);
 CREATE INDEX IF NOT EXISTS idx_graphs_graph6 ON graphs(graph6);
 CREATE INDEX IF NOT EXISTS idx_graphs_adj_hash ON graphs(adj_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_graphs_kirchhoff_hash ON graphs(kirchhoff_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_graphs_signless_hash ON graphs(signless_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_graphs_lap_hash ON graphs(lap_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_graphs_nb_hash ON graphs(nb_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_graphs_nbl_hash ON graphs(nbl_spectral_hash);
@@ -75,6 +80,8 @@ CREATE INDEX IF NOT EXISTS idx_graphs_diameter ON graphs(diameter);
 
 -- Composite indexes for cospectral mate queries (n + spectral_hash)
 CREATE INDEX IF NOT EXISTS idx_n_adj_hash ON graphs(n, adj_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_n_kirchhoff_hash ON graphs(n, kirchhoff_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_n_signless_hash ON graphs(n, signless_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_lap_hash ON graphs(n, lap_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_nb_hash ON graphs(n, nb_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_nbl_hash ON graphs(n, nbl_spectral_hash);
@@ -90,7 +97,7 @@ CREATE TABLE IF NOT EXISTS cospectral_mates (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     graph1_id   INTEGER NOT NULL REFERENCES graphs(id),
     graph2_id   INTEGER NOT NULL REFERENCES graphs(id),
-    matrix_type TEXT NOT NULL CHECK (matrix_type IN ('adj', 'lap', 'nb', 'nbl')),
+    matrix_type TEXT NOT NULL CHECK (matrix_type IN ('adj', 'kirchhoff', 'signless', 'lap', 'nb', 'nbl')),
     UNIQUE (graph1_id, graph2_id, matrix_type),
     CHECK (graph1_id < graph2_id)
 );

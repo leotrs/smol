@@ -11,12 +11,20 @@ CREATE TABLE IF NOT EXISTS graphs (
     graph6          VARCHAR(32) NOT NULL,       -- canonical graph6 encoding
 
     -- Adjacency matrix spectrum (real eigenvalues)
-    adj_eigenvalues     DOUBLE PRECISION[] NOT NULL,
-    adj_spectral_hash   CHAR(16) NOT NULL,
+    adj_eigenvalues         DOUBLE PRECISION[] NOT NULL,
+    adj_spectral_hash       CHAR(16) NOT NULL,
 
-    -- Laplacian spectrum (real eigenvalues)
-    lap_eigenvalues     DOUBLE PRECISION[] NOT NULL,
-    lap_spectral_hash   CHAR(16) NOT NULL,
+    -- Kirchhoff (combinatorial) Laplacian spectrum (real eigenvalues)
+    kirchhoff_eigenvalues   DOUBLE PRECISION[] NOT NULL,
+    kirchhoff_spectral_hash CHAR(16) NOT NULL,
+
+    -- Signless Laplacian spectrum (real eigenvalues)
+    signless_eigenvalues    DOUBLE PRECISION[] NOT NULL,
+    signless_spectral_hash  CHAR(16) NOT NULL,
+
+    -- Normalized Laplacian spectrum (real eigenvalues)
+    lap_eigenvalues         DOUBLE PRECISION[] NOT NULL,
+    lap_spectral_hash       CHAR(16) NOT NULL,
 
     -- Non-backtracking spectrum (complex eigenvalues)
     nb_eigenvalues_re   DOUBLE PRECISION[] NOT NULL,
@@ -41,6 +49,13 @@ CREATE TABLE IF NOT EXISTS graphs (
     clique_number       SMALLINT,               -- expensive, computed later
     chromatic_number    SMALLINT,               -- expensive, computed later
 
+    -- Network science properties
+    algebraic_connectivity  DOUBLE PRECISION,
+    global_clustering       DOUBLE PRECISION,
+    avg_local_clustering    DOUBLE PRECISION,
+    avg_path_length         DOUBLE PRECISION,
+    assortativity           DOUBLE PRECISION,
+
     -- Tags (e.g., 'complete', 'cycle', 'tree', 'petersen', etc.)
     tags                TEXT[] DEFAULT '{}',
 
@@ -61,12 +76,16 @@ CREATE INDEX IF NOT EXISTS idx_graphs_girth ON graphs(girth) WHERE girth IS NOT 
 
 -- Indexes for co-spectral queries
 CREATE INDEX IF NOT EXISTS idx_adj_hash ON graphs(adj_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_kirchhoff_hash ON graphs(kirchhoff_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_signless_hash ON graphs(signless_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_lap_hash ON graphs(lap_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_nb_hash ON graphs(nb_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_nbl_hash ON graphs(nbl_spectral_hash);
 
 -- Composite indexes for cospectral mate queries (n + spectral_hash)
 CREATE INDEX IF NOT EXISTS idx_n_adj_hash ON graphs(n, adj_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_n_kirchhoff_hash ON graphs(n, kirchhoff_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_n_signless_hash ON graphs(n, signless_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_lap_hash ON graphs(n, lap_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_nb_hash ON graphs(n, nb_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_nbl_hash ON graphs(n, nbl_spectral_hash);
@@ -95,7 +114,7 @@ CREATE TABLE IF NOT EXISTS cospectral_mates (
     id              BIGSERIAL PRIMARY KEY,
     graph1_id       BIGINT NOT NULL REFERENCES graphs(id),
     graph2_id       BIGINT NOT NULL REFERENCES graphs(id),
-    matrix_type     VARCHAR(3) NOT NULL CHECK (matrix_type IN ('adj', 'lap', 'nb', 'nbl')),
+    matrix_type     VARCHAR(10) NOT NULL CHECK (matrix_type IN ('adj', 'kirchhoff', 'signless', 'lap', 'nb', 'nbl')),
 
     CONSTRAINT graph_order CHECK (graph1_id < graph2_id),
     UNIQUE (graph1_id, graph2_id, matrix_type)

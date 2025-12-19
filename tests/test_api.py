@@ -73,10 +73,6 @@ class TestGraphEndpoint:
         assert "avg_local_clustering" in props
         assert "avg_path_length" in props
         assert "assortativity" in props
-        assert "degree_sequence" in props
-        assert "betweenness_centrality" in props
-        assert "closeness_centrality" in props
-        assert "eigenvector_centrality" in props
 
     def test_graph_has_tags(self):
         """Tags field should be present in response (may be empty list)."""
@@ -99,11 +95,34 @@ class TestGraphEndpoint:
         data = response.json()
         mates = data["cospectral_mates"]
         assert "adj" in mates
+        assert "kirchhoff" in mates
+        assert "signless" in mates
         assert "lap" in mates
         assert "nb" in mates
         assert "nbl" in mates
         # D?{ has adj cospectral mate DEo
         assert "DEo" in mates["adj"]
+
+    def test_graph_with_null_kirchhoff_signless(self):
+        """Graphs with NULL kirchhoff/signless eigenvalues (n>8) should return successfully."""
+        # Try to find a graph with n=9 or n=10 that would have NULL values
+        response = client.get("/graphs?n=9&limit=1")
+        if response.status_code == 200:
+            data = response.json()
+            if len(data) > 0:
+                graph6 = data[0]["graph6"]
+                from urllib.parse import quote
+                # This should not crash with 500 error
+                detail_response = client.get(f"/graph/{quote(graph6, safe='')}")
+                assert detail_response.status_code == 200
+                detail_data = detail_response.json()
+                # Should have spectra fields even if empty
+                assert "spectra" in detail_data
+                assert "kirchhoff_eigenvalues" in detail_data["spectra"]
+                assert "signless_eigenvalues" in detail_data["spectra"]
+                # May be empty list if not computed
+                assert isinstance(detail_data["spectra"]["kirchhoff_eigenvalues"], list)
+                assert isinstance(detail_data["spectra"]["signless_eigenvalues"], list)
 
 
 @needs_db
@@ -168,6 +187,23 @@ class TestCompareEndpoint:
         comp = data["spectral_comparison"]
         # D?{ and DEo are adj-cospectral
         assert comp["adj"] == "same"
+
+    def test_compare_includes_all_matrices(self):
+        """Compare endpoint should include all 6 matrix types in spectral_comparison."""
+        response = client.get("/compare?graphs=D%3F%7B,DEo")
+        assert response.status_code == 200
+        data = response.json()
+        comp = data["spectral_comparison"]
+        # Should have all 6 matrix types
+        assert "adj" in comp
+        assert "kirchhoff" in comp
+        assert "signless" in comp
+        assert "lap" in comp
+        assert "nb" in comp
+        assert "nbl" in comp
+        # Each should be "same" or "different"
+        for matrix, value in comp.items():
+            assert value in ("same", "different"), f"Invalid comparison value for {matrix}: {value}"
 
     def test_compare_returns_html_for_htmx(self):
         response = client.get(

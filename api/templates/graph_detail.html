@@ -63,6 +63,8 @@
 // Spectrum data
 const spectraData = {
     adj: {{ graph.spectra.adj_eigenvalues | tojson }}.map(x => ({re: x, im: 0})),
+    kirchhoff: {{ graph.spectra.kirchhoff_eigenvalues | tojson }}.map(x => ({re: x, im: 0})),
+    signless: {{ graph.spectra.signless_eigenvalues | tojson }}.map(x => ({re: x, im: 0})),
     lap: {{ graph.spectra.lap_eigenvalues | tojson }}.map(x => ({re: x, im: 0})),
     nb: {{ graph.spectra.nb_eigenvalues_re | tojson }}.map((re, i) => ({
         re: re,
@@ -99,6 +101,8 @@ function renderSpectrumPlot() {
 
     const plotData = {
         adj: spectraData.adj,
+        kirchhoff: spectraData.kirchhoff,
+        signless: spectraData.signless,
         lap: spectraData.lap,
         nb: withConjugates(spectraData.nb),
         nbl: withConjugates(spectraData.nbl)
@@ -106,6 +110,8 @@ function renderSpectrumPlot() {
 
     const allPoints = [
         ...plotData.adj,
+        ...plotData.kirchhoff,
+        ...plotData.signless,
         ...plotData.lap,
         ...plotData.nb,
         ...plotData.nbl
@@ -276,12 +282,14 @@ function renderSpectrumPlot() {
 
     const colors = {
         adj: style.getPropertyValue('--spectrum-adj').trim(),
+        kirchhoff: style.getPropertyValue('--spectrum-kirchhoff').trim() || '#8B4513',
+        signless: style.getPropertyValue('--spectrum-signless').trim() || '#9370DB',
         lap: style.getPropertyValue('--spectrum-lap').trim(),
         nb: style.getPropertyValue('--spectrum-nb').trim(),
         nbl: style.getPropertyValue('--spectrum-nbl').trim()
     };
 
-    const labels = {adj: 'Adj', lap: 'Lap', nb: 'NB', nbl: 'NBL'};
+    const labels = {adj: 'Adj', kirchhoff: 'Kirchhoff', signless: 'Signless', lap: 'Lap', nb: 'NB', nbl: 'NBL'};
 
     // Draw unit circle (in content so it pans, but scales with zoom)
     const circleRadius = Math.abs(xScale(1) - xScale(0));
@@ -305,7 +313,7 @@ function renderSpectrumPlot() {
     }
 
     // Draw points with tooltips
-    ['adj', 'lap', 'nb', 'nbl'].forEach(key => {
+    ['adj', 'kirchhoff', 'signless', 'lap', 'nb', 'nbl'].forEach(key => {
         content.append('g')
             .attr('class', `spectrum-points spectrum-${key}`)
             .selectAll('circle')
@@ -505,6 +513,40 @@ function renderGraph() {
             </div>
         </div>
         <div class="spectrum-legend-item">
+            <button class="spectrum-pill active" data-spectrum="kirchhoff" onclick="toggleSpectrumPill(this, 'kirchhoff')">
+                <span class="spectrum-dot" style="background: var(--spectrum-kirchhoff, #8B4513);"></span>
+                Kirchhoff
+            </button>
+            <button class="spectrum-expand" onclick="toggleEigenvalues(this)" aria-label="Show eigenvalues">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="spectrum-eigenvalues">
+                <div class="spectrum-eigenvalues-content">
+                    <code>[{% for e in graph.spectra.kirchhoff_eigenvalues %}{{ "%.6f"|format(e) }}{% if not loop.last %}, {% endif %}{% endfor %}]</code>
+                    <button class="copy-btn-small" onclick="copyEigenvalues(this)" aria-label="Copy">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="spectrum-legend-item">
+            <button class="spectrum-pill active" data-spectrum="signless" onclick="toggleSpectrumPill(this, 'signless')">
+                <span class="spectrum-dot" style="background: var(--spectrum-signless, #9370DB);"></span>
+                Signless
+            </button>
+            <button class="spectrum-expand" onclick="toggleEigenvalues(this)" aria-label="Show eigenvalues">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="spectrum-eigenvalues">
+                <div class="spectrum-eigenvalues-content">
+                    <code>[{% for e in graph.spectra.signless_eigenvalues %}{{ "%.6f"|format(e) }}{% if not loop.last %}, {% endif %}{% endfor %}]</code>
+                    <button class="copy-btn-small" onclick="copyEigenvalues(this)" aria-label="Copy">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="spectrum-legend-item">
             <button class="spectrum-pill active" data-spectrum="lap" onclick="toggleSpectrumPill(this, 'lap')">
                 <span class="spectrum-dot" style="background: var(--spectrum-lap);"></span>
                 Laplacian
@@ -595,7 +637,7 @@ function copyEigenvalues(btn) {
         Find similar spectra
     </a>
 </div>
-{% if graph.cospectral_mates.adj or graph.cospectral_mates.lap or graph.cospectral_mates.nb or graph.cospectral_mates.nbl %}
+{% if graph.cospectral_mates.adj or graph.cospectral_mates.kirchhoff or graph.cospectral_mates.signless or graph.cospectral_mates.lap or graph.cospectral_mates.nb or graph.cospectral_mates.nbl %}
 <p>Graphs that share the same spectrum for a given matrix type.</p>
 <table>
     <thead>
@@ -617,6 +659,40 @@ function copyEigenvalues(btn) {
             <td>
                 {% if graph.cospectral_mates.adj | length < 10 %}
                 <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.adj | join(',') | urlencode }}" role="button" class="outline">Compare</a>
+                {% else %}
+                <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endif %}
+        {% if graph.cospectral_mates.kirchhoff %}
+        <tr>
+            <td>Kirchhoff</td>
+            <td>
+                {% for mate in graph.cospectral_mates.kirchhoff %}
+                    <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
+                {% endfor %}
+            </td>
+            <td>
+                {% if graph.cospectral_mates.kirchhoff | length < 10 %}
+                <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.kirchhoff | join(',') | urlencode }}" role="button" class="outline">Compare</a>
+                {% else %}
+                <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endif %}
+        {% if graph.cospectral_mates.signless %}
+        <tr>
+            <td>Signless</td>
+            <td>
+                {% for mate in graph.cospectral_mates.signless %}
+                    <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
+                {% endfor %}
+            </td>
+            <td>
+                {% if graph.cospectral_mates.signless | length < 10 %}
+                <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.signless | join(',') | urlencode }}" role="button" class="outline">Compare</a>
                 {% else %}
                 <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
                 {% endif %}
@@ -684,6 +760,8 @@ function copyEigenvalues(btn) {
 <div class="code-tabs">
     <div class="code-tab-buttons">
         <button class="code-tab-btn active" onclick="switchCodeTab(event, 'adj')">Adjacency</button>
+        <button class="code-tab-btn" onclick="switchCodeTab(event, 'kirchhoff')">Kirchhoff</button>
+        <button class="code-tab-btn" onclick="switchCodeTab(event, 'signless')">Signless</button>
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'lap')">Laplacian</button>
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'nb')">NB (Ã)</button>
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'nbl')">NBL (L̃)</button>
@@ -704,6 +782,44 @@ print(eigenvalues)</code></pre>
         </div>
     </div>
 
+    <div id="code-kirchhoff" class="code-tab-content">
+        <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+<pre><code class="language-python">import networkx as nx
+import numpy as np
+
+G = nx.from_graph6_bytes(b"{{ graph.graph6 }}")
+# Kirchhoff (combinatorial) Laplacian: L = D - A
+A = nx.adjacency_matrix(G).toarray()
+degrees = A.sum(axis=1)
+D = np.diag(degrees)
+L = D - A
+eigenvalues = np.linalg.eigvalsh(L)
+print(eigenvalues)</code></pre>
+        </div>
+    </div>
+
+    <div id="code-signless" class="code-tab-content">
+        <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+<pre><code class="language-python">import networkx as nx
+import numpy as np
+
+G = nx.from_graph6_bytes(b"{{ graph.graph6 }}")
+# Signless Laplacian: Q = D + A
+A = nx.adjacency_matrix(G).toarray()
+degrees = A.sum(axis=1)
+D = np.diag(degrees)
+Q = D + A
+eigenvalues = np.linalg.eigvalsh(Q)
+print(eigenvalues)</code></pre>
+        </div>
+    </div>
+
     <div id="code-lap" class="code-tab-content">
         <div class="code-block">
             <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
@@ -713,6 +829,7 @@ print(eigenvalues)</code></pre>
 import numpy as np
 
 G = nx.from_graph6_bytes(b"{{ graph.graph6 }}")
+# Symmetric normalized Laplacian: L = I - D^{-1/2}AD^{-1/2}
 L = nx.laplacian_matrix(G).toarray()
 eigenvalues = np.linalg.eigvalsh(L)
 print(eigenvalues)</code></pre>
@@ -831,9 +948,17 @@ function copyCode(btn) {
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Adjacency (A)
     </button>
+    <button class="outline" onclick="downloadEigenvaluesCSV('kirchhoff')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Kirchhoff (L)
+    </button>
+    <button class="outline" onclick="downloadEigenvaluesCSV('signless')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Signless (Q)
+    </button>
     <button class="outline" onclick="downloadEigenvaluesCSV('lap')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Laplacian (L)
+        Laplacian (L̃)
     </button>
     <button class="outline" onclick="downloadEigenvaluesCSV('nb')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -841,7 +966,7 @@ function copyCode(btn) {
     </button>
     <button class="outline" onclick="downloadEigenvaluesCSV('nbl')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        NBL (L̃)
+        NBL (L̃_NB)
     </button>
 </div>
 
@@ -886,6 +1011,8 @@ const graphData = {
     },
     spectra: {
         adj_eigenvalues: {{ graph.spectra.adj_eigenvalues | tojson }},
+        kirchhoff_eigenvalues: {{ graph.spectra.kirchhoff_eigenvalues | tojson }},
+        signless_eigenvalues: {{ graph.spectra.signless_eigenvalues | tojson }},
         lap_eigenvalues: {{ graph.spectra.lap_eigenvalues | tojson }},
         nb_eigenvalues_re: {{ graph.spectra.nb_eigenvalues_re | tojson }},
         nb_eigenvalues_im: {{ graph.spectra.nb_eigenvalues_im | tojson }},
@@ -949,10 +1076,18 @@ function downloadEigenvaluesCSV(matrixType) {
         eigenvalues = graphData.spectra.adj_eigenvalues;
         filename = `${graphData.graph6}_adj_eigenvalues.csv`;
         header = '# Adjacency matrix eigenvalues';
+    } else if (matrixType === 'kirchhoff') {
+        eigenvalues = graphData.spectra.kirchhoff_eigenvalues;
+        filename = `${graphData.graph6}_kirchhoff_eigenvalues.csv`;
+        header = '# Kirchhoff Laplacian matrix eigenvalues';
+    } else if (matrixType === 'signless') {
+        eigenvalues = graphData.spectra.signless_eigenvalues;
+        filename = `${graphData.graph6}_signless_eigenvalues.csv`;
+        header = '# Signless Laplacian matrix eigenvalues';
     } else if (matrixType === 'lap') {
         eigenvalues = graphData.spectra.lap_eigenvalues;
         filename = `${graphData.graph6}_lap_eigenvalues.csv`;
-        header = '# Laplacian matrix eigenvalues';
+        header = '# Normalized Laplacian matrix eigenvalues';
     } else if (matrixType === 'nb') {
         const re = graphData.spectra.nb_eigenvalues_re;
         const im = graphData.spectra.nb_eigenvalues_im;

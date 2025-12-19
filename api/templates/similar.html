@@ -11,6 +11,8 @@
 <div class="matrix-selector">
     <span>Matrix:</span>
     <a href="/similar/{{ source_graph6 | urlencode }}?matrix=adj" class="{% if matrix == 'adj' %}active{% endif %}">Adjacency</a>
+    <a href="/similar/{{ source_graph6 | urlencode }}?matrix=kirchhoff" class="{% if matrix == 'kirchhoff' %}active{% endif %}">Kirchhoff</a>
+    <a href="/similar/{{ source_graph6 | urlencode }}?matrix=signless" class="{% if matrix == 'signless' %}active{% endif %}">Signless</a>
     <a href="/similar/{{ source_graph6 | urlencode }}?matrix=lap" class="{% if matrix == 'lap' %}active{% endif %}">Laplacian</a>
     <a href="/similar/{{ source_graph6 | urlencode }}?matrix=nb" class="{% if matrix == 'nb' %}active{% endif %}">NB</a>
     <a href="/similar/{{ source_graph6 | urlencode }}?matrix=nbl" class="{% if matrix == 'nbl' %}active{% endif %}">NBL</a>

@@ -78,7 +78,7 @@ def _parse_row(row: Any) -> dict[str, Any] | None:
     if IS_SQLITE:
         d = dict(row)
         json_fields = [
-            "adj_eigenvalues", "lap_eigenvalues",
+            "adj_eigenvalues", "kirchhoff_eigenvalues", "signless_eigenvalues", "lap_eigenvalues",
             "nb_eigenvalues_re", "nb_eigenvalues_im",
             "nbl_eigenvalues_re", "nbl_eigenvalues_im",
             "tags",
@@ -128,6 +128,8 @@ async def fetch_graph(graph6: str) -> dict[str, Any] | None:
                        algebraic_connectivity, global_clustering, avg_local_clustering,
                        avg_path_length, assortativity,
                        adj_eigenvalues, adj_spectral_hash,
+                       kirchhoff_eigenvalues, kirchhoff_spectral_hash,
+                       signless_eigenvalues, signless_spectral_hash,
                        lap_eigenvalues, lap_spectral_hash,
                        nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
                        nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash
@@ -152,6 +154,8 @@ async def fetch_graph(graph6: str) -> dict[str, Any] | None:
                        algebraic_connectivity, global_clustering, avg_local_clustering,
                        avg_path_length, assortativity,
                        adj_eigenvalues, adj_spectral_hash,
+                       kirchhoff_eigenvalues, kirchhoff_spectral_hash,
+                       signless_eigenvalues, signless_spectral_hash,
                        lap_eigenvalues, lap_spectral_hash,
                        nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
                        nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash
@@ -350,6 +354,8 @@ async def fetch_random_graph() -> dict[str, Any] | None:
                            algebraic_connectivity, global_clustering, avg_local_clustering,
                            avg_path_length, assortativity,
                            adj_eigenvalues, adj_spectral_hash,
+                           kirchhoff_eigenvalues, kirchhoff_spectral_hash,
+                           signless_eigenvalues, signless_spectral_hash,
                            lap_eigenvalues, lap_spectral_hash,
                            nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
                            nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash
@@ -386,6 +392,8 @@ async def fetch_random_graph() -> dict[str, Any] | None:
                            algebraic_connectivity, global_clustering, avg_local_clustering,
                            avg_path_length, assortativity,
                            adj_eigenvalues, adj_spectral_hash,
+                           kirchhoff_eigenvalues, kirchhoff_spectral_hash,
+                           signless_eigenvalues, signless_spectral_hash,
                            lap_eigenvalues, lap_spectral_hash,
                            nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
                            nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash
@@ -406,7 +414,6 @@ async def fetch_random_cospectral_class(matrix: str = "adj") -> list[str]:
     """Fetch a random cospectral class using pre-computed pairs."""
     import random
     ph = _placeholder()
-    hash_col = f"{matrix}_spectral_hash"
 
     async with get_db() as conn:
         if IS_SQLITE:
@@ -424,10 +431,9 @@ async def fetch_random_cospectral_class(matrix: str = "adj") -> list[str]:
                 rand_id = random.randint(min_id, max_id)
                 cursor = await conn.execute(
                     f"""
-                    SELECT g1.graph6, g1.{hash_col}, g1.n
-                    FROM cospectral_mates cp
-                    JOIN graphs g1 ON g1.id = cp.graph1_id
-                    WHERE cp.id >= {ph} AND cp.matrix_type = {ph}
+                    SELECT graph1_id, graph2_id
+                    FROM cospectral_mates
+                    WHERE id >= {ph} AND matrix_type = {ph}
                     LIMIT 1
                     """,
                     (rand_id, matrix),
@@ -436,17 +442,25 @@ async def fetch_random_cospectral_class(matrix: str = "adj") -> list[str]:
                 if not row:
                     continue
 
-                _, hash_val, n = row
+                seed_id1, seed_id2 = row
 
-                # Get all graphs in this cospectral class
+                # Get all graphs in this cospectral family by finding all pairs involving these graphs
                 cursor = await conn.execute(
                     f"""
-                    SELECT graph6 FROM graphs
-                    WHERE {hash_col} = {ph} AND n = {ph}
-                    ORDER BY graph6
+                    WITH family_ids AS (
+                        SELECT DISTINCT graph1_id as gid FROM cospectral_mates
+                        WHERE matrix_type = {ph} AND (graph1_id = {ph} OR graph2_id = {ph})
+                        UNION
+                        SELECT DISTINCT graph2_id as gid FROM cospectral_mates
+                        WHERE matrix_type = {ph} AND (graph1_id = {ph} OR graph2_id = {ph})
+                    )
+                    SELECT g.graph6
+                    FROM family_ids f
+                    JOIN graphs g ON g.id = f.gid
+                    ORDER BY g.graph6
                     LIMIT 10
                     """,
-                    (hash_val, n),
+                    (matrix, seed_id1, seed_id1, matrix, seed_id2, seed_id2),
                 )
                 graphs = [r[0] for r in await cursor.fetchall()]
                 if len(graphs) > 1:
@@ -467,10 +481,9 @@ async def fetch_random_cospectral_class(matrix: str = "adj") -> list[str]:
                 rand_id = random.randint(min_id, max_id)
                 cur.execute(
                     f"""
-                    SELECT g1.graph6, g1.{hash_col}, g1.n
-                    FROM cospectral_mates cp
-                    JOIN graphs g1 ON g1.id = cp.graph1_id
-                    WHERE cp.id >= {ph} AND cp.matrix_type = {ph}
+                    SELECT graph1_id, graph2_id
+                    FROM cospectral_mates
+                    WHERE id >= {ph} AND matrix_type = {ph}
                     LIMIT 1
                     """,
                     (rand_id, matrix),
@@ -479,16 +492,25 @@ async def fetch_random_cospectral_class(matrix: str = "adj") -> list[str]:
                 if not row:
                     continue
 
-                _, hash_val, n = row
+                seed_id1, seed_id2 = row
 
+                # Get all graphs in this cospectral family by finding all pairs involving these graphs
                 cur.execute(
                     f"""
-                    SELECT graph6 FROM graphs
-                    WHERE {hash_col} = {ph} AND n = {ph}
-                    ORDER BY graph6
+                    WITH family_ids AS (
+                        SELECT DISTINCT graph1_id as gid FROM cospectral_mates
+                        WHERE matrix_type = {ph} AND (graph1_id = {ph} OR graph2_id = {ph})
+                        UNION
+                        SELECT DISTINCT graph2_id as gid FROM cospectral_mates
+                        WHERE matrix_type = {ph} AND (graph1_id = {ph} OR graph2_id = {ph})
+                    )
+                    SELECT g.graph6
+                    FROM family_ids f
+                    JOIN graphs g ON g.id = f.gid
+                    ORDER BY g.graph6
                     LIMIT 10
                     """,
-                    (hash_val, n),
+                    (matrix, seed_id1, seed_id1, matrix, seed_id2, seed_id2),
                 )
                 graphs = [r[0] for r in cur.fetchall()]
                 if len(graphs) > 1:
@@ -512,7 +534,7 @@ async def fetch_similar_graphs(
 
     n = target["n"]
 
-    if matrix in ("adj", "lap"):
+    if matrix in ("adj", "kirchhoff", "signless", "lap"):
         target_eigs = target[f"{matrix}_eigenvalues"]
         target_hash = target[f"{matrix}_spectral_hash"]
         eig_col = f"{matrix}_eigenvalues"

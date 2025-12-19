@@ -7,6 +7,9 @@ SMOL (Spectra and Matrices Of Little graphs) is a database of all small simple u
 ## Key concepts
 
 - **graph6**: A compact string encoding for graphs used by nauty/geng
+- **Kirchhoff Laplacian**: L = D - A, the combinatorial/standard Laplacian
+- **Signless Laplacian**: Q = D + A, the positive counterpart to Kirchhoff
+- **Normalized Laplacian**: I - D⁻¹/²AD⁻¹/², eigenvalues in [0,2]
 - **Non-backtracking matrix**: The Hashimoto matrix B, indexed by directed edges
 - **Non-backtracking Laplacian**: I - D⁻¹B, random walk on directed edges
 - **Spectral hash**: A 16-character hash of sorted eigenvalues for cospectral detection

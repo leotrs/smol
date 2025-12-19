@@ -9,6 +9,36 @@ def adjacency_matrix(G: nx.Graph) -> np.ndarray:
     return nx.to_numpy_array(G, dtype=np.float64)
 
 
+def kirchhoff_laplacian(G: nx.Graph) -> np.ndarray:
+    """
+    Return the Kirchhoff (combinatorial) Laplacian L = D - A.
+
+    Also known as the combinatorial Laplacian or standard Laplacian.
+    - Eigenvalues: 0 = λ₁ ≤ λ₂ ≤ ... ≤ λₙ
+    - λ₂ is the algebraic connectivity (Fiedler value)
+    - Related to spanning trees, cuts, and graph connectivity
+    """
+    A = adjacency_matrix(G)
+    degrees = A.sum(axis=1)
+    D = np.diag(degrees)
+    return D - A
+
+
+def signless_laplacian(G: nx.Graph) -> np.ndarray:
+    """
+    Return the signless Laplacian Q = D + A.
+
+    The "positive" counterpart to the Kirchhoff Laplacian.
+    - All eigenvalues are non-negative
+    - Related to chromatic number and bipartiteness detection
+    - Largest eigenvalue is related to maximum degree
+    """
+    A = adjacency_matrix(G)
+    degrees = A.sum(axis=1)
+    D = np.diag(degrees)
+    return D + A
+
+
 def laplacian_matrix(G: nx.Graph) -> np.ndarray:
     """
     Return the symmetric normalized Laplacian L = I - D^{-1/2}AD^{-1/2}.

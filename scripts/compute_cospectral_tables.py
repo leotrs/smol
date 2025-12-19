@@ -6,7 +6,7 @@ For a cospectral family of k graphs, stores C(k,2) = k*(k-1)/2 pairs.
 Enables O(1) lookup of cospectral mates for any graph.
 
 Usage:
-    python scripts/compute_cospectral_tables.py [--matrix adj|lap|nb|nbl] [--n N]
+    python scripts/compute_cospectral_tables.py [--matrix adj|kirchhoff|signless|lap|nb|nbl] [--n N]
 
 Examples:
     python scripts/compute_cospectral_tables.py           # All matrix types, all n
@@ -118,7 +118,7 @@ def main():
     parser = argparse.ArgumentParser(description="Compute cospectral tables")
     parser.add_argument(
         "--matrix",
-        choices=["adj", "lap", "nb", "nbl"],
+        choices=["adj", "kirchhoff", "signless", "lap", "nb", "nbl"],
         help="Compute only this matrix type (default: all)",
     )
     parser.add_argument(
@@ -133,7 +133,7 @@ def main():
     if args.matrix:
         compute_for_matrix(conn, args.matrix, args.n)
     else:
-        for matrix in ["adj", "lap", "nb", "nbl"]:
+        for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl"]:
             compute_for_matrix(conn, matrix, args.n)
 
     conn.close()

@@ -6,6 +6,8 @@ import networkx as nx
 
 from .matrices import (
     adjacency_matrix,
+    kirchhoff_laplacian,
+    signless_laplacian,
     laplacian_matrix,
     nonbacktracking_matrix,
     nonbacktracking_laplacian,
@@ -31,7 +33,15 @@ class GraphRecord:
     adj_eigenvalues: np.ndarray
     adj_spectral_hash: str
 
-    # Laplacian spectrum
+    # Kirchhoff Laplacian spectrum
+    kirchhoff_eigenvalues: np.ndarray
+    kirchhoff_spectral_hash: str
+
+    # Signless Laplacian spectrum
+    signless_eigenvalues: np.ndarray
+    signless_spectral_hash: str
+
+    # Normalized Laplacian spectrum
     lap_eigenvalues: np.ndarray
     lap_spectral_hash: str
 
@@ -64,6 +74,10 @@ class GraphRecord:
             self.graph6,
             self.adj_eigenvalues.tolist(),
             self.adj_spectral_hash,
+            self.kirchhoff_eigenvalues.tolist(),
+            self.kirchhoff_spectral_hash,
+            self.signless_eigenvalues.tolist(),
+            self.signless_spectral_hash,
             self.lap_eigenvalues.tolist(),
             self.lap_spectral_hash,
             self.nb_eigenvalues_re.tolist(),
@@ -97,18 +111,24 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
     """
     # Compute matrices
     A = adjacency_matrix(G)
-    L = laplacian_matrix(G)
+    L_kirchhoff = kirchhoff_laplacian(G)
+    Q_signless = signless_laplacian(G)
+    L_normalized = laplacian_matrix(G)
     B = nonbacktracking_matrix(G)
     L_NB = nonbacktracking_laplacian(G)
 
     # Compute eigenvalues
     adj_eigs = compute_real_eigenvalues(A)
-    lap_eigs = compute_real_eigenvalues(L)
+    kirchhoff_eigs = compute_real_eigenvalues(L_kirchhoff)
+    signless_eigs = compute_real_eigenvalues(Q_signless)
+    lap_eigs = compute_real_eigenvalues(L_normalized)
     nb_eigs = compute_complex_eigenvalues(B)
     nbl_eigs = compute_complex_eigenvalues(L_NB)
 
     # Compute hashes
     adj_hash = spectral_hash_real(adj_eigs)
+    kirchhoff_hash = spectral_hash_real(kirchhoff_eigs)
+    signless_hash = spectral_hash_real(signless_eigs)
     lap_hash = spectral_hash_real(lap_eigs)
     nb_hash = spectral_hash_complex(nb_eigs)
     nbl_hash = spectral_hash_complex(nbl_eigs)
@@ -122,6 +142,10 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
         m=meta["m"],
         adj_eigenvalues=adj_eigs,
         adj_spectral_hash=adj_hash,
+        kirchhoff_eigenvalues=kirchhoff_eigs,
+        kirchhoff_spectral_hash=kirchhoff_hash,
+        signless_eigenvalues=signless_eigs,
+        signless_spectral_hash=signless_hash,
         lap_eigenvalues=lap_eigs,
         lap_spectral_hash=lap_hash,
         nb_eigenvalues_re=nb_eigs.real,

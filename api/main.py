@@ -124,6 +124,10 @@ def row_to_graph_full(row: dict, mates: dict[str, list[str]]) -> GraphFull:
         spectra=Spectra(
             adj_eigenvalues=row["adj_eigenvalues"],
             adj_hash=row["adj_spectral_hash"],
+            kirchhoff_eigenvalues=row["kirchhoff_eigenvalues"] or [],
+            kirchhoff_hash=row["kirchhoff_spectral_hash"] or "",
+            signless_eigenvalues=row["signless_eigenvalues"] or [],
+            signless_hash=row["signless_spectral_hash"] or "",
             lap_eigenvalues=row["lap_eigenvalues"],
             lap_hash=row["lap_spectral_hash"],
             nb_eigenvalues_re=row["nb_eigenvalues_re"],
@@ -188,6 +192,8 @@ async def get_graph_by_id(graph6: str, request: Request):
 
     hashes = {
         "adj": row["adj_spectral_hash"],
+        "kirchhoff": row["kirchhoff_spectral_hash"] or "",
+        "signless": row["signless_spectral_hash"] or "",
         "lap": row["lap_spectral_hash"],
         "nb": row["nb_spectral_hash"],
         "nbl": row["nbl_spectral_hash"],
@@ -228,7 +234,7 @@ async def random_cospectral(matrix: str = "adj"):
     from fastapi.responses import RedirectResponse
     from urllib.parse import quote
 
-    if matrix not in ("adj", "lap", "nb", "nbl"):
+    if matrix not in ("adj", "kirchhoff", "signless", "lap", "nb", "nbl"):
         raise HTTPException(status_code=400, detail="Invalid matrix type")
 
     graphs = await fetch_random_cospectral_class(matrix)
@@ -277,6 +283,8 @@ async def list_graphs(
             return []
         hashes = {
             "adj": row["adj_spectral_hash"],
+            "kirchhoff": row["kirchhoff_spectral_hash"] or "",
+            "signless": row["signless_spectral_hash"] or "",
             "lap": row["lap_spectral_hash"],
             "nb": row["nb_spectral_hash"],
             "nbl": row["nbl_spectral_hash"],
@@ -327,7 +335,7 @@ async def compare_graphs(
         raise HTTPException(status_code=400, detail="Maximum 10 graphs per comparison")
 
     full_graphs = []
-    all_hashes = {"adj": set(), "lap": set(), "nb": set(), "nbl": set()}
+    all_hashes = {"adj": set(), "kirchhoff": set(), "signless": set(), "lap": set(), "nb": set(), "nbl": set()}
 
     for g6 in graph6_list:
         row = await fetch_graph(g6)
@@ -336,6 +344,8 @@ async def compare_graphs(
 
         hashes = {
             "adj": row["adj_spectral_hash"],
+            "kirchhoff": row["kirchhoff_spectral_hash"] or "",
+            "signless": row["signless_spectral_hash"] or "",
             "lap": row["lap_spectral_hash"],
             "nb": row["nb_spectral_hash"],
             "nbl": row["nbl_spectral_hash"],
@@ -419,13 +429,13 @@ async def stats(request: Request):
 async def similar_graphs(
     graph6: str,
     request: Request,
-    matrix: str = Query(default="adj", description="Matrix type: adj, lap, nb, nbl"),
+    matrix: str = Query(default="adj", description="Matrix type: adj, kirchhoff, signless, lap, nb, nbl"),
     limit: int = Query(default=10, le=50),
 ):
     """Find graphs with similar spectrum (by Earth Mover's Distance)."""
     t0 = time.perf_counter()
 
-    if matrix not in ("adj", "lap", "nb", "nbl"):
+    if matrix not in ("adj", "kirchhoff", "signless", "lap", "nb", "nbl"):
         raise HTTPException(status_code=400, detail="Invalid matrix type")
 
     results = await fetch_similar_graphs(graph6, matrix=matrix, limit=limit)

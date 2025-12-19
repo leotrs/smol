@@ -5,6 +5,8 @@ import networkx as nx
 
 from db.matrices import (
     adjacency_matrix,
+    kirchhoff_laplacian,
+    signless_laplacian,
     laplacian_matrix,
     nonbacktracking_matrix,
     nonbacktracking_laplacian,
@@ -36,6 +38,78 @@ def test_adjacency_matrix_complete():
     assert A.shape == (4, 4)
     assert np.all(np.diag(A) == 0)
     assert A.sum() == 4 * 3  # 4 vertices, each connected to 3 others
+
+
+def test_kirchhoff_laplacian_path():
+    """Test Kirchhoff Laplacian (D - A) for P3."""
+    G = nx.path_graph(3)
+    L = kirchhoff_laplacian(G)
+
+    # For P3: degrees are [1, 2, 1]
+    # L = D - A
+    expected = np.array(
+        [
+            [1, -1, 0],
+            [-1, 2, -1],
+            [0, -1, 1],
+        ],
+        dtype=np.float64,
+    )
+
+    np.testing.assert_array_equal(L, expected)
+
+
+def test_kirchhoff_laplacian_properties():
+    """Test Kirchhoff Laplacian properties."""
+    G = nx.complete_graph(5)
+    L = kirchhoff_laplacian(G)
+
+    # Should be symmetric
+    np.testing.assert_array_almost_equal(L, L.T)
+
+    # Smallest eigenvalue should be 0 (always has 0 eigenvalue)
+    eigs = np.linalg.eigvalsh(L)
+    assert abs(eigs[0]) < 1e-10
+
+    # Sum of each row should be 0
+    row_sums = L.sum(axis=1)
+    np.testing.assert_array_almost_equal(row_sums, np.zeros(5))
+
+
+def test_signless_laplacian_path():
+    """Test Signless Laplacian (D + A) for P3."""
+    G = nx.path_graph(3)
+    Q = signless_laplacian(G)
+
+    # For P3: degrees are [1, 2, 1]
+    # Q = D + A
+    expected = np.array(
+        [
+            [1, 1, 0],
+            [1, 2, 1],
+            [0, 1, 1],
+        ],
+        dtype=np.float64,
+    )
+
+    np.testing.assert_array_equal(Q, expected)
+
+
+def test_signless_laplacian_properties():
+    """Test Signless Laplacian properties."""
+    G = nx.complete_graph(5)
+    Q = signless_laplacian(G)
+
+    # Should be symmetric
+    np.testing.assert_array_almost_equal(Q, Q.T)
+
+    # All eigenvalues should be non-negative
+    eigs = np.linalg.eigvalsh(Q)
+    assert np.all(eigs >= -1e-10)
+
+    # Largest eigenvalue should be at most 2*max_degree
+    max_degree = max(dict(G.degree()).values())
+    assert eigs[-1] <= 2 * max_degree + 1e-10
 
 
 def test_laplacian_matrix_path():

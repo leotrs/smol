@@ -32,10 +32,26 @@
             Symmetric for undirected graphs. Eigenvalues are real.
         </dd>
 
-        <dt id="laplacian"><strong>Laplacian matrix</strong></dt>
+        <dt id="kirchhoff"><strong>Kirchhoff Laplacian</strong> (Combinatorial Laplacian)</dt>
+        <dd>
+            $L = D - A$, where $D$ is the diagonal degree matrix and $A$ is the adjacency matrix.
+            Also called the combinatorial or standard Laplacian. Eigenvalues are real and non-negative:
+            $0 = \lambda_1 \leq \lambda_2 \leq \cdots \leq \lambda_n \leq 2\Delta$, where $\Delta$ is the maximum degree.
+            The second-smallest eigenvalue $\lambda_2$ is the algebraic connectivity (Fiedler value).
+        </dd>
+
+        <dt id="signless"><strong>Signless Laplacian</strong></dt>
+        <dd>
+            $Q = D + A$, where $D$ is the diagonal degree matrix and $A$ is the adjacency matrix.
+            The "positive" counterpart to the Kirchhoff Laplacian. All eigenvalues are real and non-negative.
+            Related to chromatic number and bipartiteness detection.
+        </dd>
+
+        <dt id="laplacian"><strong>Normalized Laplacian</strong></dt>
         <dd>
             The symmetric normalized Laplacian: $L = I - D^{-1/2} A D^{-1/2}$, where $D$ is the
             diagonal degree matrix. Eigenvalues are real and lie in $[0, 2]$.
+            Has the same eigenvalues as the random walk Laplacian $I - D^{-1} A$.
         </dd>
 
         <dt id="nonbacktracking"><strong>Non-backtracking matrix</strong> (Hashimoto)</dt>

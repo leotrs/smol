@@ -33,6 +33,10 @@ class GraphProperties(BaseModel):
 class Spectra(BaseModel):
     adj_eigenvalues: list[float]
     adj_hash: str
+    kirchhoff_eigenvalues: list[float]
+    kirchhoff_hash: str
+    signless_eigenvalues: list[float]
+    signless_hash: str
     lap_eigenvalues: list[float]
     lap_hash: str
     nb_eigenvalues_re: list[float]
@@ -45,6 +49,8 @@ class Spectra(BaseModel):
 
 class CospectralMates(BaseModel):
     adj: list[str]
+    kirchhoff: list[str]
+    signless: list[str]
     lap: list[str]
     nb: list[str]
     nbl: list[str]
