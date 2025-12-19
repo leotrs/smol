@@ -90,6 +90,16 @@
             A 16-character hash of the sorted eigenvalues, used for fast cospectral lookup.
             Two graphs with the same hash have the same spectrum (within numerical precision).
         </dd>
+
+        <dt id="spectral-distance"><strong>Spectral distance</strong></dt>
+        <dd>
+            A measure of dissimilarity between two spectra, computed using the Earth Mover's Distance
+            (Wasserstein metric). For real eigenvalues (adjacency, Kirchhoff, signless, normalized Laplacian),
+            this is the 1D Wasserstein distance between sorted eigenvalue sequences. For complex eigenvalues
+            (NB, NBL matrices), this is the 2D Wasserstein distance treating eigenvalues as points $(λ_r, λ_i)$
+            in the complex plane. A distance of 0 indicates cospectral graphs; smaller distances indicate more
+            similar spectra.
+        </dd>
     </dl>
 </article>
 

@@ -33,7 +33,7 @@ def compute_stats(conn) -> dict:
 
     # Cospectral counts from pre-computed pairs table
     cospectral = {}
-    for matrix in ["adj", "lap", "nb", "nbl"]:
+    for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl"]:
         cur.execute(
             """
             WITH all_graphs AS (
@@ -57,8 +57,7 @@ def compute_stats(conn) -> dict:
         SELECT
             COUNT(*) as total,
             COUNT(clique_number) as has_clique,
-            COUNT(global_clustering) as has_clustering,
-            COUNT(degree_sequence) as has_degree_seq
+            COUNT(global_clustering) as has_clustering
         FROM graphs
         """
     )

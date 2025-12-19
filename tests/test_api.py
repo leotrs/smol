@@ -185,8 +185,8 @@ class TestCompareEndpoint:
         response = client.get("/compare?graphs=D%3F%7B,DEo")
         data = response.json()
         comp = data["spectral_comparison"]
-        # D?{ and DEo are adj-cospectral
-        assert comp["adj"] == "same"
+        # D?{ and DEo are adj-cospectral (distance should be 0.0000)
+        assert comp["adj"] == "0.0000"
 
     def test_compare_includes_all_matrices(self):
         """Compare endpoint should include all 6 matrix types in spectral_comparison."""
@@ -201,9 +201,13 @@ class TestCompareEndpoint:
         assert "lap" in comp
         assert "nb" in comp
         assert "nbl" in comp
-        # Each should be "same" or "different"
+        # When comparing 2 graphs, should show numeric distances
         for matrix, value in comp.items():
-            assert value in ("same", "different"), f"Invalid comparison value for {matrix}: {value}"
+            # Should be a numeric string like "0.0000" or "1.2345"
+            try:
+                float(value)
+            except ValueError:
+                assert value in ("same", "different", "n/a"), f"Invalid comparison value for {matrix}: {value}"
 
     def test_compare_returns_html_for_htmx(self):
         response = client.get(

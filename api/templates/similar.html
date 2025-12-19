@@ -46,6 +46,14 @@
         {% endfor %}
     </tbody>
 </table>
+
+<p>
+    {% if matrix in ('nb', 'nbl') %}
+    Distance measures spectral similarity using the 2D Wasserstein distance (Earth Mover's Distance), treating complex eigenvalues as points in the complex plane. Smaller values indicate more similar spectra. A distance of 0.0000 indicates cospectral graphs.
+    {% else %}
+    Distance measures spectral similarity using the 1D Wasserstein distance (Earth Mover's Distance) between sorted eigenvalue sequences. Smaller values indicate more similar spectra. A distance of 0.0000 indicates cospectral graphs.
+    {% endif %}
+</p>
 {% else %}
 <p><em>No similar graphs found.</em></p>
 {% endif %}

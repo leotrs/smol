@@ -358,17 +358,69 @@ async def compare_graphs(
 
     logger.info(f"  compare fetch {len(graph6_list)} graphs: {(time.perf_counter()-t0)*1000:.0f}ms")
 
-    comparison = {
-        matrix: "same" if len(hashes) == 1 else "different"
-        for matrix, hashes in all_hashes.items()
-    }
+    # For 2-graph comparison, compute spectral distances
+    if len(graph6_list) == 2:
+        import numpy as np
+        from scipy.stats import wasserstein_distance
+        import ot
+
+        g1_row = await fetch_graph(graph6_list[0])
+        g2_row = await fetch_graph(graph6_list[1])
+
+        comparison = {}
+        for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl"]:
+            if matrix in ("adj", "kirchhoff", "signless", "lap"):
+                # 1D Wasserstein for real eigenvalues
+                eigs1 = g1_row[f"{matrix}_eigenvalues"]
+                eigs2 = g2_row[f"{matrix}_eigenvalues"]
+                if eigs1 is not None and eigs2 is not None and len(eigs1) == len(eigs2):
+                    dist = wasserstein_distance(eigs1, eigs2)
+                    comparison[matrix] = f"{dist:.4f}"
+                else:
+                    comparison[matrix] = "n/a"
+            else:
+                # 2D Wasserstein for complex eigenvalues
+                re1 = g1_row[f"{matrix}_eigenvalues_re"]
+                im1 = g1_row[f"{matrix}_eigenvalues_im"]
+                re2 = g2_row[f"{matrix}_eigenvalues_re"]
+                im2 = g2_row[f"{matrix}_eigenvalues_im"]
+
+                if re1 is not None and re2 is not None and len(re1) == len(re2):
+                    eigs1 = np.column_stack([re1, im1])
+                    eigs2 = np.column_stack([re2, im2])
+                    n_eigs = len(eigs1)
+                    a = np.ones(n_eigs) / n_eigs
+                    b = np.ones(n_eigs) / n_eigs
+                    M = ot.dist(eigs1, eigs2, metric='euclidean')
+                    dist = ot.emd2(a, b, M)
+                    comparison[matrix] = f"{dist:.4f}"
+                else:
+                    comparison[matrix] = "n/a"
+    else:
+        comparison = {
+            matrix: "same" if len(hashes) == 1 else "different"
+            for matrix, hashes in all_hashes.items()
+        }
 
     result = CompareResult(graphs=full_graphs, spectral_comparison=comparison)
 
     if wants_html(request):
+        # Compare tags (combine explicit tags + boolean properties)
+        all_tag_sets = []
+        for g in full_graphs:
+            tags = set(g.tags or [])
+            if g.properties.is_bipartite:
+                tags.add("bipartite")
+            if g.properties.is_planar:
+                tags.add("planar")
+            if g.properties.is_regular:
+                tags.add("regular")
+            all_tag_sets.append(frozenset(tags))
+
         prop_diffs = {
             "n": len(set(g.n for g in full_graphs)) > 1,
             "m": len(set(g.m for g in full_graphs)) > 1,
+            "tags": len(set(all_tag_sets)) > 1,
             "is_bipartite": len(set(g.properties.is_bipartite for g in full_graphs)) > 1,
             "is_planar": len(set(g.properties.is_planar for g in full_graphs)) > 1,
             "is_regular": len(set(g.properties.is_regular for g in full_graphs)) > 1,

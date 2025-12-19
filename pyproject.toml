@@ -36,6 +36,8 @@ dependencies = [
     "requests>=2.32.5",
     "matplotlib>=3.10.8",
     "aiosqlite>=0.22.0",
+    "sympy>=1.14.0",
+    "pot>=0.9.6.post1",
 ]
 
 [project.urls]

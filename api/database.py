@@ -523,9 +523,14 @@ async def fetch_similar_graphs(
     matrix: str = "adj",
     limit: int = 10,
 ) -> list[tuple[dict[str, Any], float]]:
-    """Find graphs with similar spectrum using Earth Mover's Distance (Wasserstein-1)."""
-    import math
+    """Find graphs with similar spectrum using Earth Mover's Distance.
+
+    For real eigenvalues (adj, kirchhoff, signless, lap): Uses 1D Wasserstein distance.
+    For complex eigenvalues (nb, nbl): Uses 2D Wasserstein distance on (re, im) pairs.
+    """
+    import numpy as np
     from scipy.stats import wasserstein_distance
+    import ot  # Python Optimal Transport
     ph = _placeholder()
 
     target = await fetch_graph(graph6)
@@ -533,8 +538,9 @@ async def fetch_similar_graphs(
         return []
 
     n = target["n"]
+    is_complex = matrix in ("nb", "nbl")
 
-    if matrix in ("adj", "kirchhoff", "signless", "lap"):
+    if not is_complex:
         target_eigs = target[f"{matrix}_eigenvalues"]
         target_hash = target[f"{matrix}_spectral_hash"]
         eig_col = f"{matrix}_eigenvalues"
@@ -544,8 +550,7 @@ async def fetch_similar_graphs(
         im_col = f"{matrix}_eigenvalues_im"
         target_re = target[re_col]
         target_im = target[im_col]
-        target_eigs = [math.sqrt(r**2 + i**2) for r, i in zip(target_re, target_im)]
-        target_eigs.sort()
+        target_eigs = np.column_stack([target_re, target_im])
         target_hash = target[f"{matrix}_spectral_hash"]
         eig_col = None
         hash_col = f"{matrix}_spectral_hash"
@@ -672,17 +677,28 @@ async def fetch_similar_graphs(
     results = []
     for row in candidates:
         row_dict = _parse_row(row)
-        if eig_col:
+        if not is_complex:
             eigs = row_dict[eig_col]
+            if len(eigs) != len(target_eigs):
+                continue
+            dist = wasserstein_distance(target_eigs, eigs)
         else:
             re_vals = row_dict[f"{matrix}_eigenvalues_re"]
             im_vals = row_dict[f"{matrix}_eigenvalues_im"]
-            eigs = sorted([math.sqrt(r**2 + i**2) for r, i in zip(re_vals, im_vals)])
+            eigs = np.column_stack([re_vals, im_vals])
+            if len(eigs) != len(target_eigs):
+                continue
 
-        if len(eigs) != len(target_eigs):
-            continue
+            # 2D Wasserstein distance for complex eigenvalues
+            n_eigs = len(eigs)
+            # Uniform weights for both distributions
+            a = np.ones(n_eigs) / n_eigs
+            b = np.ones(n_eigs) / n_eigs
+            # Compute pairwise Euclidean distances in complex plane
+            M = ot.dist(target_eigs, eigs, metric='euclidean')
+            # Compute Earth Mover's Distance
+            dist = ot.emd2(a, b, M)
 
-        dist = wasserstein_distance(target_eigs, eigs)
         results.append((row_dict, dist))
 
     results.sort(key=lambda x: x[1])
