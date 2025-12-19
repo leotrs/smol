@@ -358,7 +358,8 @@ async def compare_graphs(
 
     logger.info(f"  compare fetch {len(graph6_list)} graphs: {(time.perf_counter()-t0)*1000:.0f}ms")
 
-    # For 2-graph comparison, compute spectral distances
+    # Compute spectral distances
+    distance_matrix_data = None
     if len(graph6_list) == 2:
         import numpy as np
         from scipy.stats import wasserstein_distance
@@ -375,6 +376,8 @@ async def compare_graphs(
                 eigs2 = g2_row[f"{matrix}_eigenvalues"]
                 if eigs1 is not None and eigs2 is not None and len(eigs1) == len(eigs2):
                     dist = wasserstein_distance(eigs1, eigs2)
+                    if dist < 1e-8:
+                        dist = 0.0
                     comparison[matrix] = f"{dist:.4f}"
                 else:
                     comparison[matrix] = "n/a"
@@ -393,16 +396,77 @@ async def compare_graphs(
                     b = np.ones(n_eigs) / n_eigs
                     M = ot.dist(eigs1, eigs2, metric='euclidean')
                     dist = ot.emd2(a, b, M)
+                    if dist < 1e-8:
+                        dist = 0.0
                     comparison[matrix] = f"{dist:.4f}"
                 else:
                     comparison[matrix] = "n/a"
+    elif len(graph6_list) > 2:
+        # Compute distance matrix for all pairs
+        import numpy as np
+        from scipy.stats import wasserstein_distance
+        import ot
+
+        # Fetch all graph rows
+        graph_rows = [await fetch_graph(g6) for g6 in graph6_list]
+        n = len(graph6_list)
+
+        distance_matrix_data = {}
+        for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl"]:
+            dist_matrix = [[0.0 for _ in range(n)] for _ in range(n)]
+
+            for i in range(n):
+                for j in range(i + 1, n):
+                    g1_row = graph_rows[i]
+                    g2_row = graph_rows[j]
+
+                    if matrix in ("adj", "kirchhoff", "signless", "lap"):
+                        # 1D Wasserstein for real eigenvalues
+                        eigs1 = g1_row[f"{matrix}_eigenvalues"]
+                        eigs2 = g2_row[f"{matrix}_eigenvalues"]
+                        if eigs1 is not None and eigs2 is not None and len(eigs1) == len(eigs2):
+                            dist = wasserstein_distance(eigs1, eigs2)
+                        else:
+                            dist = float('nan')
+                    else:
+                        # 2D Wasserstein for complex eigenvalues
+                        re1 = g1_row[f"{matrix}_eigenvalues_re"]
+                        im1 = g1_row[f"{matrix}_eigenvalues_im"]
+                        re2 = g2_row[f"{matrix}_eigenvalues_re"]
+                        im2 = g2_row[f"{matrix}_eigenvalues_im"]
+
+                        if re1 is not None and re2 is not None and len(re1) == len(re2):
+                            eigs1 = np.column_stack([re1, im1])
+                            eigs2 = np.column_stack([re2, im2])
+                            n_eigs = len(eigs1)
+                            a = np.ones(n_eigs) / n_eigs
+                            b = np.ones(n_eigs) / n_eigs
+                            M = ot.dist(eigs1, eigs2, metric='euclidean')
+                            dist = ot.emd2(a, b, M)
+                        else:
+                            dist = float('nan')
+
+                    # Round tiny floating point errors to exactly 0
+                    if not np.isnan(dist) and dist < 1e-8:
+                        dist = 0.0
+
+                    dist_matrix[i][j] = dist
+                    dist_matrix[j][i] = dist
+
+            distance_matrix_data[matrix] = dist_matrix
+
+        # For backward compatibility, still provide a summary
+        comparison = {
+            matrix: "same" if len(hashes) == 1 else "different"
+            for matrix, hashes in all_hashes.items()
+        }
     else:
         comparison = {
             matrix: "same" if len(hashes) == 1 else "different"
             for matrix, hashes in all_hashes.items()
         }
 
-    result = CompareResult(graphs=full_graphs, spectral_comparison=comparison)
+    result = CompareResult(graphs=full_graphs, spectral_comparison=comparison, distance_matrix=distance_matrix_data)
 
     if wants_html(request):
         # Compare tags (combine explicit tags + boolean properties)
