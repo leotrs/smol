@@ -67,9 +67,7 @@ def parse_row(row):
     d = dict(row)
     # Parse JSON array fields
     for field in ['adj_eigenvalues', 'lap_eigenvalues', 'nb_eigenvalues_re',
-                  'nb_eigenvalues_im', 'nbl_eigenvalues_re', 'nbl_eigenvalues_im',
-                  'degree_sequence', 'betweenness_centrality',
-                  'closeness_centrality', 'eigenvector_centrality']:
+                  'nb_eigenvalues_im', 'nbl_eigenvalues_re', 'nbl_eigenvalues_im']:
         if d.get(field):
             d[field] = json.loads(d[field])
     # Convert integer booleans
@@ -115,11 +113,7 @@ CREATE TABLE IF NOT EXISTS graphs (
     global_clustering       REAL,
     avg_local_clustering    REAL,
     avg_path_length         REAL,
-    assortativity           REAL,
-    degree_sequence         TEXT,
-    betweenness_centrality  TEXT,
-    closeness_centrality    TEXT,
-    eigenvector_centrality  TEXT
+    assortativity           REAL
 );
 
 CREATE INDEX IF NOT EXISTS idx_n ON graphs(n);

@@ -21,25 +21,33 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "dbname=smol")
 def main():
     parser = argparse.ArgumentParser(description="Compute tags for graphs")
     parser.add_argument("--batch-size", type=int, default=1000, help="Batch size for updates")
+    parser.add_argument("--recompute", action="store_true", help="Recompute all tags, not just empty ones")
     args = parser.parse_args()
 
     conn = psycopg2.connect(DATABASE_URL)
     cur = conn.cursor()
 
     # Count graphs needing tags
-    cur.execute("SELECT COUNT(*) FROM graphs WHERE tags = '{}'")
+    if args.recompute:
+        cur.execute("SELECT COUNT(*) FROM graphs")
+    else:
+        cur.execute("SELECT COUNT(*) FROM graphs WHERE tags = '{}'")
     total = cur.fetchone()[0]
-    print(f"Computing tags for {total:,} graphs...")
+    action = "Recomputing" if args.recompute else "Computing"
+    print(f"{action} tags for {total:,} graphs...")
 
     # Fetch graphs in batches
-    cur.execute(
-        """
-        SELECT id, graph6
-        FROM graphs
-        WHERE tags = '{}'
-        ORDER BY id
-        """
-    )
+    if args.recompute:
+        cur.execute("SELECT id, graph6 FROM graphs ORDER BY id")
+    else:
+        cur.execute(
+            """
+            SELECT id, graph6
+            FROM graphs
+            WHERE tags = '{}'
+            ORDER BY id
+            """
+        )
 
     updates = []
     count = 0

@@ -82,4 +82,265 @@ def compute_tags(G: nx.Graph) -> list[str]:
         except nx.NetworkXError:
             pass
 
+    # Cubic: 3-regular
+    if min_deg == max_deg == 3:
+        tags.append("cubic")
+
+    # Triangle-free: no triangles
+    if nx.triangles(G).get(0, 0) == 0 and sum(nx.triangles(G).values()) == 0:
+        tags.append("triangle-free")
+
+    # Complete multipartite: complement is a disjoint union of cliques
+    # A graph is complete multipartite iff its complement is a union of cliques (no edges between cliques)
+    if is_connected and n >= 2:
+        complement = nx.complement(G)
+        components = list(nx.connected_components(complement))
+        # Check each component is a clique (complete subgraph)
+        is_all_cliques = True
+        for comp in components:
+            comp_nodes = list(comp)
+            subgraph = complement.subgraph(comp_nodes)
+            # A clique has n*(n-1)/2 edges
+            expected_edges = len(comp_nodes) * (len(comp_nodes) - 1) // 2
+            if subgraph.number_of_edges() != expected_edges:
+                is_all_cliques = False
+                break
+        if is_all_cliques:
+            # Already have complete and complete-bipartite, this is for 3+ parts
+            num_parts = len(components)
+            if num_parts >= 3:
+                tags.append("complete-multipartite")
+
+    # Prism: C_n □ K_2 (two cycles connected by matching)
+    # n must be even, 3-regular, m = 3n/2
+    if n >= 6 and n % 2 == 0 and min_deg == max_deg == 3 and is_connected:
+        half = n // 2
+        if m == 3 * half:  # prism has 3n/2 edges
+            prism = nx.circular_ladder_graph(half)
+            if nx.is_isomorphic(G, prism):
+                tags.append("prism")
+
+    # Ladder: P_n □ K_2 (two paths connected by rungs)
+    # Has 2k vertices, 3k-2 edges, max degree 3, min degree 2
+    if n >= 4 and n % 2 == 0 and is_connected:
+        half = n // 2
+        if m == 3 * half - 2 and min_deg == 2 and max_deg == 3:
+            # Check structure: should have exactly 4 vertices of degree 2 (corners)
+            deg_2_count = sum(1 for d in degrees if d == 2)
+            if deg_2_count == 4:
+                ladder = nx.ladder_graph(half)
+                if nx.is_isomorphic(G, ladder):
+                    tags.append("ladder")
+
+    # Strongly regular: regular graph with consistent adjacency counts
+    if min_deg == max_deg and is_connected and n >= 4:
+        k = min_deg
+        if 0 < k < n - 1:  # not empty or complete
+            srg_params = _check_strongly_regular(G, n, k)
+            if srg_params:
+                tags.append("strongly-regular")
+
+    # Line graph: detected via Beineke's theorem (no forbidden induced subgraphs)
+    if is_connected and n >= 2:
+        if _is_line_graph(G):
+            tags.append("line-graph")
+
+    # Windmill: n copies of K_k sharing a universal vertex
+    # Has 1 + n*(k-1) vertices, n*k*(k-1)/2 edges, one vertex of high degree
+    if is_connected and n >= 4:
+        if _is_windmill(G):
+            tags.append("windmill")
+
+    # Fan: P_n joined to a single vertex (apex)
+    # Has n+1 vertices, 2n-1 edges, apex has degree n
+    if is_connected and n >= 3:
+        if _is_fan(G, n, m):
+            tags.append("fan")
+
+    # Vertex-transitive: automorphism group acts transitively on vertices
+    if is_connected and min_deg == max_deg and n >= 2:
+        if _is_vertex_transitive(G):
+            tags.append("vertex-transitive")
+
     return sorted(tags)
+
+
+def _check_strongly_regular(G: nx.Graph, n: int, k: int) -> tuple | None:
+    """Check if G is strongly regular, return (n, k, λ, μ) or None."""
+    nodes = list(G.nodes())
+    adj_set = {v: set(G.neighbors(v)) for v in nodes}
+
+    # Find λ (common neighbors of adjacent pair)
+    lambda_val = None
+    for u in nodes:
+        for v in adj_set[u]:
+            if u < v:
+                common = len(adj_set[u] & adj_set[v])
+                if lambda_val is None:
+                    lambda_val = common
+                elif common != lambda_val:
+                    return None
+
+    # Find μ (common neighbors of non-adjacent pair)
+    mu_val = None
+    for u in nodes:
+        for v in nodes:
+            if u < v and v not in adj_set[u]:
+                common = len(adj_set[u] & adj_set[v])
+                if mu_val is None:
+                    mu_val = common
+                elif common != mu_val:
+                    return None
+
+    if lambda_val is not None and mu_val is not None:
+        return (n, k, lambda_val, mu_val)
+    return None
+
+
+def _is_line_graph(G: nx.Graph) -> bool:
+    """Check if G is a line graph using Beineke's characterization."""
+    n = G.number_of_nodes()
+    if n <= 1:
+        return True
+
+    # Quick check: the claw K_{1,3} is forbidden
+    for v in G.nodes():
+        neighbors = list(G.neighbors(v))
+        if len(neighbors) >= 3:
+            for i in range(len(neighbors)):
+                for j in range(i + 1, len(neighbors)):
+                    for k in range(j + 1, len(neighbors)):
+                        if (not G.has_edge(neighbors[i], neighbors[j]) and
+                            not G.has_edge(neighbors[j], neighbors[k]) and
+                            not G.has_edge(neighbors[i], neighbors[k])):
+                            return False  # Found claw K_{1,3}
+
+    try:
+        return nx.is_valid_line_graph(G)
+    except AttributeError:
+        pass
+
+    try:
+        nx.inverse_line_graph(G)
+        return True
+    except (nx.NetworkXError, nx.NetworkXNotImplemented):
+        return False
+
+
+def _is_windmill(G: nx.Graph) -> bool:
+    """Check if G is a windmill graph Wd(k,n): n copies of K_k sharing one vertex.
+
+    k must be >= 2 (each blade is at least an edge).
+    """
+    n = G.number_of_nodes()
+
+    # Find the universal vertex (highest degree, should be unique)
+    degrees = dict(G.degree())
+    max_deg = max(degrees.values())
+    universal_candidates = [v for v, d in degrees.items() if d == max_deg]
+
+    if len(universal_candidates) != 1:
+        return False
+
+    universal = universal_candidates[0]
+    neighbors = set(G.neighbors(universal))
+
+    # Remove universal vertex, remaining graph should be disjoint cliques
+    H = G.subgraph([v for v in G.nodes() if v != universal]).copy()
+
+    if not H.nodes():
+        return False
+
+    # Check each connected component is a clique
+    components = list(nx.connected_components(H))
+    if len(components) < 2:
+        return False  # Need at least 2 blades for windmill
+
+    clique_sizes = set()
+    for comp in components:
+        comp_nodes = list(comp)
+        k = len(comp_nodes)
+        if k < 2:
+            return False  # Each blade must have at least 2 non-universal vertices (k >= 2 means K_k with k >= 3 total including universal)
+        # Check it's a clique
+        expected_edges = k * (k - 1) // 2
+        actual_edges = H.subgraph(comp_nodes).number_of_edges()
+        if actual_edges != expected_edges:
+            return False
+        # Check all connected to universal
+        if not all(v in neighbors for v in comp_nodes):
+            return False
+        clique_sizes.add(k)
+
+    # All cliques should be the same size
+    if len(clique_sizes) != 1:
+        return False
+
+    return True
+
+
+def _is_fan(G: nx.Graph, n: int, m: int) -> bool:
+    """Check if G is a fan graph F_{1,k}: path P_k joined to apex vertex."""
+    # Fan with k path vertices has k+1 total vertices, 2k-1 edges
+    k = n - 1  # number of path vertices
+    expected_edges = 2 * k - 1
+    if m != expected_edges or k < 2:
+        return False
+
+    # Try each vertex as potential apex
+    for apex in G.nodes():
+        # Remove apex, check if remaining is a path with all vertices connected to apex
+        other_nodes = [v for v in G.nodes() if v != apex]
+        H = G.subgraph(other_nodes)
+
+        # Path has k vertices and k-1 edges
+        if H.number_of_edges() != k - 1:
+            continue
+
+        # Check it's a path: exactly 2 vertices of degree 1, rest degree 2
+        h_degrees = sorted([d for _, d in H.degree()])
+        if k == 2:
+            expected_path_degrees = [1, 1]
+        else:
+            expected_path_degrees = [1, 1] + [2] * (k - 2)
+
+        if h_degrees != expected_path_degrees:
+            continue
+
+        # Verify all path vertices connected to apex
+        if all(G.has_edge(v, apex) for v in other_nodes):
+            return True
+
+    return False
+
+
+def _is_vertex_transitive(G: nx.Graph) -> bool:
+    """Check if G is vertex-transitive using automorphism group."""
+    try:
+        # Use graph_automorphism_group if available (requires pynauty or similar)
+        # Fall back to checking orbit sizes
+        from networkx.algorithms.isomorphism import GraphMatcher
+
+        n = G.number_of_nodes()
+        if n <= 1:
+            return True
+
+        nodes = list(G.nodes())
+        first = nodes[0]
+
+        # Check if every vertex can be mapped to the first vertex
+        for v in nodes[1:]:
+            # Try to find an automorphism mapping first -> v
+            found = False
+            # Use node matching that checks if mapping first to v works
+            GM = GraphMatcher(G, G)
+            for iso in GM.isomorphisms_iter():
+                if iso[first] == v:
+                    found = True
+                    break
+            if not found:
+                return False
+
+        return True
+    except Exception:
+        return False

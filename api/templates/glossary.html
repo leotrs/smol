@@ -122,6 +122,18 @@
             The minimum number of colors needed to color the vertices such that no two adjacent
             vertices share the same color. SMOL stores a greedy upper bound.
         </dd>
+
+        <dt id="degree"><strong>Degree</strong></dt>
+        <dd>
+            The number of edges incident to a vertex. SMOL stores the minimum and maximum degree
+            in the graph, shown as a range [min, max].
+        </dd>
+
+        <dt id="triangles"><strong>Triangle count</strong></dt>
+        <dd>
+            The number of triangles (3-cycles) in the graph. A triangle is a set of three vertices
+            that are mutually adjacent.
+        </dd>
     </dl>
 </article>
 
@@ -159,24 +171,119 @@
             Positive values mean high-degree nodes tend to connect to high-degree nodes;
             negative values indicate high-degree nodes connect to low-degree nodes.
         </dd>
+    </dl>
+</article>
 
-        <dt id="betweenness"><strong>Betweenness centrality</strong></dt>
+<article>
+    <header><h3>Named Graph Types</h3></header>
+    <dl>
+        <dt id="complete"><strong>Complete graph</strong> ($K_n$)</dt>
         <dd>
-            For each vertex, the fraction of all shortest paths that pass through it.
-            SMOL stores the sorted distribution of betweenness values across all vertices.
+            A graph where every pair of vertices is connected by an edge.
+            Has $\binom{n}{2} = n(n-1)/2$ edges.
         </dd>
 
-        <dt id="closeness"><strong>Closeness centrality</strong></dt>
+        <dt id="cycle"><strong>Cycle</strong> ($C_n$)</dt>
         <dd>
-            For each vertex, the inverse of the sum of shortest path distances to all other vertices.
-            SMOL stores the sorted distribution of closeness values across all vertices.
+            A connected 2-regular graph. The vertices form a single closed loop.
         </dd>
 
-        <dt id="eigenvector"><strong>Eigenvector centrality</strong></dt>
+        <dt id="path"><strong>Path</strong> ($P_n$)</dt>
         <dd>
-            A measure of influence based on the leading eigenvector of the adjacency matrix.
-            A node has high eigenvector centrality if it is connected to other high-centrality nodes.
-            SMOL stores the sorted distribution of eigenvector centrality values.
+            A tree where every vertex has degree at most 2. The simplest connected graph structure.
+        </dd>
+
+        <dt id="star"><strong>Star</strong> ($K_{1,n-1}$)</dt>
+        <dd>
+            A tree with one central vertex connected to all others. The center has degree $n-1$,
+            all other vertices have degree 1.
+        </dd>
+
+        <dt id="wheel"><strong>Wheel</strong> ($W_n$)</dt>
+        <dd>
+            A cycle with an additional central vertex (hub) connected to all cycle vertices.
+            The hub has degree $n-1$, rim vertices have degree 3.
+        </dd>
+
+        <dt id="complete-bipartite"><strong>Complete bipartite</strong> ($K_{a,b}$)</dt>
+        <dd>
+            A bipartite graph where every vertex in one part is connected to every vertex in the other.
+            Has $a \cdot b$ edges.
+        </dd>
+
+        <dt id="complete-multipartite"><strong>Complete multipartite</strong> ($K_{n_1, n_2, \ldots}$)</dt>
+        <dd>
+            A graph whose vertices are partitioned into groups, with edges between all pairs of vertices
+            in different groups and no edges within groups. Generalizes complete bipartite graphs.
+        </dd>
+
+        <dt id="tree"><strong>Tree</strong></dt>
+        <dd>
+            A connected acyclic graph. Equivalently, a connected graph with $n-1$ edges.
+        </dd>
+
+        <dt id="prism"><strong>Prism</strong> ($C_n \square K_2$)</dt>
+        <dd>
+            The Cartesian product of a cycle and an edge. Two parallel cycles connected by matching edges.
+            Also called a circular ladder.
+        </dd>
+
+        <dt id="ladder"><strong>Ladder</strong> ($P_n \square K_2$)</dt>
+        <dd>
+            The Cartesian product of a path and an edge. Two parallel paths connected by rungs.
+        </dd>
+
+        <dt id="windmill"><strong>Windmill</strong> ($Wd(k, n)$)</dt>
+        <dd>
+            A graph of $n$ copies of $K_k$ sharing a single universal vertex.
+            The friendship graph $F_n$ is the special case $Wd(3, n)$ (triangles sharing a vertex).
+        </dd>
+
+        <dt id="fan"><strong>Fan</strong> ($F_{1,n}$)</dt>
+        <dd>
+            A path $P_n$ with an additional vertex connected to all path vertices.
+            Similar to a wheel but with a path instead of a cycle.
+        </dd>
+
+        <dt id="petersen"><strong>Petersen graph</strong></dt>
+        <dd>
+            The famous 10-vertex, 15-edge graph. 3-regular with girth 5 and diameter 2.
+            A counterexample to many graph theory conjectures.
+        </dd>
+
+        <dt id="cubic"><strong>Cubic</strong> (3-regular)</dt>
+        <dd>
+            A graph where every vertex has degree exactly 3. An important class in spectral graph theory.
+        </dd>
+
+        <dt id="triangle-free"><strong>Triangle-free</strong></dt>
+        <dd>
+            A graph containing no triangles (3-cycles). Equivalently, has girth $\geq 4$ or clique number 2.
+        </dd>
+
+        <dt id="line-graph"><strong>Line graph</strong></dt>
+        <dd>
+            A graph $L(G)$ whose vertices represent the edges of $G$, with two vertices adjacent
+            if the corresponding edges share an endpoint. Characterized by forbidden induced subgraphs.
+        </dd>
+
+        <dt id="strongly-regular"><strong>Strongly regular</strong></dt>
+        <dd>
+            A regular graph where every pair of adjacent vertices has the same number of common neighbors,
+            and every pair of non-adjacent vertices also has the same number of common neighbors.
+            Parameters denoted $srg(n, k, \lambda, \mu)$.
+        </dd>
+
+        <dt id="vertex-transitive"><strong>Vertex-transitive</strong></dt>
+        <dd>
+            A graph whose automorphism group acts transitively on vertices—every vertex can be mapped
+            to any other by some symmetry. All vertex-transitive graphs are regular.
+        </dd>
+
+        <dt id="eulerian"><strong>Eulerian</strong></dt>
+        <dd>
+            A connected graph where every vertex has even degree. Such graphs have a closed walk
+            that visits every edge exactly once (an Eulerian circuit).
         </dd>
     </dl>
 </article>
