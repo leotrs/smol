@@ -52,36 +52,6 @@
 </article>
 
 <article>
-    <header><h3>Network Properties</h3></header>
-    {% if stats.property_stats %}
-    <p>
-        <strong>{{ "{:,}".format(stats.property_stats.computed) }}</strong> of
-        {{ "{:,}".format(stats.property_stats.total) }} graphs have computed network properties
-        ({{ stats.property_stats.percent }}%)
-    </p>
-    {% if stats.property_ranges %}
-    <p>Network property ranges across all computed graphs:</p>
-    <dl class="property-grid">
-        {% if stats.property_ranges.clustering %}
-        <dt>Global clustering</dt>
-        <dd>{{ stats.property_ranges.clustering.min }} – {{ stats.property_ranges.clustering.max }} (avg: {{ stats.property_ranges.clustering.avg }})</dd>
-        {% endif %}
-        {% if stats.property_ranges.path_length %}
-        <dt>Avg path length</dt>
-        <dd>{{ stats.property_ranges.path_length.min }} – {{ stats.property_ranges.path_length.max }} (avg: {{ stats.property_ranges.path_length.avg }})</dd>
-        {% endif %}
-        {% if stats.property_ranges.assortativity %}
-        <dt>Assortativity</dt>
-        <dd>{{ stats.property_ranges.assortativity.min }} – {{ stats.property_ranges.assortativity.max }} (avg: {{ stats.property_ranges.assortativity.avg }})</dd>
-        {% endif %}
-    </dl>
-    {% endif %}
-    {% else %}
-    <p>Network properties (clustering, centrality, etc.) are being computed. Check back soon.</p>
-    {% endif %}
-</article>
-
-<article>
     <header><h3>API</h3></header>
     <p>All endpoints return JSON by default. Use <code>Accept: text/html</code> header or access via browser for HTML.</p>
 
