@@ -850,13 +850,28 @@
         }
 
         .find-similar-link {
-            font-size: 0.85rem;
-            color: var(--pico-muted-color);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.75rem;
+            font-size: 0.9rem;
+            color: var(--pico-primary);
+            background: transparent;
+            border: 1px solid var(--pico-primary);
+            border-radius: var(--pico-border-radius);
             text-decoration: none;
+            transition: all 0.15s;
         }
 
         .find-similar-link:hover {
-            color: var(--pico-primary);
+            background: var(--pico-primary);
+            color: var(--pico-primary-inverse);
+        }
+
+        .find-similar-link svg {
+            width: 14px;
+            height: 14px;
+            stroke: currentColor;
         }
 
         /* Export buttons */

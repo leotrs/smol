@@ -422,7 +422,7 @@ async def similar_graphs(
     matrix: str = Query(default="adj", description="Matrix type: adj, lap, nb, nbl"),
     limit: int = Query(default=10, le=50),
 ):
-    """Find graphs with similar spectrum (by L2 distance)."""
+    """Find graphs with similar spectrum (by Earth Mover's Distance)."""
     t0 = time.perf_counter()
 
     if matrix not in ("adj", "lap", "nb", "nbl"):

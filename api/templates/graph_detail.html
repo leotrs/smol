@@ -590,7 +590,10 @@ function copyEigenvalues(btn) {
 
 <div class="section-header">
     <h3>Cospectral Mates</h3>
-    <a href="/similar/{{ graph.graph6 | urlencode }}" class="find-similar-link">Find similar spectra</a>
+    <a href="/similar/{{ graph.graph6 | urlencode }}" class="find-similar-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Find similar spectra
+    </a>
 </div>
 {% if graph.cospectral_mates.adj or graph.cospectral_mates.lap or graph.cospectral_mates.nb or graph.cospectral_mates.nbl %}
 <p>Graphs that share the same spectrum for a given matrix type.</p>

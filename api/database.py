@@ -81,8 +81,6 @@ def _parse_row(row: Any) -> dict[str, Any] | None:
             "adj_eigenvalues", "lap_eigenvalues",
             "nb_eigenvalues_re", "nb_eigenvalues_im",
             "nbl_eigenvalues_re", "nbl_eigenvalues_im",
-            "degree_sequence", "betweenness_centrality",
-            "closeness_centrality", "eigenvector_centrality",
             "tags",
         ]
         for field in json_fields:
@@ -129,7 +127,6 @@ async def fetch_graph(graph6: str) -> dict[str, Any] | None:
                        clique_number, chromatic_number,
                        algebraic_connectivity, global_clustering, avg_local_clustering,
                        avg_path_length, assortativity,
-                       degree_sequence, betweenness_centrality, closeness_centrality, eigenvector_centrality,
                        adj_eigenvalues, adj_spectral_hash,
                        lap_eigenvalues, lap_spectral_hash,
                        nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
@@ -154,7 +151,6 @@ async def fetch_graph(graph6: str) -> dict[str, Any] | None:
                        clique_number, chromatic_number,
                        algebraic_connectivity, global_clustering, avg_local_clustering,
                        avg_path_length, assortativity,
-                       degree_sequence, betweenness_centrality, closeness_centrality, eigenvector_centrality,
                        adj_eigenvalues, adj_spectral_hash,
                        lap_eigenvalues, lap_spectral_hash,
                        nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
@@ -291,8 +287,7 @@ async def query_graphs(
                        min_degree, max_degree, triangle_count,
                        clique_number, chromatic_number,
                        algebraic_connectivity, global_clustering, avg_local_clustering,
-                       avg_path_length, assortativity,
-                       degree_sequence, betweenness_centrality, closeness_centrality, eigenvector_centrality
+                       avg_path_length, assortativity
                        {tags_col}
                 FROM graphs
                 WHERE {where}
@@ -314,8 +309,7 @@ async def query_graphs(
                        min_degree, max_degree, triangle_count,
                        clique_number, chromatic_number,
                        algebraic_connectivity, global_clustering, avg_local_clustering,
-                       avg_path_length, assortativity,
-                       degree_sequence, betweenness_centrality, closeness_centrality, eigenvector_centrality
+                       avg_path_length, assortativity
                        {tags_col}
                 FROM graphs
                 WHERE {where}
@@ -355,7 +349,6 @@ async def fetch_random_graph() -> dict[str, Any] | None:
                            clique_number, chromatic_number,
                            algebraic_connectivity, global_clustering, avg_local_clustering,
                            avg_path_length, assortativity,
-                           degree_sequence, betweenness_centrality, closeness_centrality, eigenvector_centrality,
                            adj_eigenvalues, adj_spectral_hash,
                            lap_eigenvalues, lap_spectral_hash,
                            nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
@@ -392,7 +385,6 @@ async def fetch_random_graph() -> dict[str, Any] | None:
                            clique_number, chromatic_number,
                            algebraic_connectivity, global_clustering, avg_local_clustering,
                            avg_path_length, assortativity,
-                           degree_sequence, betweenness_centrality, closeness_centrality, eigenvector_centrality,
                            adj_eigenvalues, adj_spectral_hash,
                            lap_eigenvalues, lap_spectral_hash,
                            nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
@@ -509,8 +501,9 @@ async def fetch_similar_graphs(
     matrix: str = "adj",
     limit: int = 10,
 ) -> list[tuple[dict[str, Any], float]]:
-    """Find graphs with similar spectrum using L2 distance."""
+    """Find graphs with similar spectrum using Earth Mover's Distance (Wasserstein-1)."""
     import math
+    from scipy.stats import wasserstein_distance
     ph = _placeholder()
 
     target = await fetch_graph(graph6)
@@ -667,7 +660,7 @@ async def fetch_similar_graphs(
         if len(eigs) != len(target_eigs):
             continue
 
-        dist = math.sqrt(sum((a - b) ** 2 for a, b in zip(eigs, target_eigs)))
+        dist = wasserstein_distance(target_eigs, eigs)
         results.append((row_dict, dist))
 
     results.sort(key=lambda x: x[1])

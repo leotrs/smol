@@ -30,10 +30,6 @@ Each graph stores:
 - `avg_path_length` (only for connected graphs)
 - `assortativity` (degree assortativity coefficient)
 
-**Distributions (sorted arrays):**
-- `degree_sequence` (sorted descending)
-- `betweenness_centrality`, `closeness_centrality`, `eigenvector_centrality`
-
 ## Tech Stack
 
 - **Backend**: FastAPI with Jinja2 templates
@@ -80,7 +76,7 @@ GET /                    Home page (search interface)
 GET /graph/{graph6}      Graph detail + cospectral mates + tags
 GET /graphs              Query/filter graphs (HTMX partial or JSON)
 GET /compare?graphs=...  Compare multiple graphs
-GET /similar/{graph6}    Find spectrally similar graphs (L2 distance)
+GET /similar/{graph6}    Find spectrally similar graphs (Earth Mover's Distance)
 GET /random              Redirect to random graph
 GET /random/cospectral   Redirect to random cospectral family
 GET /glossary            Terminology with MathJax
