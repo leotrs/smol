@@ -678,15 +678,101 @@ function copyEigenvalues(btn) {
 {% endif %}
 
 <h3>Code <span class="code-lang">Python</span></h3>
-<div class="code-block">
-    <button class="copy-btn" onclick="copySpectrum(this)" aria-label="Copy to clipboard">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-    </button>
+<div class="code-tabs">
+    <div class="code-tab-buttons">
+        <button class="code-tab-btn active" onclick="switchCodeTab(event, 'adj')">Adjacency</button>
+        <button class="code-tab-btn" onclick="switchCodeTab(event, 'lap')">Laplacian</button>
+        <button class="code-tab-btn" onclick="switchCodeTab(event, 'nb')">NB (Ã)</button>
+        <button class="code-tab-btn" onclick="switchCodeTab(event, 'nbl')">NBL (L̃)</button>
+    </div>
+
+    <div id="code-adj" class="code-tab-content active">
+        <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
 <pre><code class="language-python">import networkx as nx
+import numpy as np
 
 G = nx.from_graph6_bytes(b"{{ graph.graph6 }}")
-A = nx.to_numpy_array(G)  # adjacency matrix</code></pre>
+A = nx.adjacency_matrix(G).toarray()
+eigenvalues = np.linalg.eigvalsh(A)
+print(eigenvalues)</code></pre>
+        </div>
+    </div>
+
+    <div id="code-lap" class="code-tab-content">
+        <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+<pre><code class="language-python">import networkx as nx
+import numpy as np
+
+G = nx.from_graph6_bytes(b"{{ graph.graph6 }}")
+L = nx.laplacian_matrix(G).toarray()
+eigenvalues = np.linalg.eigvalsh(L)
+print(eigenvalues)</code></pre>
+        </div>
+    </div>
+
+    <div id="code-nb" class="code-tab-content">
+        <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+<pre><code class="language-python">import networkx as nx
+import numpy as np
+
+G = nx.from_graph6_bytes(b"{{ graph.graph6 }}")
+
+# Build Hashimoto (non-backtracking) matrix
+edges = [(u, v) for u, v in G.edges()] + [(v, u) for u, v in G.edges()]
+n_edges = len(edges)
+B = np.zeros((n_edges, n_edges))
+
+for i, (u, v) in enumerate(edges):
+    for j, (w, x) in enumerate(edges):
+        if v == w and u != x:  # non-backtracking condition
+            B[i, j] = 1
+
+eigenvalues = np.linalg.eigvals(B)
+print(eigenvalues)</code></pre>
+        </div>
+    </div>
+
+    <div id="code-nbl" class="code-tab-content">
+        <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+<pre><code class="language-python">import networkx as nx
+import numpy as np
+
+G = nx.from_graph6_bytes(b"{{ graph.graph6 }}")
+
+# Build Hashimoto matrix B
+edges = [(u, v) for u, v in G.edges()] + [(v, u) for u, v in G.edges()]
+n_edges = len(edges)
+B = np.zeros((n_edges, n_edges))
+
+for i, (u, v) in enumerate(edges):
+    for j, (w, x) in enumerate(edges):
+        if v == w and u != x:
+            B[i, j] = 1
+
+# Build degree matrix D for directed edges
+D = np.diag([G.degree(v) for _, v in edges])
+
+# Non-backtracking Laplacian: I - D^{-1}B
+D_inv = np.linalg.inv(D)
+L_nb = np.eye(n_edges) - D_inv @ B
+eigenvalues = np.linalg.eigvals(L_nb)
+print(eigenvalues)</code></pre>
+        </div>
+    </div>
 </div>
+
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css" id="prism-light">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-okaidia.min.css" id="prism-dark" disabled>
 <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
@@ -696,14 +782,26 @@ function updatePrismTheme() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     document.getElementById('prism-light').disabled = isDark;
     document.getElementById('prism-dark').disabled = !isDark;
+    Prism.highlightAll();
 }
 updatePrismTheme();
 const observer = new MutationObserver(updatePrismTheme);
 observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-</script>
 
-<script>
-function copySpectrum(btn) {
+function switchCodeTab(event, tabId) {
+    // Hide all tabs
+    document.querySelectorAll('.code-tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.code-tab-btn').forEach(btn => btn.classList.remove('active'));
+
+    // Show selected tab
+    document.getElementById('code-' + tabId).classList.add('active');
+    event.target.classList.add('active');
+
+    // Re-highlight code
+    Prism.highlightAll();
+}
+
+function copyCode(btn) {
     const code = btn.parentElement.querySelector('code').textContent;
     navigator.clipboard.writeText(code).then(() => {
         btn.classList.add('copied');
@@ -712,19 +810,51 @@ function copySpectrum(btn) {
 }
 </script>
 
-<h3>Export</h3>
+<h3>Data</h3>
+
+<div style="margin-bottom: 1.5rem;">
+    <label for="graph6-field" style="font-size: 0.875rem; color: var(--pico-muted-color); display: block; margin-bottom: 0.25rem;">Graph6 string</label>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <input type="text" id="graph6-field" value="{{ graph.graph6 }}" readonly style="font-family: monospace; font-size: 0.875rem; margin-bottom: 0;">
+        <button onclick="copyGraph6()" style="padding: 0.4rem 0.75rem; font-size: 0.875rem; margin-bottom: 0; flex-shrink: 0;" class="outline">
+            Copy
+        </button>
+    </div>
+</div>
+
+<p style="font-size: 0.875rem; color: var(--pico-muted-color); margin-bottom: 0.5rem; margin-top: 1.5rem;">Eigenvalues (CSV)</p>
+<div class="export-buttons">
+    <button class="outline" onclick="downloadEigenvaluesCSV('adj')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Adjacency (A)
+    </button>
+    <button class="outline" onclick="downloadEigenvaluesCSV('lap')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Laplacian (L)
+    </button>
+    <button class="outline" onclick="downloadEigenvaluesCSV('nb')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        NB (Ã)
+    </button>
+    <button class="outline" onclick="downloadEigenvaluesCSV('nbl')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        NBL (L̃)
+    </button>
+</div>
+
+<p style="font-size: 0.875rem; color: var(--pico-muted-color); margin-bottom: 0.5rem; margin-top: 1.5rem;">Graph structure</p>
 <div class="export-buttons">
     <button class="outline" onclick="downloadJSON()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        JSON
+        JSON (full)
     </button>
     <button class="outline" onclick="downloadEdgeList()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Edge list
+        Edge list (.txt)
     </button>
     <button class="outline" onclick="downloadAdjList()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Adjacency list
+        Adjacency list (.txt)
     </button>
 </div>
 <script>
@@ -794,6 +924,59 @@ function downloadAdjList() {
     );
     const content = `# Adjacency list for ${graphData.graph6}\n# ${graphData.n} vertices, ${graphData.m} edges\n` + lines.join('\n');
     downloadFile(content, `${graphData.graph6}.adjlist`, 'text/plain');
+}
+
+function copyGraph6() {
+    const input = document.getElementById('graph6-field');
+    input.select();
+    navigator.clipboard.writeText(input.value).then(() => {
+        const btn = event.target.closest('button');
+        const originalText = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => {
+            btn.textContent = originalText;
+        }, 1500);
+    });
+}
+
+function downloadEigenvaluesCSV(matrixType) {
+    let eigenvalues, filename, header;
+
+    if (matrixType === 'adj') {
+        eigenvalues = graphData.spectra.adj_eigenvalues;
+        filename = `${graphData.graph6}_adj_eigenvalues.csv`;
+        header = '# Adjacency matrix eigenvalues';
+    } else if (matrixType === 'lap') {
+        eigenvalues = graphData.spectra.lap_eigenvalues;
+        filename = `${graphData.graph6}_lap_eigenvalues.csv`;
+        header = '# Laplacian matrix eigenvalues';
+    } else if (matrixType === 'nb') {
+        const re = graphData.spectra.nb_eigenvalues_re;
+        const im = graphData.spectra.nb_eigenvalues_im;
+        const lines = ['real,imaginary'];
+        for (let i = 0; i < re.length; i++) {
+            lines.push(`${re[i]},${im[i]}`);
+        }
+        const content = `# Non-backtracking matrix eigenvalues\n# ${graphData.graph6}\n` + lines.join('\n');
+        downloadFile(content, `${graphData.graph6}_nb_eigenvalues.csv`, 'text/csv');
+        return;
+    } else if (matrixType === 'nbl') {
+        const re = graphData.spectra.nbl_eigenvalues_re;
+        const im = graphData.spectra.nbl_eigenvalues_im;
+        const lines = ['real,imaginary'];
+        for (let i = 0; i < re.length; i++) {
+            lines.push(`${re[i]},${im[i]}`);
+        }
+        const content = `# Non-backtracking Laplacian eigenvalues\n# ${graphData.graph6}\n` + lines.join('\n');
+        downloadFile(content, `${graphData.graph6}_nbl_eigenvalues.csv`, 'text/csv');
+        return;
+    }
+
+    // For real eigenvalues (adj, lap)
+    const lines = ['eigenvalue'];
+    eigenvalues.forEach(e => lines.push(e.toString()));
+    const content = `${header}\n# ${graphData.graph6}\n` + lines.join('\n');
+    downloadFile(content, filename, 'text/csv');
 }
 </script>
 {% endblock %}

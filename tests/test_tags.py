@@ -337,7 +337,6 @@ class TestStronglyRegularTag:
 class TestLineGraphTag:
     def test_k4_is_line_graph(self):
         """K_4 = L(K_4)."""
-        G = nx.complete_graph(4)
         # Actually K_4 is the line graph of K_4 only in a specific sense
         # Let's check: L(K_4) has 6 vertices (one per edge of K_4)
         # So K_4 itself is L(K_{1,4}) = L(star)

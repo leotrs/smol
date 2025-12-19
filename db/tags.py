@@ -232,8 +232,6 @@ def _is_windmill(G: nx.Graph) -> bool:
 
     k must be >= 2 (each blade is at least an edge).
     """
-    n = G.number_of_nodes()
-
     # Find the universal vertex (highest degree, should be unique)
     degrees = dict(G.degree())
     max_deg = max(degrees.values())
