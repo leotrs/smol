@@ -11,10 +11,6 @@ Properties computed:
 - avg_local_clustering: Mean of local clustering coefficients
 - avg_path_length: Mean shortest path distance (only for connected graphs)
 - assortativity: Degree assortativity coefficient (Pearson correlation)
-- degree_sequence: Sorted list of degrees (descending)
-- betweenness_centrality: Sorted distribution of betweenness values (ascending)
-- closeness_centrality: Sorted distribution of closeness values (ascending)
-- eigenvector_centrality: Sorted distribution of eigenvector centrality (ascending)
 
 Usage:
     uv run python scripts/compute_properties.py [--n N] [--batch-size SIZE] [--quiet]
@@ -22,7 +18,6 @@ Usage:
 Notes:
 - Uses WITH HOLD cursor to survive transaction commits during batch processing
 - Chromatic number is a greedy upper bound, not exact (exact is NP-hard)
-- Eigenvector centrality may fail for disconnected graphs (returns None)
 - Assortativity is undefined for graphs where all nodes have the same degree
 """
 
@@ -85,11 +80,8 @@ def compute_properties(G: nx.Graph) -> dict:
     else:
         avg_path_length = None  # undefined for disconnected
 
-    # Degree sequence (sorted descending)
-    degrees = [d for _, d in G.degree()]
-    degree_sequence = sorted(degrees, reverse=True) if n > 0 else []
-
     # Degree assortativity (undefined for regular graphs where all degrees are equal)
+    degrees = [d for _, d in G.degree()]
     if m < 2 or (degrees and min(degrees) == max(degrees)):
         assortativity = None
     else:
@@ -100,27 +92,6 @@ def compute_properties(G: nx.Graph) -> dict:
         except (ValueError, ZeroDivisionError):
             assortativity = None
 
-    # Centrality distributions (sorted ascending by value)
-    if n == 0:
-        betweenness = []
-        closeness = []
-        eigenvector = []
-    else:
-        # Betweenness centrality
-        bc = nx.betweenness_centrality(G)
-        betweenness = sorted(bc.values())
-
-        # Closeness centrality
-        cc = nx.closeness_centrality(G)
-        closeness = sorted(cc.values())
-
-        # Eigenvector centrality (may fail for disconnected graphs)
-        try:
-            ec = nx.eigenvector_centrality(G, max_iter=1000)
-            eigenvector = sorted(ec.values())
-        except nx.PowerIterationFailedConvergence:
-            eigenvector = None
-
     return {
         'clique_number': clique_number,
         'chromatic_number': chromatic_number,
@@ -130,10 +101,6 @@ def compute_properties(G: nx.Graph) -> dict:
         'global_clustering': global_clustering,
         'avg_local_clustering': avg_local_clustering,
         'avg_path_length': avg_path_length,
-        'degree_sequence': degree_sequence,
-        'betweenness_centrality': betweenness,
-        'closeness_centrality': closeness,
-        'eigenvector_centrality': eigenvector
     }
 
 
@@ -147,8 +114,7 @@ def main():
     conn = psycopg2.connect("dbname=smol")
 
     where_clause = """WHERE clique_number IS NULL
-        OR global_clustering IS NULL
-        OR degree_sequence IS NULL"""
+        OR global_clustering IS NULL"""
     if args.n:
         where_clause += f" AND n = {args.n}"
 
@@ -184,10 +150,6 @@ def main():
                 props['global_clustering'],
                 props['avg_local_clustering'],
                 props['avg_path_length'],
-                props['degree_sequence'],
-                props['betweenness_centrality'],
-                props['closeness_centrality'],
-                props['eigenvector_centrality'],
                 graph_id
             ))
 
@@ -202,11 +164,7 @@ def main():
                             assortativity = %s,
                             global_clustering = %s,
                             avg_local_clustering = %s,
-                            avg_path_length = %s,
-                            degree_sequence = %s,
-                            betweenness_centrality = %s,
-                            closeness_centrality = %s,
-                            eigenvector_centrality = %s
+                            avg_path_length = %s
                         WHERE id = %s
                     """, batch)
                 conn.commit()
@@ -226,11 +184,7 @@ def main():
                         assortativity = %s,
                         global_clustering = %s,
                         avg_local_clustering = %s,
-                        avg_path_length = %s,
-                        degree_sequence = %s,
-                        betweenness_centrality = %s,
-                        closeness_centrality = %s,
-                        eigenvector_centrality = %s
+                        avg_path_length = %s
                     WHERE id = %s
                 """, batch)
             conn.commit()

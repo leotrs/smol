@@ -1,0 +1,1131 @@
+{% extends "base.html" %}
+
+{% block title %}{{ graph.graph6 }} - SMOL{% endblock %}
+
+{% block content %}
+{% set all_tags = graph.tags | default([]) | list %}
+{% if graph.properties.is_bipartite and 'bipartite' not in all_tags %}{% set _ = all_tags.append('bipartite') %}{% endif %}
+{% if graph.properties.is_planar and 'planar' not in all_tags %}{% set _ = all_tags.append('planar') %}{% endif %}
+{% if graph.properties.is_regular and 'regular' not in all_tags %}{% set _ = all_tags.append('regular') %}{% endif %}
+
+<div class="graph-hero">
+    <div class="graph-hero-viz">
+        <div class="viz-container">
+            <div id="graph-viz" class="graph-viz"></div>
+            <button class="viz-reset-btn" onclick="resetGraphViz()" title="Reset view">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            </button>
+        </div>
+    </div>
+    <div class="graph-hero-info">
+        <hgroup>
+            <h1><code>{{ graph.graph6 }}</code></h1>
+            <p>{{ graph.n }} vertices, {{ graph.m }} edges</p>
+        </hgroup>
+        <div class="property-grid-compact">
+            <div class="property-col">
+                <dl>
+                    <dt><a href="/glossary#diameter" class="glossary-link">Diameter</a></dt>
+                    <dd>{{ graph.properties.diameter if graph.properties.diameter else "∞" }}</dd>
+                    <dt><a href="/glossary#girth" class="glossary-link">Girth</a></dt>
+                    <dd>{{ graph.properties.girth if graph.properties.girth else "∞" }}</dd>
+                    <dt><a href="/glossary#radius" class="glossary-link">Radius</a></dt>
+                    <dd>{{ graph.properties.radius if graph.properties.radius else "-" }}</dd>
+                    <dt><a href="/glossary#degree" class="glossary-link">Degree range</a></dt>
+                    <dd>[{{ graph.properties.min_degree }}, {{ graph.properties.max_degree }}]</dd>
+                    <dt><a href="/glossary#triangles" class="glossary-link">Triangles</a></dt>
+                    <dd>{{ graph.properties.triangle_count }}</dd>
+                    {% if graph.properties.clique_number %}<dt><a href="/glossary#clique-number" class="glossary-link">Clique number</a></dt><dd>{{ graph.properties.clique_number }}</dd>{% endif %}
+                    {% if graph.properties.chromatic_number %}<dt><a href="/glossary#chromatic-number" class="glossary-link">Chromatic</a></dt><dd>{{ graph.properties.chromatic_number }}{% if graph.properties.chromatic_number > graph.properties.clique_number %}<span class="muted">*</span>{% endif %}</dd>{% endif %}
+                </dl>
+            </div>
+            <div class="property-col">
+                <dl>
+                    {% if graph.properties.algebraic_connectivity is not none %}<dt><a href="/glossary#algebraic-connectivity" class="glossary-link">Alg. conn.</a></dt><dd>{{ "%.4f"|format(graph.properties.algebraic_connectivity) }}</dd>{% endif %}
+                    {% if graph.properties.global_clustering is not none %}<dt><a href="/glossary#global-clustering" class="glossary-link">Clustering</a></dt><dd>{{ "%.4f"|format(graph.properties.global_clustering) }}</dd>{% endif %}
+                    {% if graph.properties.avg_local_clustering is not none %}<dt><a href="/glossary#avg-local-clustering" class="glossary-link">Avg local clust.</a></dt><dd>{{ "%.4f"|format(graph.properties.avg_local_clustering) }}</dd>{% endif %}
+                    {% if graph.properties.avg_path_length is not none %}<dt><a href="/glossary#avg-path-length" class="glossary-link">Avg path len.</a></dt><dd>{{ "%.4f"|format(graph.properties.avg_path_length) }}</dd>{% endif %}
+                    {% if graph.properties.assortativity is not none %}<dt><a href="/glossary#assortativity" class="glossary-link">Assortativity</a></dt><dd>{{ "%.4f"|format(graph.properties.assortativity) }}</dd>{% endif %}
+                </dl>
+            </div>
+        </div>
+        {% if all_tags %}
+        <div class="graph-tags">
+            {% for tag in all_tags | sort %}
+            <a href="/glossary#{{ tag }}" class="tag">{{ tag }}</a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// Spectrum data
+const spectraData = {
+    adj: {{ graph.spectra.adj_eigenvalues | tojson }}.map(x => ({re: x, im: 0})),
+    kirchhoff: {{ graph.spectra.kirchhoff_eigenvalues | tojson }}.map(x => ({re: x, im: 0})),
+    signless: {{ graph.spectra.signless_eigenvalues | tojson }}.map(x => ({re: x, im: 0})),
+    lap: {{ graph.spectra.lap_eigenvalues | tojson }}.map(x => ({re: x, im: 0})),
+    nb: {{ graph.spectra.nb_eigenvalues_re | tojson }}.map((re, i) => ({
+        re: re,
+        im: {{ graph.spectra.nb_eigenvalues_im | tojson }}[i]
+    })),
+    nbl: {{ graph.spectra.nbl_eigenvalues_re | tojson }}.map((re, i) => ({
+        re: re,
+        im: {{ graph.spectra.nbl_eigenvalues_im | tojson }}[i]
+    }))
+};
+
+function renderSpectrumPlot() {
+    const container = document.getElementById('spectrum-plot');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const width = container.clientWidth || 500;
+    const height = 350;
+    const margin = {top: 20, right: 20, bottom: 40, left: 50};
+    const plotWidth = width - margin.left - margin.right;
+    const plotHeight = height - margin.top - margin.bottom;
+
+    // Mirror complex eigenvalues to show conjugate pairs
+    function withConjugates(points) {
+        const result = [];
+        points.forEach(p => {
+            result.push(p);
+            if (Math.abs(p.im) > 1e-10) {
+                result.push({re: p.re, im: -p.im});
+            }
+        });
+        return result;
+    }
+
+    const plotData = {
+        adj: spectraData.adj,
+        kirchhoff: spectraData.kirchhoff,
+        signless: spectraData.signless,
+        lap: spectraData.lap,
+        nb: withConjugates(spectraData.nb),
+        nbl: withConjugates(spectraData.nbl)
+    };
+
+    const allPoints = [
+        ...plotData.adj,
+        ...plotData.kirchhoff,
+        ...plotData.signless,
+        ...plotData.lap,
+        ...plotData.nb,
+        ...plotData.nbl
+    ];
+
+    const reExtent = d3.extent(allPoints, d => d.re);
+    let imExtent = d3.extent(allPoints, d => d.im);
+
+    // Make y-axis symmetric around 0
+    const imMax = Math.max(Math.abs(imExtent[0]), Math.abs(imExtent[1]));
+    imExtent = [-imMax, imMax];
+
+    const rePadding = (reExtent[1] - reExtent[0]) * 0.1 || 0.5;
+    const imPadding = imMax * 0.1 || 0.5;
+
+    // Calculate data ranges with padding
+    const xDataRange = (reExtent[1] - reExtent[0]) + 2 * rePadding;
+    const yDataRange = 2 * (imMax + imPadding);
+
+    // Force 1:1 aspect ratio by using the same scale for both axes
+    const xPixelsPerUnit = plotWidth / xDataRange;
+    const yPixelsPerUnit = plotHeight / yDataRange;
+    const pixelsPerUnit = Math.min(xPixelsPerUnit, yPixelsPerUnit);
+
+    // Center the data in the available space
+    const xCenter = (reExtent[0] + reExtent[1]) / 2;
+    const yCenter = 0;
+    const xHalfRange = (plotWidth / pixelsPerUnit) / 2;
+    const yHalfRange = (plotHeight / pixelsPerUnit) / 2;
+
+    const xScale = d3.scaleLinear()
+        .domain([xCenter - xHalfRange, xCenter + xHalfRange])
+        .range([0, plotWidth]);
+
+    const yScale = d3.scaleLinear()
+        .domain([yCenter - yHalfRange, yCenter + yHalfRange])
+        .range([plotHeight, 0]);
+
+    const svg = d3.select('#spectrum-plot')
+        .append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .style('cursor', 'grab');
+
+    // Clip path to contain points within plot area
+    svg.append('defs').append('clipPath')
+        .attr('id', 'plot-clip')
+        .append('rect')
+        .attr('width', plotWidth)
+        .attr('height', plotHeight);
+
+    const g = svg.append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+
+    // Container for pannable/zoomable content
+    const plotArea = g.append('g')
+        .attr('clip-path', 'url(#plot-clip)');
+
+    const content = plotArea.append('g');
+
+    // Viewport pan and zoom
+    let transform = {x: 0, y: 0, k: 1};
+    const baseRadius = 4;
+
+    function updatePlotTransform() {
+        content.attr('transform', `translate(${transform.x},${transform.y}) scale(${transform.k})`);
+        // Keep eigenvalue dots at constant visual size by scaling radius inversely
+        content.selectAll('.eigenvalue-dot').attr('r', baseRadius / transform.k);
+    }
+
+    // Store for reset button
+    spectrumPlotState = { transform, update: updatePlotTransform };
+
+    svg.call(d3.drag()
+        .on('start', () => svg.style('cursor', 'grabbing'))
+        .on('drag', (event) => {
+            transform.x += event.dx;
+            transform.y += event.dy;
+            updatePlotTransform();
+        })
+        .on('end', () => svg.style('cursor', 'grab')));
+
+    svg.on('wheel', (event) => {
+        event.preventDefault();
+        const scaleFactor = event.deltaY > 0 ? 0.9 : 1.1;
+        const newK = Math.max(0.2, Math.min(5, transform.k * scaleFactor));
+
+        // Get mouse position relative to plot area
+        const [mx, my] = d3.pointer(event, plotArea.node());
+
+        // Zoom centered on mouse position
+        transform.x = mx - (mx - transform.x) * (newK / transform.k);
+        transform.y = my - (my - transform.y) * (newK / transform.k);
+        transform.k = newK;
+
+        updatePlotTransform();
+    });
+
+    // Tooltip
+    const tooltip = d3.select('body').append('div')
+        .attr('class', 'spectrum-tooltip')
+        .style('position', 'absolute')
+        .style('visibility', 'hidden')
+        .style('background', 'var(--pico-card-background-color)')
+        .style('border', '1px solid var(--pico-muted-border-color)')
+        .style('border-radius', '4px')
+        .style('padding', '4px 8px')
+        .style('font-size', '12px')
+        .style('pointer-events', 'none')
+        .style('z-index', '1000');
+
+    const style = getComputedStyle(document.documentElement);
+    const axisColor = style.getPropertyValue('--pico-muted-color').trim() || '#666';
+    const borderColor = style.getPropertyValue('--pico-muted-border-color').trim() || '#ddd';
+
+    // X axis
+    const xAxis = g.append('g')
+        .attr('transform', `translate(0,${plotHeight})`)
+        .call(d3.axisBottom(xScale).ticks(6));
+    xAxis.selectAll('text').attr('fill', axisColor).attr('stroke', 'none');
+    xAxis.selectAll('line, path').attr('stroke', borderColor);
+
+    // Y axis
+    const yAxis = g.append('g')
+        .call(d3.axisLeft(yScale).ticks(6));
+    yAxis.selectAll('text').attr('fill', axisColor).attr('stroke', 'none');
+    yAxis.selectAll('line, path').attr('stroke', borderColor);
+
+    // Axis labels
+    g.append('text')
+        .attr('x', plotWidth / 2)
+        .attr('y', plotHeight + 32)
+        .attr('text-anchor', 'middle')
+        .attr('fill', axisColor)
+        .attr('font-size', '11px')
+        .text('Re(λ)');
+
+    g.append('text')
+        .attr('transform', 'rotate(-90)')
+        .attr('x', -plotHeight / 2)
+        .attr('y', -32)
+        .attr('text-anchor', 'middle')
+        .attr('fill', axisColor)
+        .attr('font-size', '11px')
+        .text('Im(λ)');
+
+    // Zero lines (in content so they pan)
+    if (xScale.domain()[0] < 0 && xScale.domain()[1] > 0) {
+        content.append('line')
+            .attr('x1', xScale(0))
+            .attr('x2', xScale(0))
+            .attr('y1', 0)
+            .attr('y2', plotHeight)
+            .attr('stroke', axisColor)
+            .attr('stroke-opacity', 0.3)
+            .attr('stroke-dasharray', '4,4');
+    }
+    if (yScale.domain()[0] < 0 && yScale.domain()[1] > 0) {
+        content.append('line')
+            .attr('x1', 0)
+            .attr('x2', plotWidth)
+            .attr('y1', yScale(0))
+            .attr('y2', yScale(0))
+            .attr('stroke', axisColor)
+            .attr('stroke-opacity', 0.3)
+            .attr('stroke-dasharray', '4,4');
+    }
+
+    const colors = {
+        adj: style.getPropertyValue('--spectrum-adj').trim(),
+        kirchhoff: style.getPropertyValue('--spectrum-kirchhoff').trim() || '#8B4513',
+        signless: style.getPropertyValue('--spectrum-signless').trim() || '#F97316',
+        lap: style.getPropertyValue('--spectrum-lap').trim(),
+        nb: style.getPropertyValue('--spectrum-nb').trim(),
+        nbl: style.getPropertyValue('--spectrum-nbl').trim()
+    };
+
+    const labels = {adj: 'Adj', kirchhoff: 'Kirchhoff', signless: 'Signless', lap: 'Lap', nb: 'NB', nbl: 'NBL'};
+
+    // Draw unit circle (in content so it pans, but scales with zoom)
+    const circleRadius = Math.abs(xScale(1) - xScale(0));
+    content.append('circle')
+        .attr('class', 'unit-circle')
+        .attr('cx', xScale(0))
+        .attr('cy', yScale(0))
+        .attr('r', circleRadius)
+        .attr('fill', 'none')
+        .attr('stroke', axisColor)
+        .attr('stroke-opacity', 0.2)
+        .attr('stroke-dasharray', '4,4');
+
+    // Format eigenvalue for tooltip
+    function formatEig(d) {
+        const re = d.re.toFixed(4);
+        const im = d.im.toFixed(4);
+        if (Math.abs(d.im) < 1e-10) return re;
+        const sign = d.im >= 0 ? '+' : '';
+        return `${re}${sign}${im}i`;
+    }
+
+    // Draw points with tooltips
+    ['adj', 'kirchhoff', 'signless', 'lap', 'nb', 'nbl'].forEach(key => {
+        content.append('g')
+            .attr('class', `spectrum-points spectrum-${key}`)
+            .selectAll('circle')
+            .data(plotData[key])
+            .join('circle')
+            .attr('class', 'eigenvalue-dot')
+            .attr('cx', d => xScale(d.re))
+            .attr('cy', d => yScale(d.im))
+            .attr('r', baseRadius)
+            .attr('fill', colors[key])
+            .attr('opacity', 0.7)
+            .style('cursor', 'pointer')
+            .on('mouseover', (event, d) => {
+                tooltip.style('visibility', 'visible')
+                    .html(`<strong>${labels[key]}:</strong> ${formatEig(d)}`);
+                d3.select(event.target).attr('r', 6 / transform.k).attr('opacity', 1);
+            })
+            .on('mousemove', (event) => {
+                tooltip.style('top', (event.pageY - 10) + 'px')
+                    .style('left', (event.pageX + 10) + 'px');
+            })
+            .on('mouseout', (event) => {
+                tooltip.style('visibility', 'hidden');
+                d3.select(event.target).attr('r', baseRadius / transform.k).attr('opacity', 0.7);
+            });
+    });
+
+    // Clean up tooltip when plot is re-rendered
+    return () => tooltip.remove();
+}
+
+function toggleSpectrumPill(btn, key) {
+    btn.classList.toggle('active');
+    const visible = btn.classList.contains('active');
+    d3.selectAll(`.spectrum-${key}`)
+        .style('display', visible ? null : 'none');
+}
+
+let graphVizState = null;
+let spectrumPlotState = null;
+
+function resetGraphViz() {
+    if (graphVizState) {
+        graphVizState.transform.x = 0;
+        graphVizState.transform.y = 0;
+        graphVizState.transform.k = 1;
+        graphVizState.update();
+    }
+}
+
+function resetSpectrumPlot() {
+    if (spectrumPlotState) {
+        spectrumPlotState.transform.x = 0;
+        spectrumPlotState.transform.y = 0;
+        spectrumPlotState.transform.k = 1;
+        spectrumPlotState.update();
+    }
+}
+
+function renderGraph() {
+    const n = {{ graph.n }};
+    const edges = {{ graph.edges | tojson }};
+
+    const width = 280, height = 280;
+    const nodes = Array.from({length: n}, (_, i) => ({id: i}));
+    const links = edges.map(([s, t]) => ({source: s, target: t}));
+
+    const svg = d3.select("#graph-viz")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .style("cursor", "grab");
+
+    // Container group for panning/zooming
+    const g = svg.append("g");
+
+    // Viewport pan and zoom
+    const transform = {x: 0, y: 0, k: 1};
+
+    function updateTransform() {
+        g.attr("transform", `translate(${transform.x},${transform.y}) scale(${transform.k})`);
+    }
+
+    // Store for reset button
+    graphVizState = { transform, update: updateTransform };
+
+    svg.call(d3.drag()
+        .on("start", () => svg.style("cursor", "grabbing"))
+        .on("drag", (event) => {
+            transform.x += event.dx;
+            transform.y += event.dy;
+            updateTransform();
+        })
+        .on("end", () => svg.style("cursor", "grab")));
+
+    svg.on("wheel", (event) => {
+        event.preventDefault();
+        const scaleFactor = event.deltaY > 0 ? 0.9 : 1.1;
+        const newK = Math.max(0.2, Math.min(5, transform.k * scaleFactor));
+
+        // Get mouse position relative to SVG
+        const [mx, my] = d3.pointer(event, svg.node());
+
+        // Zoom centered on mouse position
+        transform.x = mx - (mx - transform.x) * (newK / transform.k);
+        transform.y = my - (my - transform.y) * (newK / transform.k);
+        transform.k = newK;
+
+        updateTransform();
+    });
+
+    const simulation = d3.forceSimulation(nodes)
+        .force("link", d3.forceLink(links).id(d => d.id).distance(50))
+        .force("charge", d3.forceManyBody().strength(-100))
+        .force("center", d3.forceCenter(width / 2, height / 2));
+
+    const style = getComputedStyle(document.documentElement);
+    const nodeColor = style.getPropertyValue('--graph-node-color').trim();
+    const edgeColor = style.getPropertyValue('--graph-edge-color').trim();
+
+    const link = g.append("g")
+        .selectAll("line")
+        .data(links)
+        .join("line")
+        .attr("stroke", edgeColor)
+        .attr("stroke-width", 2);
+
+    const node = g.append("g")
+        .selectAll("circle")
+        .data(nodes)
+        .join("circle")
+        .attr("r", 8)
+        .attr("fill", nodeColor)
+        .style("cursor", "pointer")
+        .call(d3.drag()
+            .on("start", (event, d) => {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+                event.sourceEvent.stopPropagation();
+            })
+            .on("drag", (event, d) => {
+                d.fx = event.x;
+                d.fy = event.y;
+            })
+            .on("end", (event, d) => {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }));
+
+    const padding = 10;
+    simulation.on("tick", () => {
+        // Constrain nodes to viewport
+        nodes.forEach(d => {
+            d.x = Math.max(padding, Math.min(width - padding, d.x));
+            d.y = Math.max(padding, Math.min(height - padding, d.y));
+        });
+
+        link
+            .attr("x1", d => d.source.x)
+            .attr("y1", d => d.source.y)
+            .attr("x2", d => d.target.x)
+            .attr("y2", d => d.target.y);
+        node
+            .attr("cx", d => d.x)
+            .attr("cy", d => d.y);
+    });
+}
+</script>
+<script src="https://d3js.org/d3.v7.min.js" onload="renderGraph()"></script>
+
+<h3>Spectra</h3>
+<div style="display: flex; gap: 2rem; margin-bottom: 1rem;">
+    <div class="viz-container" style="flex: 1;">
+        <div id="graph-detail-real-plot" style="height: 280px;"></div>
+        <button class="viz-reset-btn" onclick="resetGraphDetailRealPlot()" title="Reset view">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        </button>
+    </div>
+    <div class="viz-container" style="flex: 1;">
+        <div id="graph-detail-complex-plot" style="height: 280px;"></div>
+        <button class="viz-reset-btn" onclick="resetGraphDetailComplexPlot()" title="Reset view">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        </button>
+    </div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 0.5rem;">
+    <div class="spectrum-controls">
+        <div class="spectrum-legend-item">
+            <button class="spectrum-pill active" data-spectrum="adj" onclick="toggleSpectrumPill(this, 'adj')">
+                <span class="spectrum-dot" style="background: var(--spectrum-adj);"></span>
+                Adjacency
+            </button>
+            <button class="spectrum-expand" onclick="toggleEigenvalues(this)" aria-label="Show eigenvalues">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="spectrum-eigenvalues">
+                <div class="spectrum-eigenvalues-content">
+                    <code>[{% for e in graph.spectra.adj_eigenvalues %}{{ "%.6f"|format(e) }}{% if not loop.last %}, {% endif %}{% endfor %}]</code>
+                    <button class="copy-btn-small" onclick="copyEigenvalues(this)" aria-label="Copy">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="spectrum-legend-item">
+            <button class="spectrum-pill active" data-spectrum="kirchhoff" onclick="toggleSpectrumPill(this, 'kirchhoff')">
+                <span class="spectrum-dot" style="background: var(--spectrum-kirchhoff, #8B4513);"></span>
+                Kirchhoff
+            </button>
+            <button class="spectrum-expand" onclick="toggleEigenvalues(this)" aria-label="Show eigenvalues">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="spectrum-eigenvalues">
+                <div class="spectrum-eigenvalues-content">
+                    <code>[{% for e in graph.spectra.kirchhoff_eigenvalues %}{{ "%.6f"|format(e) }}{% if not loop.last %}, {% endif %}{% endfor %}]</code>
+                    <button class="copy-btn-small" onclick="copyEigenvalues(this)" aria-label="Copy">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="spectrum-legend-item">
+            <button class="spectrum-pill active" data-spectrum="signless" onclick="toggleSpectrumPill(this, 'signless')">
+                <span class="spectrum-dot" style="background: var(--spectrum-signless, #9370DB);"></span>
+                Signless
+            </button>
+            <button class="spectrum-expand" onclick="toggleEigenvalues(this)" aria-label="Show eigenvalues">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="spectrum-eigenvalues">
+                <div class="spectrum-eigenvalues-content">
+                    <code>[{% for e in graph.spectra.signless_eigenvalues %}{{ "%.6f"|format(e) }}{% if not loop.last %}, {% endif %}{% endfor %}]</code>
+                    <button class="copy-btn-small" onclick="copyEigenvalues(this)" aria-label="Copy">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="spectrum-legend-item">
+            <button class="spectrum-pill active" data-spectrum="lap" onclick="toggleSpectrumPill(this, 'lap')">
+                <span class="spectrum-dot" style="background: var(--spectrum-lap);"></span>
+                Laplacian
+            </button>
+            <button class="spectrum-expand" onclick="toggleEigenvalues(this)" aria-label="Show eigenvalues">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="spectrum-eigenvalues">
+                <div class="spectrum-eigenvalues-content">
+                    <code>[{% for e in graph.spectra.lap_eigenvalues %}{{ "%.6f"|format(e) }}{% if not loop.last %}, {% endif %}{% endfor %}]</code>
+                    <button class="copy-btn-small" onclick="copyEigenvalues(this)" aria-label="Copy">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="spectrum-legend-item">
+            <button class="spectrum-pill active" data-spectrum="nb" onclick="toggleSpectrumPill(this, 'nb')">
+                <span class="spectrum-dot" style="background: var(--spectrum-nb);"></span>
+                Non-backtracking
+            </button>
+            <button class="spectrum-expand" onclick="toggleEigenvalues(this)" aria-label="Show eigenvalues">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="spectrum-eigenvalues">
+                <div class="spectrum-eigenvalues-content">
+                    <code>[{% for i in range(graph.spectra.nb_eigenvalues_re|length) %}{{ "%.6f"|format(graph.spectra.nb_eigenvalues_re[i]) }}{% if graph.spectra.nb_eigenvalues_im[i] >= 0 %}+{% endif %}{{ "%.6f"|format(graph.spectra.nb_eigenvalues_im[i]) }}j{% if not loop.last %}, {% endif %}{% endfor %}]</code>
+                    <button class="copy-btn-small" onclick="copyEigenvalues(this)" aria-label="Copy">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="spectrum-legend-item">
+            <button class="spectrum-pill active" data-spectrum="nbl" onclick="toggleSpectrumPill(this, 'nbl')">
+                <span class="spectrum-dot" style="background: var(--spectrum-nbl);"></span>
+                NB-Laplacian
+            </button>
+            <button class="spectrum-expand" onclick="toggleEigenvalues(this)" aria-label="Show eigenvalues">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="spectrum-eigenvalues">
+                <div class="spectrum-eigenvalues-content">
+                    <code>[{% for i in range(graph.spectra.nbl_eigenvalues_re|length) %}{{ "%.6f"|format(graph.spectra.nbl_eigenvalues_re[i]) }}{% if graph.spectra.nbl_eigenvalues_im[i] >= 0 %}+{% endif %}{{ "%.6f"|format(graph.spectra.nbl_eigenvalues_im[i]) }}j{% if not loop.last %}, {% endif %}{% endfor %}]</code>
+                    <button class="copy-btn-small" onclick="copyEigenvalues(this)" aria-label="Copy">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+<script>
+if (typeof d3 !== 'undefined') {
+    renderGraphDetailRealPlot();
+    renderGraphDetailComplexPlot();
+} else {
+    document.addEventListener('DOMContentLoaded', () => {
+        const checkD3 = setInterval(() => {
+            if (typeof d3 !== 'undefined') {
+                clearInterval(checkD3);
+                renderGraphDetailRealPlot();
+                renderGraphDetailComplexPlot();
+            }
+        }, 50);
+    });
+}
+
+function toggleEigenvalues(btn) {
+    const item = btn.closest('.spectrum-legend-item');
+    const eigenvalues = item.querySelector('.spectrum-eigenvalues');
+    const isOpen = eigenvalues.classList.toggle('open');
+    btn.classList.toggle('open', isOpen);
+}
+
+function copyEigenvalues(btn) {
+    const code = btn.parentElement.querySelector('code').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+        btn.classList.add('copied');
+        setTimeout(() => btn.classList.remove('copied'), 1500);
+    });
+}
+</script>
+
+
+<div class="section-header">
+    <h3>Cospectral Mates</h3>
+    <a href="/similar/{{ graph.graph6 | urlencode }}" class="find-similar-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Find similar spectra
+    </a>
+</div>
+{% if graph.cospectral_mates.adj or graph.cospectral_mates.kirchhoff or graph.cospectral_mates.signless or graph.cospectral_mates.lap or graph.cospectral_mates.nb or graph.cospectral_mates.nbl %}
+<p>Graphs that share the same spectrum for a given matrix type.</p>
+<table>
+    <thead>
+        <tr>
+            <th>Matrix</th>
+            <th>Mates</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% if graph.cospectral_mates.adj %}
+        <tr>
+            <td>Adjacency</td>
+            <td>
+                {% for mate in graph.cospectral_mates.adj %}
+                    <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
+                {% endfor %}
+            </td>
+            <td>
+                {% if graph.cospectral_mates.adj | length < 10 %}
+                <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.adj | join(',') | urlencode }}" role="button" class="outline">Compare</a>
+                {% else %}
+                <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endif %}
+        {% if graph.cospectral_mates.kirchhoff %}
+        <tr>
+            <td>Kirchhoff</td>
+            <td>
+                {% for mate in graph.cospectral_mates.kirchhoff %}
+                    <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
+                {% endfor %}
+            </td>
+            <td>
+                {% if graph.cospectral_mates.kirchhoff | length < 10 %}
+                <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.kirchhoff | join(',') | urlencode }}" role="button" class="outline">Compare</a>
+                {% else %}
+                <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endif %}
+        {% if graph.cospectral_mates.signless %}
+        <tr>
+            <td>Signless</td>
+            <td>
+                {% for mate in graph.cospectral_mates.signless %}
+                    <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
+                {% endfor %}
+            </td>
+            <td>
+                {% if graph.cospectral_mates.signless | length < 10 %}
+                <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.signless | join(',') | urlencode }}" role="button" class="outline">Compare</a>
+                {% else %}
+                <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endif %}
+        {% if graph.cospectral_mates.lap %}
+        <tr>
+            <td>Laplacian</td>
+            <td>
+                {% for mate in graph.cospectral_mates.lap %}
+                    <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
+                {% endfor %}
+            </td>
+            <td>
+                {% if graph.cospectral_mates.lap | length < 10 %}
+                <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.lap | join(',') | urlencode }}" role="button" class="outline">Compare</a>
+                {% else %}
+                <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endif %}
+        {% if graph.cospectral_mates.nb %}
+        <tr>
+            <td>Non-backtracking</td>
+            <td>
+                {% for mate in graph.cospectral_mates.nb %}
+                    <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
+                {% endfor %}
+            </td>
+            <td>
+                {% if graph.cospectral_mates.nb | length < 10 %}
+                <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.nb | join(',') | urlencode }}" role="button" class="outline">Compare</a>
+                {% else %}
+                <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endif %}
+        {% if graph.cospectral_mates.nbl %}
+        <tr>
+            <td>NB-Laplacian</td>
+            <td>
+                {% for mate in graph.cospectral_mates.nbl %}
+                    <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
+                {% endfor %}
+            </td>
+            <td>
+                {% if graph.cospectral_mates.nbl | length < 10 %}
+                <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.nbl | join(',') | urlencode }}" role="button" class="outline">Compare</a>
+                {% else %}
+                <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endif %}
+    </tbody>
+</table>
+{% else %}
+<p><em>No cospectral mates for any matrix type.</em></p>
+{% endif %}
+
+<h3>Code <span class="code-lang">Python</span></h3>
+<div class="code-tabs">
+    <div class="code-tab-buttons">
+        <button class="code-tab-btn active" onclick="switchCodeTab(event, 'adj')">Adjacency</button>
+        <button class="code-tab-btn" onclick="switchCodeTab(event, 'kirchhoff')">Kirchhoff</button>
+        <button class="code-tab-btn" onclick="switchCodeTab(event, 'signless')">Signless</button>
+        <button class="code-tab-btn" onclick="switchCodeTab(event, 'lap')">Laplacian</button>
+        <button class="code-tab-btn" onclick="switchCodeTab(event, 'nb')">NB (Ã)</button>
+        <button class="code-tab-btn" onclick="switchCodeTab(event, 'nbl')">NBL (L̃)</button>
+    </div>
+
+    <div id="code-adj" class="code-tab-content active">
+        <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+<pre><code class="language-python">import networkx as nx
+import numpy as np
+
+G = nx.from_graph6_bytes(b"{{ graph.graph6 }}")
+A = nx.adjacency_matrix(G).toarray()
+eigenvalues = np.linalg.eigvalsh(A)
+print(eigenvalues)</code></pre>
+        </div>
+    </div>
+
+    <div id="code-kirchhoff" class="code-tab-content">
+        <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+<pre><code class="language-python">import networkx as nx
+import numpy as np
+
+G = nx.from_graph6_bytes(b"{{ graph.graph6 }}")
+# Kirchhoff (combinatorial) Laplacian: L = D - A
+A = nx.adjacency_matrix(G).toarray()
+degrees = A.sum(axis=1)
+D = np.diag(degrees)
+L = D - A
+eigenvalues = np.linalg.eigvalsh(L)
+print(eigenvalues)</code></pre>
+        </div>
+    </div>
+
+    <div id="code-signless" class="code-tab-content">
+        <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+<pre><code class="language-python">import networkx as nx
+import numpy as np
+
+G = nx.from_graph6_bytes(b"{{ graph.graph6 }}")
+# Signless Laplacian: Q = D + A
+A = nx.adjacency_matrix(G).toarray()
+degrees = A.sum(axis=1)
+D = np.diag(degrees)
+Q = D + A
+eigenvalues = np.linalg.eigvalsh(Q)
+print(eigenvalues)</code></pre>
+        </div>
+    </div>
+
+    <div id="code-lap" class="code-tab-content">
+        <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+<pre><code class="language-python">import networkx as nx
+import numpy as np
+
+G = nx.from_graph6_bytes(b"{{ graph.graph6 }}")
+# Symmetric normalized Laplacian: L = I - D^{-1/2}AD^{-1/2}
+L = nx.laplacian_matrix(G).toarray()
+eigenvalues = np.linalg.eigvalsh(L)
+print(eigenvalues)</code></pre>
+        </div>
+    </div>
+
+    <div id="code-nb" class="code-tab-content">
+        <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+<pre><code class="language-python">import networkx as nx
+import numpy as np
+
+G = nx.from_graph6_bytes(b"{{ graph.graph6 }}")
+
+# Build Hashimoto (non-backtracking) matrix
+edges = [(u, v) for u, v in G.edges()] + [(v, u) for u, v in G.edges()]
+n_edges = len(edges)
+B = np.zeros((n_edges, n_edges))
+
+for i, (u, v) in enumerate(edges):
+    for j, (w, x) in enumerate(edges):
+        if v == w and u != x:  # non-backtracking condition
+            B[i, j] = 1
+
+eigenvalues = np.linalg.eigvals(B)
+print(eigenvalues)</code></pre>
+        </div>
+    </div>
+
+    <div id="code-nbl" class="code-tab-content">
+        <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+<pre><code class="language-python">import networkx as nx
+import numpy as np
+
+G = nx.from_graph6_bytes(b"{{ graph.graph6 }}")
+
+# Build Hashimoto matrix B
+edges = [(u, v) for u, v in G.edges()] + [(v, u) for u, v in G.edges()]
+n_edges = len(edges)
+B = np.zeros((n_edges, n_edges))
+
+for i, (u, v) in enumerate(edges):
+    for j, (w, x) in enumerate(edges):
+        if v == w and u != x:
+            B[i, j] = 1
+
+# Build degree matrix D for directed edges
+D = np.diag([G.degree(v) for _, v in edges])
+
+# Non-backtracking Laplacian: I - D^{-1}B
+D_inv = np.linalg.inv(D)
+L_nb = np.eye(n_edges) - D_inv @ B
+eigenvalues = np.linalg.eigvals(L_nb)
+print(eigenvalues)</code></pre>
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css" id="prism-light">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-okaidia.min.css" id="prism-dark" disabled>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
+<script>
+function updatePrismTheme() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    document.getElementById('prism-light').disabled = isDark;
+    document.getElementById('prism-dark').disabled = !isDark;
+    Prism.highlightAll();
+}
+updatePrismTheme();
+const observer = new MutationObserver(updatePrismTheme);
+observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+function switchCodeTab(event, tabId) {
+    // Hide all tabs
+    document.querySelectorAll('.code-tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.code-tab-btn').forEach(btn => btn.classList.remove('active'));
+
+    // Show selected tab
+    document.getElementById('code-' + tabId).classList.add('active');
+    event.target.classList.add('active');
+
+    // Re-highlight code
+    Prism.highlightAll();
+}
+
+function copyCode(btn) {
+    const code = btn.parentElement.querySelector('code').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+        btn.classList.add('copied');
+        setTimeout(() => btn.classList.remove('copied'), 1500);
+    });
+}
+</script>
+
+<h3>Data</h3>
+
+<div style="margin-bottom: 1.5rem;">
+    <label for="graph6-field" style="font-size: 0.875rem; color: var(--pico-muted-color); display: block; margin-bottom: 0.25rem;">Graph6 string</label>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <input type="text" id="graph6-field" value="{{ graph.graph6 }}" readonly style="font-family: monospace; font-size: 0.875rem; margin-bottom: 0;">
+        <button onclick="copyGraph6()" style="padding: 0.4rem 0.75rem; font-size: 0.875rem; margin-bottom: 0; flex-shrink: 0;" class="outline">
+            Copy
+        </button>
+    </div>
+</div>
+
+<p style="font-size: 0.875rem; color: var(--pico-muted-color); margin-bottom: 0.5rem; margin-top: 1.5rem;">Eigenvalues (CSV)</p>
+<div class="export-buttons">
+    <button class="outline" onclick="downloadEigenvaluesCSV('adj')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Adjacency (A)
+    </button>
+    <button class="outline" onclick="downloadEigenvaluesCSV('kirchhoff')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Kirchhoff (L)
+    </button>
+    <button class="outline" onclick="downloadEigenvaluesCSV('signless')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Signless (Q)
+    </button>
+    <button class="outline" onclick="downloadEigenvaluesCSV('lap')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Laplacian (L̃)
+    </button>
+    <button class="outline" onclick="downloadEigenvaluesCSV('nb')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        NB (Ã)
+    </button>
+    <button class="outline" onclick="downloadEigenvaluesCSV('nbl')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        NBL (L̃_NB)
+    </button>
+</div>
+
+<p style="font-size: 0.875rem; color: var(--pico-muted-color); margin-bottom: 0.5rem; margin-top: 1.5rem;">Graph structure</p>
+<div class="export-buttons">
+    <button class="outline" onclick="downloadJSON()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        JSON (full)
+    </button>
+    <button class="outline" onclick="downloadEdgeList()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Edge list (.txt)
+    </button>
+    <button class="outline" onclick="downloadAdjList()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Adjacency list (.txt)
+    </button>
+</div>
+<script>
+const graphData = {
+    graph6: {{ graph.graph6 | tojson }},
+    n: {{ graph.n }},
+    m: {{ graph.m }},
+    edges: {{ graph.edges | tojson }},
+    properties: {
+        is_bipartite: {{ graph.properties.is_bipartite | tojson }},
+        is_planar: {{ graph.properties.is_planar | tojson }},
+        is_regular: {{ graph.properties.is_regular | tojson }},
+        diameter: {{ graph.properties.diameter | tojson }},
+        girth: {{ graph.properties.girth | tojson }},
+        radius: {{ graph.properties.radius | tojson }},
+        min_degree: {{ graph.properties.min_degree }},
+        max_degree: {{ graph.properties.max_degree }},
+        triangle_count: {{ graph.properties.triangle_count }},
+        clique_number: {{ graph.properties.clique_number | tojson }},
+        chromatic_number: {{ graph.properties.chromatic_number | tojson }},
+        algebraic_connectivity: {{ graph.properties.algebraic_connectivity | tojson }},
+        global_clustering: {{ graph.properties.global_clustering | tojson }},
+        avg_local_clustering: {{ graph.properties.avg_local_clustering | tojson }},
+        avg_path_length: {{ graph.properties.avg_path_length | tojson }},
+        assortativity: {{ graph.properties.assortativity | tojson }}
+    },
+    spectra: {
+        adj_eigenvalues: {{ graph.spectra.adj_eigenvalues | tojson }},
+        kirchhoff_eigenvalues: {{ graph.spectra.kirchhoff_eigenvalues | tojson }},
+        signless_eigenvalues: {{ graph.spectra.signless_eigenvalues | tojson }},
+        lap_eigenvalues: {{ graph.spectra.lap_eigenvalues | tojson }},
+        nb_eigenvalues_re: {{ graph.spectra.nb_eigenvalues_re | tojson }},
+        nb_eigenvalues_im: {{ graph.spectra.nb_eigenvalues_im | tojson }},
+        nbl_eigenvalues_re: {{ graph.spectra.nbl_eigenvalues_re | tojson }},
+        nbl_eigenvalues_im: {{ graph.spectra.nbl_eigenvalues_im | tojson }}
+    }
+};
+
+function downloadFile(content, filename, type) {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function downloadJSON() {
+    const json = JSON.stringify(graphData, null, 2);
+    downloadFile(json, `${graphData.graph6}.json`, 'application/json');
+}
+
+function downloadEdgeList() {
+    const lines = graphData.edges.map(([u, v]) => `${u} ${v}`);
+    const content = `# Edge list for ${graphData.graph6}\n# ${graphData.n} vertices, ${graphData.m} edges\n` + lines.join('\n');
+    downloadFile(content, `${graphData.graph6}.edgelist`, 'text/plain');
+}
+
+function downloadAdjList() {
+    const adj = {};
+    for (let i = 0; i < graphData.n; i++) adj[i] = [];
+    graphData.edges.forEach(([u, v]) => {
+        adj[u].push(v);
+        adj[v].push(u);
+    });
+    const lines = Object.entries(adj).map(([node, neighbors]) =>
+        `${node}: ${neighbors.sort((a, b) => a - b).join(' ')}`
+    );
+    const content = `# Adjacency list for ${graphData.graph6}\n# ${graphData.n} vertices, ${graphData.m} edges\n` + lines.join('\n');
+    downloadFile(content, `${graphData.graph6}.adjlist`, 'text/plain');
+}
+
+function copyGraph6() {
+    const input = document.getElementById('graph6-field');
+    input.select();
+    navigator.clipboard.writeText(input.value).then(() => {
+        const btn = event.target.closest('button');
+        const originalText = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => {
+            btn.textContent = originalText;
+        }, 1500);
+    });
+}
+
+function downloadEigenvaluesCSV(matrixType) {
+    let eigenvalues, filename, header;
+
+    if (matrixType === 'adj') {
+        eigenvalues = graphData.spectra.adj_eigenvalues;
+        filename = `${graphData.graph6}_adj_eigenvalues.csv`;
+        header = '# Adjacency matrix eigenvalues';
+    } else if (matrixType === 'kirchhoff') {
+        eigenvalues = graphData.spectra.kirchhoff_eigenvalues;
+        filename = `${graphData.graph6}_kirchhoff_eigenvalues.csv`;
+        header = '# Kirchhoff Laplacian matrix eigenvalues';
+    } else if (matrixType === 'signless') {
+        eigenvalues = graphData.spectra.signless_eigenvalues;
+        filename = `${graphData.graph6}_signless_eigenvalues.csv`;
+        header = '# Signless Laplacian matrix eigenvalues';
+    } else if (matrixType === 'lap') {
+        eigenvalues = graphData.spectra.lap_eigenvalues;
+        filename = `${graphData.graph6}_lap_eigenvalues.csv`;
+        header = '# Normalized Laplacian matrix eigenvalues';
+    } else if (matrixType === 'nb') {
+        const re = graphData.spectra.nb_eigenvalues_re;
+        const im = graphData.spectra.nb_eigenvalues_im;
+        const lines = ['real,imaginary'];
+        for (let i = 0; i < re.length; i++) {
+            lines.push(`${re[i]},${im[i]}`);
+        }
+        const content = `# Non-backtracking matrix eigenvalues\n# ${graphData.graph6}\n` + lines.join('\n');
+        downloadFile(content, `${graphData.graph6}_nb_eigenvalues.csv`, 'text/csv');
+        return;
+    } else if (matrixType === 'nbl') {
+        const re = graphData.spectra.nbl_eigenvalues_re;
+        const im = graphData.spectra.nbl_eigenvalues_im;
+        const lines = ['real,imaginary'];
+        for (let i = 0; i < re.length; i++) {
+            lines.push(`${re[i]},${im[i]}`);
+        }
+        const content = `# Non-backtracking Laplacian eigenvalues\n# ${graphData.graph6}\n` + lines.join('\n');
+        downloadFile(content, `${graphData.graph6}_nbl_eigenvalues.csv`, 'text/csv');
+        return;
+    }
+
+    // For real eigenvalues (adj, lap)
+    const lines = ['eigenvalue'];
+    eigenvalues.forEach(e => lines.push(e.toString()));
+    const content = `${header}\n# ${graphData.graph6}\n` + lines.join('\n');
+    downloadFile(content, filename, 'text/csv');
+}
+</script>
+{% endblock %}

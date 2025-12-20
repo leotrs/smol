@@ -13,7 +13,6 @@ import json
 import sqlite3
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 import psycopg2
@@ -31,7 +30,6 @@ COLUMNS = [
     "clique_number", "chromatic_number",
     "algebraic_connectivity", "clustering_coefficient", "assortativity",
     "global_clustering", "avg_local_clustering", "avg_path_length",
-    "degree_sequence", "betweenness_centrality", "closeness_centrality", "eigenvector_centrality",
     "tags", "extra",
 ]
 
@@ -95,10 +93,6 @@ def create_sqlite_export(graphs: list[dict], output_path: Path) -> None:
             global_clustering REAL,
             avg_local_clustering REAL,
             avg_path_length REAL,
-            degree_sequence TEXT,
-            betweenness_centrality TEXT,
-            closeness_centrality TEXT,
-            eigenvector_centrality TEXT,
             tags TEXT DEFAULT '[]',
             extra TEXT DEFAULT '{}'
         )
@@ -118,9 +112,8 @@ def create_sqlite_export(graphs: list[dict], output_path: Path) -> None:
                 clique_number, chromatic_number,
                 algebraic_connectivity, clustering_coefficient, assortativity,
                 global_clustering, avg_local_clustering, avg_path_length,
-                degree_sequence, betweenness_centrality, closeness_centrality, eigenvector_centrality,
                 tags, extra
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             g["n"], g["m"], g["graph6"],
             array_to_text(g["adj_eigenvalues"]), g["adj_spectral_hash"],
@@ -133,10 +126,6 @@ def create_sqlite_export(graphs: list[dict], output_path: Path) -> None:
             g["clique_number"], g["chromatic_number"],
             g["algebraic_connectivity"], g["clustering_coefficient"], g["assortativity"],
             g["global_clustering"], g["avg_local_clustering"], g["avg_path_length"],
-            array_to_text(g["degree_sequence"]),
-            array_to_text(g["betweenness_centrality"]),
-            array_to_text(g["closeness_centrality"]),
-            array_to_text(g["eigenvector_centrality"]),
             array_to_text(g["tags"]) if g["tags"] else "[]",
             json.dumps(g["extra"]) if g["extra"] else "{}"
         ))
@@ -186,7 +175,6 @@ result = conn.execute("""
         clique_number, chromatic_number,
         algebraic_connectivity, clustering_coefficient, assortativity,
         global_clustering, avg_local_clustering, avg_path_length,
-        degree_sequence, betweenness_centrality, closeness_centrality, eigenvector_centrality,
         tags, extra
     )
     SELECT
@@ -201,7 +189,6 @@ result = conn.execute("""
         clique_number, chromatic_number,
         algebraic_connectivity, clustering_coefficient, assortativity,
         global_clustering, avg_local_clustering, avg_path_length,
-        degree_sequence, betweenness_centrality, closeness_centrality, eigenvector_centrality,
         tags, extra
     FROM import_db.graphs_import
 """)

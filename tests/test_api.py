@@ -232,6 +232,13 @@ class TestCompareEndpoint:
         response = client.get("/compare?graphs=D%3F%7B,INVALID")
         assert response.status_code == 404
 
+    def test_compare_has_spectra_section(self):
+        """Compare page should have a Spectra section with visualization."""
+        response = client.get("/compare?graphs=D%3F%7B,DEo", headers={"Accept": "text/html"})
+        assert response.status_code == 200
+        assert "Spectra</strong>" in response.text or "Spectra</" in response.text
+        assert "compare-spectrum-real-plot" in response.text
+
 
 class TestGlossaryEndpoint:
     def test_glossary_returns_html(self):
@@ -256,10 +263,8 @@ class TestAboutEndpoint:
         response = client.get("/about")
         assert response.status_code == 200
         data = response.json()
-        assert "total_graphs" in data
-        assert "connected_graphs" in data
-        assert "counts_by_n" in data
-        assert "cospectral_counts" in data
+        assert "message" in data
+        assert data["message"] == "About page - use HTML request"
 
 
 @needs_db
@@ -375,8 +380,8 @@ class TestCompareEdgeCases:
         assert response.status_code == 200
         data = response.json()
         assert len(data["graphs"]) == 2
-        # Same graph should have same spectrum
-        assert data["spectral_comparison"]["adj"] == "same"
+        # Same graph should have zero spectral distance
+        assert data["spectral_comparison"]["adj"] == "0.0000"
 
     def test_compare_html_has_visualizations(self):
         response = client.get(

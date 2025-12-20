@@ -158,7 +158,12 @@ def compute_tags(G: nx.Graph) -> list[str]:
             tags.append("fan")
 
     # Vertex-transitive: automorphism group acts transitively on vertices
-    if is_connected and min_deg == max_deg and n >= 2:
+    # Complete graphs, cycles, and Petersen are trivially vertex-transitive
+    if "complete" in tags or "cycle" in tags or "petersen" in tags:
+        tags.append("vertex-transitive")
+    # For other graphs, check using automorphism enumeration (expensive)
+    # Skip for large graphs to avoid exponential blowup
+    elif is_connected and min_deg == max_deg and n >= 2 and n <= 8:
         if _is_vertex_transitive(G):
             tags.append("vertex-transitive")
 
@@ -315,8 +320,6 @@ def _is_fan(G: nx.Graph, n: int, m: int) -> bool:
 def _is_vertex_transitive(G: nx.Graph) -> bool:
     """Check if G is vertex-transitive using automorphism group."""
     try:
-        # Use graph_automorphism_group if available (requires pynauty or similar)
-        # Fall back to checking orbit sizes
         from networkx.algorithms.isomorphism import GraphMatcher
 
         n = G.number_of_nodes()
@@ -330,12 +333,16 @@ def _is_vertex_transitive(G: nx.Graph) -> bool:
         for v in nodes[1:]:
             # Try to find an automorphism mapping first -> v
             found = False
-            # Use node matching that checks if mapping first to v works
             GM = GraphMatcher(G, G)
-            for iso in GM.isomorphisms_iter():
+            # Limit number of isomorphisms checked to avoid exponential blowup
+            max_isos_to_check = 10000
+            for i, iso in enumerate(GM.isomorphisms_iter()):
                 if iso[first] == v:
                     found = True
                     break
+                if i >= max_isos_to_check:
+                    # Too many automorphisms, give up
+                    return False
             if not found:
                 return False
 

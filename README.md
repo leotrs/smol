@@ -26,7 +26,6 @@ For each connected graph on up to 10 vertices, SMOL stores:
 - Algebraic connectivity (Fiedler value)
 - Global and local clustering coefficients
 - Average path length, assortativity
-- Centrality distributions (betweenness, closeness, eigenvector)
 
 **Tags (named graph detection):**
 - Complete graphs, cycles, paths, stars, wheels
