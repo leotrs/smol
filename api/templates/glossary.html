@@ -8,24 +8,21 @@
     <p>Key concepts and terminology used throughout SMOL.</p>
 </hgroup>
 
-<article>
-    <header><h3>Graph Encoding</h3></header>
-    <dl>
-        <dt id="graph6"><strong>graph6</strong></dt>
-        <dd>
-            A compact ASCII encoding for simple undirected graphs. Each graph6 string uniquely represents a graph
-            (up to isomorphism). The format encodes the upper triangle of the adjacency matrix.
-            <br><br>
-            <strong>Example:</strong> <code>D?{</code> represents the star graph $K_{1,4}$ (4 leaves connected to a center).
-            <br><br>
-            <a href="https://users.cecs.anu.edu.au/~bdm/data/formats.txt">Read the full specification →</a>
-        </dd>
-    </dl>
-</article>
+<h3>Graph Encoding</h3>
+<dl>
+    <dt id="graph6"><strong>graph6</strong></dt>
+    <dd>
+        A compact ASCII encoding for simple undirected graphs. Each graph6 string uniquely represents a graph
+        (up to isomorphism). The format encodes the upper triangle of the adjacency matrix.
+        <br><br>
+        <strong>Example:</strong> <code>D?{</code> represents the star graph $K_{1,4}$ (4 leaves connected to a center).
+        <br><br>
+        <a href="https://users.cecs.anu.edu.au/~bdm/data/formats.txt">Read the full specification →</a>
+    </dd>
+</dl>
 
-<article>
-    <header><h3>Matrix Types</h3></header>
-    <dl>
+<h3>Matrix Types</h3>
+<dl>
         <dt id="adjacency"><strong>Adjacency matrix</strong></dt>
         <dd>
             The $n \times n$ matrix $A$ where $A_{ij} = 1$ if vertices $i$ and $j$ are connected, 0 otherwise.
@@ -68,11 +65,9 @@
             Eigenvalues are generally complex.
         </dd>
     </dl>
-</article>
 
-<article>
-    <header><h3>Spectral Concepts</h3></header>
-    <dl>
+<h3>Spectral Concepts</h3>
+<dl>
         <dt id="spectrum"><strong>Spectrum</strong></dt>
         <dd>
             The multiset of eigenvalues of a matrix. Two graphs are <em>cospectral</em> if they have
@@ -101,11 +96,9 @@
             similar spectra.
         </dd>
     </dl>
-</article>
 
-<article>
-    <header><h3>Graph Properties</h3></header>
-    <dl>
+<h3>Graph Properties</h3>
+<dl>
         <dt id="bipartite"><strong>Bipartite</strong></dt>
         <dd>
             A graph whose vertices can be divided into two disjoint sets such that every edge connects
@@ -161,11 +154,9 @@
             that are mutually adjacent.
         </dd>
     </dl>
-</article>
 
-<article>
-    <header><h3>Network Science Properties</h3></header>
-    <dl>
+<h3>Network Science Properties</h3>
+<dl>
         <dt id="algebraic-connectivity"><strong>Algebraic connectivity</strong></dt>
         <dd>
             The second-smallest eigenvalue of the Laplacian matrix (also called the Fiedler value).
@@ -198,11 +189,9 @@
             negative values indicate high-degree nodes connect to low-degree nodes.
         </dd>
     </dl>
-</article>
 
-<article>
-    <header><h3>Named Graph Types</h3></header>
-    <dl>
+<h3>Named Graph Types</h3>
+<dl>
         <dt id="complete"><strong>Complete graph</strong> ($K_n$)</dt>
         <dd>
             A graph where every pair of vertices is connected by an edge.
@@ -312,5 +301,4 @@
             that visits every edge exactly once (an Eulerian circuit).
         </dd>
     </dl>
-</article>
 {% endblock %}

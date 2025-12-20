@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Statistics - SMOL{% endblock %}
+
+{% block content %}
+<hgroup>
+    <h1>Database Statistics</h1>
+    <p>Comprehensive statistics on graph counts and cospectrality</p>
+</hgroup>
+
+<p><strong>{{ "{:,}".format(stats.total_graphs) }}</strong> total graphs ({{ "{:,}".format(stats.connected_graphs) }} connected)</p>
+
+<p>
+    SMOL precomputes spectral properties for six matrix types. The table below shows
+    the number of graphs at each vertex count that have at least one cospectral mate
+    (another non-isomorphic graph with the same spectrum).
+</p>
+
+<div style="overflow-x: auto;">
+<table>
+    <caption>Graphs with cospectral mates by vertex count and matrix type</caption>
+    <thead>
+        <tr>
+            <th>n</th>
+            <th>Graphs</th>
+            <th>Adj</th>
+            <th>Kirchhoff</th>
+            <th>Signless</th>
+            <th>Lap</th>
+            <th>NB</th>
+            <th>NBL</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for n, count in stats.counts_by_n.items() %}
+        <tr>
+            <td>{{ n }}</td>
+            <td>{{ "{:,}".format(count) }}</td>
+            <td>{{ "{:,}".format(stats.cospectral_counts.adj.get(n, 0)) if stats.cospectral_counts.adj.get(n, 0) else "-" }}</td>
+            <td>{{ "{:,}".format(stats.cospectral_counts.kirchhoff.get(n, 0)) if stats.cospectral_counts.kirchhoff.get(n, 0) else "-" }}</td>
+            <td>{{ "{:,}".format(stats.cospectral_counts.signless.get(n, 0)) if stats.cospectral_counts.signless.get(n, 0) else "-" }}</td>
+            <td>{{ "{:,}".format(stats.cospectral_counts.lap.get(n, 0)) if stats.cospectral_counts.lap.get(n, 0) else "-" }}</td>
+            <td>{{ "{:,}".format(stats.cospectral_counts.nb.get(n, 0)) if stats.cospectral_counts.nb.get(n, 0) else "-" }}</td>
+            <td>{{ "{:,}".format(stats.cospectral_counts.nbl.get(n, 0)) if stats.cospectral_counts.nbl.get(n, 0) else "-" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+{% if stats.tag_counts %}
+<h3 style="margin-top: 2rem;">Graphs by named type</h3>
+
+<p>
+    The table below shows the number of graphs identified with each named graph type.
+    Note that graphs can have multiple tags (e.g., a graph can be both regular and triangle-free).
+</p>
+
+<div style="overflow-x: auto;">
+<table>
+    <caption>Number of graphs by tag</caption>
+    <thead>
+        <tr>
+            <th>Tag</th>
+            <th>Count</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for tag, count in stats.tag_counts.items() %}
+        <tr>
+            <td><code>{{ tag }}</code></td>
+            <td>{{ "{:,}".format(count) }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}
+
+{% if stats.cospectral_counts_mindeg2 %}
+<h3 style="margin-top: 2rem;">Graphs with minimum degree ≥ 2</h3>
+
+<p>
+    The table below shows the same statistics restricted to graphs where every vertex has degree at least 2
+    (excludes trees, stars, and other graphs with pendant vertices).
+</p>
+
+<div style="overflow-x: auto;">
+<table>
+    <caption>Graphs with min degree ≥ 2: cospectral mates by vertex count and matrix type</caption>
+    <thead>
+        <tr>
+            <th>n</th>
+            <th>Graphs</th>
+            <th>Adj</th>
+            <th>Kirchhoff</th>
+            <th>Signless</th>
+            <th>Lap</th>
+            <th>NB</th>
+            <th>NBL</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for n, count in stats.counts_by_n_mindeg2.items() %}
+        <tr>
+            <td>{{ n }}</td>
+            <td>{{ "{:,}".format(count) }}</td>
+            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.adj.get(n, 0)) if stats.cospectral_counts_mindeg2.adj.get(n, 0) else "-" }}</td>
+            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.kirchhoff.get(n, 0)) if stats.cospectral_counts_mindeg2.kirchhoff.get(n, 0) else "-" }}</td>
+            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.signless.get(n, 0)) if stats.cospectral_counts_mindeg2.signless.get(n, 0) else "-" }}</td>
+            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.lap.get(n, 0)) if stats.cospectral_counts_mindeg2.lap.get(n, 0) else "-" }}</td>
+            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.nb.get(n, 0)) if stats.cospectral_counts_mindeg2.nb.get(n, 0) else "-" }}</td>
+            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.nbl.get(n, 0)) if stats.cospectral_counts_mindeg2.nbl.get(n, 0) else "-" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}

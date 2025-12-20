@@ -513,17 +513,12 @@ async def glossary(request: Request):
 
 @app.get("/about")
 async def about(request: Request):
-    """About page with statistics."""
-    t0 = time.perf_counter()
-    data = await get_stats()
-    logger.info(f"  get_stats: {(time.perf_counter()-t0)*1000:.0f}ms")
-    stats = Stats(**data)
-
+    """About page."""
     if wants_html(request):
         return templates.TemplateResponse(
-            request, "about.html", {"stats": stats}
+            request, "about.html", {}
         )
-    return stats
+    return {"message": "About page - use HTML request"}
 
 
 @app.get("/stats")
@@ -536,7 +531,7 @@ async def stats(request: Request):
 
     if wants_html(request):
         return templates.TemplateResponse(
-            request, "about.html", {"stats": result}
+            request, "stats.html", {"stats": result}
         )
     return result
 

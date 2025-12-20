@@ -31,6 +31,16 @@ def compute_stats(conn) -> dict:
     )
     counts_by_n = {str(r[0]): r[1] for r in cur.fetchall()}
 
+    # Counts by n for min_degree >= 2
+    cur.execute(
+        """
+        SELECT n, COUNT(*) FROM graphs
+        WHERE diameter IS NOT NULL AND min_degree >= 2
+        GROUP BY n ORDER BY n
+        """
+    )
+    counts_by_n_mindeg2 = {str(r[0]): r[1] for r in cur.fetchall()}
+
     # Cospectral counts from pre-computed pairs table
     cospectral = {}
     for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl"]:
@@ -50,6 +60,39 @@ def compute_stats(conn) -> dict:
             (matrix, matrix),
         )
         cospectral[matrix] = {str(r[0]): r[1] for r in cur.fetchall()}
+
+    # Cospectral counts for min_degree >= 2
+    cospectral_mindeg2 = {}
+    for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl"]:
+        cur.execute(
+            """
+            WITH all_graphs AS (
+                SELECT graph1_id as gid FROM cospectral_mates WHERE matrix_type = %s
+                UNION
+                SELECT graph2_id FROM cospectral_mates WHERE matrix_type = %s
+            )
+            SELECT g.n, COUNT(*) as cospectral_count
+            FROM all_graphs a
+            JOIN graphs g ON a.gid = g.id
+            WHERE g.min_degree >= 2
+            GROUP BY g.n
+            ORDER BY g.n
+            """,
+            (matrix, matrix),
+        )
+        cospectral_mindeg2[matrix] = {str(r[0]): r[1] for r in cur.fetchall()}
+
+    # Tag counts
+    cur.execute(
+        """
+        SELECT tag, COUNT(*) as count
+        FROM graphs, unnest(tags) as tag
+        WHERE tags IS NOT NULL
+        GROUP BY tag
+        ORDER BY count DESC
+        """
+    )
+    tag_counts = {r[0]: r[1] for r in cur.fetchall()}
 
     # Network property computation progress
     cur.execute(
@@ -101,6 +144,9 @@ def compute_stats(conn) -> dict:
         "cospectral_counts": cospectral,
         "property_stats": property_stats,
         "property_ranges": property_ranges,
+        "counts_by_n_mindeg2": counts_by_n_mindeg2,
+        "cospectral_counts_mindeg2": cospectral_mindeg2,
+        "tag_counts": tag_counts,
     }
 
 

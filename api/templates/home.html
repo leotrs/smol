@@ -4,8 +4,8 @@
 
 {% block content %}
 <hgroup class="hero">
-    <h1>SMOL Graph DB</h1>
-    <p>Spectra and matrices of all simple connected graphs up to 10 vertices.</p>
+    <h1>SMOL Graphs DB</h1>
+    <p>Spectra and matrices of all simple graphs with up to 10 vertices.</p>
 </hgroup>
 
 <div class="search-box" x-data="{ tab: 'lookup' }">
@@ -100,6 +100,14 @@
             <div id="ex-cube" class="example-viz"></div>
             <div class="example-label">Q₃ cube</div>
         </a>
+        <a href="/graph/ICOf%40pSb%3F" class="example-card">
+            <div id="ex-petersen" class="example-viz"></div>
+            <div class="example-label">Petersen</div>
+        </a>
+        <a href="/graph/FEhfw" class="example-card">
+            <div id="ex-wheel" class="example-viz"></div>
+            <div class="example-label">W₆ wheel</div>
+        </a>
     </div>
 </section>
 
@@ -121,15 +129,83 @@
                 </div>
             </div>
         </a>
-        <a href="/compare?graphs=ECRw,EEiW" class="family-card">
+        <a href="/compare?graphs=F%3FABo,F%3FB%40g,F%3F%60b%3F" class="family-card">
             <div class="family-graphs">
                 <div class="family-graph">
                     <div id="ex-adj2a" class="example-viz"></div>
-                    <code>ECRw</code>
+                    <code>F?ABo</code>
                 </div>
                 <div class="family-graph">
                     <div id="ex-adj2b" class="example-viz"></div>
-                    <code>EEiW</code>
+                    <code>F?B@g</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-adj2c" class="example-viz"></div>
+                    <code>F?`b?</code>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <h4 class="matrix-type">Kirchhoff</h4>
+    <div class="cospectral-families">
+        <a href="/compare?graphs=ECZo,EEr_" class="family-card">
+            <div class="family-graphs">
+                <div class="family-graph">
+                    <div id="ex-kirchhoff1a" class="example-viz"></div>
+                    <code>ECZo</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-kirchhoff1b" class="example-viz"></div>
+                    <code>EEr_</code>
+                </div>
+            </div>
+        </a>
+        <a href="/compare?graphs=F%3FzVO,FCXkw,FCZfG" class="family-card">
+            <div class="family-graphs">
+                <div class="family-graph">
+                    <div id="ex-kirchhoff2a" class="example-viz"></div>
+                    <code>F?zVO</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-kirchhoff2b" class="example-viz"></div>
+                    <code>FCXkw</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-kirchhoff2c" class="example-viz"></div>
+                    <code>FCZfG</code>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <h4 class="matrix-type">Signless</h4>
+    <div class="cospectral-families">
+        <a href="/compare?graphs=E%3Fzw,ECfw" class="family-card">
+            <div class="family-graphs">
+                <div class="family-graph">
+                    <div id="ex-signless1a" class="example-viz"></div>
+                    <code>E?zw</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-signless1b" class="example-viz"></div>
+                    <code>ECfw</code>
+                </div>
+            </div>
+        </a>
+        <a href="/compare?graphs=FCZbw,FCZfg,FQjdg" class="family-card">
+            <div class="family-graphs">
+                <div class="family-graph">
+                    <div id="ex-signless2a" class="example-viz"></div>
+                    <code>FCZbw</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-signless2b" class="example-viz"></div>
+                    <code>FCZfg</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-signless2c" class="example-viz"></div>
+                    <code>FQjdg</code>
                 </div>
             </div>
         </a>
@@ -137,27 +213,31 @@
 
     <h4 class="matrix-type">Laplacian</h4>
     <div class="cospectral-families">
-        <a href="/compare?graphs=CF,C%5D" class="family-card">
+        <a href="/compare?graphs=F%3Fb~w,FEzfw" class="family-card">
             <div class="family-graphs">
                 <div class="family-graph">
                     <div id="ex-lap1a" class="example-viz"></div>
-                    <code>CF</code>
+                    <code>F?b~w</code>
                 </div>
                 <div class="family-graph">
                     <div id="ex-lap1b" class="example-viz"></div>
-                    <code>C]</code>
+                    <code>FEzfw</code>
                 </div>
             </div>
         </a>
-        <a href="/compare?graphs=E%3FzW,ECxw" class="family-card">
+        <a href="/compare?graphs=E%3FBw,E%3F~o,EFz_" class="family-card">
             <div class="family-graphs">
                 <div class="family-graph">
                     <div id="ex-lap2a" class="example-viz"></div>
-                    <code>E?zW</code>
+                    <code>E?Bw</code>
                 </div>
                 <div class="family-graph">
                     <div id="ex-lap2b" class="example-viz"></div>
-                    <code>ECxw</code>
+                    <code>E?~o</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-lap2c" class="example-viz"></div>
+                    <code>EFz_</code>
                 </div>
             </div>
         </a>
@@ -165,27 +245,27 @@
 
     <h4 class="matrix-type">Non-backtracking</h4>
     <div class="cospectral-families">
-        <a href="/compare?graphs=DC%7B,DEk" class="family-card">
+        <a href="/compare?graphs=GCXmew,GCdevg" class="family-card">
             <div class="family-graphs">
                 <div class="family-graph">
                     <div id="ex-nb1a" class="example-viz"></div>
-                    <code>DC{</code>
+                    <code>GCXmew</code>
                 </div>
                 <div class="family-graph">
                     <div id="ex-nb1b" class="example-viz"></div>
-                    <code>DEk</code>
+                    <code>GCdevg</code>
                 </div>
             </div>
         </a>
-        <a href="/compare?graphs=E%3Fro,E%3FzO" class="family-card">
+        <a href="/compare?graphs=H%3F%60DBjw,H%3F%60DUbs" class="family-card">
             <div class="family-graphs">
                 <div class="family-graph">
                     <div id="ex-nb2a" class="example-viz"></div>
-                    <code>E?ro</code>
+                    <code>H?`DBjw</code>
                 </div>
                 <div class="family-graph">
                     <div id="ex-nb2b" class="example-viz"></div>
-                    <code>E?zO</code>
+                    <code>H?`DUbs</code>
                 </div>
             </div>
         </a>
@@ -193,27 +273,27 @@
 
     <h4 class="matrix-type">NB-Laplacian</h4>
     <div class="cospectral-families">
-        <a href="/compare?graphs=CF,CU" class="family-card">
+        <a href="/compare?graphs=I%3Fqa%60hidg,I%3Fqa%60iYXg" class="family-card">
             <div class="family-graphs">
                 <div class="family-graph">
                     <div id="ex-nbl1a" class="example-viz"></div>
-                    <code>CF</code>
+                    <code>I?qa`hidg</code>
                 </div>
                 <div class="family-graph">
                     <div id="ex-nbl1b" class="example-viz"></div>
-                    <code>CU</code>
+                    <code>I?qa`iYXg</code>
                 </div>
             </div>
         </a>
-        <a href="/compare?graphs=E%3Fbw,ECZG" class="family-card">
+        <a href="/compare?graphs=I%3Fqa%60ngk_,I%3Fqadhik_" class="family-card">
             <div class="family-graphs">
                 <div class="family-graph">
                     <div id="ex-nbl2a" class="example-viz"></div>
-                    <code>E?bw</code>
+                    <code>I?qa`ngk_</code>
                 </div>
                 <div class="family-graph">
                     <div id="ex-nbl2b" class="example-viz"></div>
-                    <code>ECZG</code>
+                    <code>I?qadhik_</code>
                 </div>
             </div>
         </a>
@@ -242,26 +322,42 @@ const exampleGraphs = {
     'ex-c6': {n: 6, edges: [[0,3],[0,4],[1,3],[1,5],[2,4],[2,5]]},
     'ex-s6': {n: 6, edges: [[0,5],[1,5],[2,5],[3,5],[4,5]]},
     'ex-cube': {n: 8, edges: [[0,4],[0,5],[0,6],[1,4],[1,5],[1,7],[2,4],[2,6],[2,7],[3,5],[3,6],[3,7]]},
+    'ex-petersen': {n: 10, edges: [[0,3],[0,6],[0,9],[1,4],[1,6],[1,8],[2,5],[2,6],[2,7],[3,7],[3,8],[4,7],[4,9],[5,8],[5,9]]},
+    'ex-wheel': {n: 7, edges: [[0,3],[0,4],[0,6],[1,3],[1,5],[1,6],[2,4],[2,5],[2,6],[3,6],[4,6],[5,6]]},
     // Adjacency cospectral
     'ex-adj1a': {n: 5, edges: [[0,4],[1,4],[2,4],[3,4]]},
     'ex-adj1b': {n: 5, edges: [[0,3],[0,4],[1,3],[1,4]]},
-    'ex-adj2a': {n: 6, edges: [[0,3],[0,5],[1,4],[1,5],[2,5],[3,5],[4,5]]},
-    'ex-adj2b': {n: 6, edges: [[0,3],[0,4],[0,5],[1,3],[2,4],[3,5],[4,5]]},
-    // Laplacian cospectral
-    'ex-lap1a': {n: 4, edges: [[0,3],[1,3],[2,3]]},
-    'ex-lap1b': {n: 4, edges: [[0,2],[0,3],[1,2],[1,3]]},
-    'ex-lap2a': {n: 6, edges: [[0,4],[0,5],[1,4],[1,5],[2,4],[3,5],[4,5]]},
-    'ex-lap2b': {n: 6, edges: [[0,3],[0,4],[1,4],[1,5],[2,4],[2,5],[3,5],[4,5]]},
-    // NB cospectral
-    'ex-nb1a': {n: 5, edges: [[0,3],[0,4],[1,4],[2,4],[3,4]]},
-    'ex-nb1b': {n: 5, edges: [[0,3],[0,4],[1,3],[2,4],[3,4]]},
-    'ex-nb2a': {n: 6, edges: [[0,4],[0,5],[1,4],[1,5],[2,5],[3,5]]},
-    'ex-nb2b': {n: 6, edges: [[0,4],[0,5],[1,4],[1,5],[2,4],[3,5]]},
-    // NBL cospectral
-    'ex-nbl1a': {n: 4, edges: [[0,3],[1,3],[2,3]]},
-    'ex-nbl1b': {n: 4, edges: [[0,2],[0,3],[1,3]]},
-    'ex-nbl2a': {n: 6, edges: [[0,4],[0,5],[1,5],[2,5],[3,5],[4,5]]},
-    'ex-nbl2b': {n: 6, edges: [[0,3],[0,5],[1,4],[1,5],[2,4],[4,5]]}
+    'ex-adj2a': {n: 7, edges: [[0,5],[1,6],[2,6],[3,6],[4,6]]},
+    'ex-adj2b': {n: 7, edges: [[0,5],[1,5],[2,6],[3,6],[5,6]]},
+    'ex-adj2c': {n: 7, edges: [[0,4],[1,5],[1,6],[2,5],[2,6]]},
+    // Kirchhoff cospectral
+    'ex-kirchhoff1a': {n: 6, edges: [[0,3],[0,5],[1,4],[1,5],[2,4],[2,5],[3,5]]},
+    'ex-kirchhoff1b': {n: 6, edges: [[0,3],[0,4],[0,5],[1,3],[1,4],[1,5],[2,5]]},
+    'ex-kirchhoff2a': {n: 7, edges: [[0,4],[0,5],[0,6],[1,4],[1,5],[1,6],[2,4],[2,6],[3,5],[4,6]]},
+    'ex-kirchhoff2b': {n: 7, edges: [[0,3],[0,6],[1,4],[1,5],[2,4],[2,5],[3,6],[4,5],[4,6],[5,6]]},
+    'ex-kirchhoff2c': {n: 7, edges: [[0,3],[0,5],[0,6],[1,4],[1,5],[1,6],[2,4],[2,5],[2,6],[5,6]]},
+    // Signless cospectral
+    'ex-signless1a': {n: 6, edges: [[0,4],[0,5],[1,4],[1,5],[2,4],[2,5],[3,5],[4,5]]},
+    'ex-signless1b': {n: 6, edges: [[0,3],[0,4],[0,5],[1,5],[2,5],[3,4],[3,5],[4,5]]},
+    'ex-signless2a': {n: 7, edges: [[0,3],[0,5],[1,4],[1,5],[1,6],[2,4],[2,5],[2,6],[3,6],[4,6],[5,6]]},
+    'ex-signless2b': {n: 7, edges: [[0,3],[0,5],[0,6],[1,4],[1,5],[1,6],[2,4],[2,5],[2,6],[3,6],[5,6]]},
+    'ex-signless2c': {n: 7, edges: [[0,2],[0,4],[0,5],[0,6],[1,3],[1,5],[2,4],[2,5],[2,6],[3,6],[5,6]]},
+    // Laplacian cospectral (connected)
+    'ex-lap1a': {n: 7, edges: [[0,4],[0,5],[0,6],[1,5],[1,6],[2,5],[2,6],[3,5],[3,6],[4,5],[4,6],[5,6]]},
+    'ex-lap1b': {n: 7, edges: [[0,3],[0,4],[0,5],[0,6],[1,3],[1,4],[1,5],[1,6],[2,4],[2,5],[2,6],[3,6],[4,6],[5,6]]},
+    'ex-lap2a': {n: 6, edges: [[0,5],[1,5],[2,5],[3,5],[4,5]]},
+    'ex-lap2b': {n: 6, edges: [[0,4],[0,5],[1,4],[1,5],[2,4],[2,5],[3,4],[3,5]]},
+    'ex-lap2c': {n: 6, edges: [[0,3],[0,4],[0,5],[1,3],[1,4],[1,5],[2,3],[2,4],[2,5]]},
+    // NB cospectral (min_degree >= 2)
+    'ex-nb1a': {n: 8, edges: [[0,3],[0,6],[0,7],[1,4],[1,5],[1,6],[1,7],[2,4],[2,5],[3,6],[3,7],[4,5],[4,7],[5,7]]},
+    'ex-nb1b': {n: 8, edges: [[0,3],[0,4],[0,6],[0,7],[1,5],[1,6],[1,7],[2,5],[2,7],[3,4],[3,6],[3,7],[4,6],[5,7]]},
+    'ex-nb2a': {n: 9, edges: [[0,4],[0,6],[0,8],[1,5],[1,7],[1,8],[2,6],[2,7],[2,8],[3,7],[3,8],[4,8],[5,7]]},
+    'ex-nb2b': {n: 9, edges: [[0,4],[0,6],[0,7],[0,8],[1,5],[1,7],[1,8],[2,6],[2,8],[3,7],[3,8],[4,6],[5,8]]},
+    // NBL cospectral (n=10, m=18, min_degree>=2)
+    'ex-nbl1a': {n: 10, edges: [[0,4],[0,5],[0,9],[1,4],[1,6],[1,8],[2,5],[2,7],[2,8],[3,6],[3,7],[3,9],[4,8],[5,7],[5,9],[6,8],[6,9],[8,9]]},
+    'ex-nbl1b': {n: 10, edges: [[0,4],[0,5],[0,8],[1,4],[1,6],[1,9],[2,5],[2,7],[2,9],[3,6],[3,7],[3,8],[4,8],[5,7],[5,9],[6,8],[6,9],[8,9]]},
+    'ex-nbl2a': {n: 10, edges: [[0,4],[0,5],[0,8],[0,9],[1,4],[1,6],[1,8],[2,5],[2,7],[2,8],[2,9],[3,6],[3,7],[3,9],[4,8],[5,7],[6,7],[6,9]]},
+    'ex-nbl2b': {n: 10, edges: [[0,4],[0,5],[0,7],[0,9],[1,4],[1,6],[1,8],[2,5],[2,7],[2,8],[2,9],[3,6],[3,7],[3,9],[4,8],[5,7],[6,8],[6,9]]}
 };
 
 function renderExamples() {

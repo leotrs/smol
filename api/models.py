@@ -76,7 +76,8 @@ class GraphSummary(BaseModel):
 
 class CompareResult(BaseModel):
     graphs: list[GraphFull]
-    spectral_comparison: dict[str, str]  # matrix -> "same" or "different"
+    spectral_comparison: dict[str, str]  # matrix -> "same" or "different" (or distance for 2 graphs)
+    distance_matrix: dict[str, list[list[float]]] | None = None  # matrix -> NxN distance matrix for >2 graphs
 
 
 class PropertyStats(BaseModel):
@@ -98,3 +99,6 @@ class Stats(BaseModel):
     cospectral_counts: dict[str, dict[int, int]]  # matrix -> n -> count
     property_stats: PropertyStats | None = None
     property_ranges: dict[str, PropertyRange] | None = None
+    counts_by_n_mindeg2: dict[int, int] | None = None
+    cospectral_counts_mindeg2: dict[str, dict[int, int]] | None = None  # matrix -> n -> count
+    tag_counts: dict[str, int] | None = None
