@@ -501,6 +501,11 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            align-items: stretch;
+        }
+
+        .tab-content[x-show*="lookup"] form {
+            align-items: flex-start;
         }
 
         /* Lookup form */
@@ -509,16 +514,17 @@
             flex-direction: row;
             gap: 0.5rem;
             align-items: center;
+            width: 100%;
         }
 
         .lookup-form input {
-            flex: 1;
-            max-width: 400px;
+            width: 400px;
             margin-bottom: 0;
         }
 
         .lookup-form button {
             margin-bottom: 0;
+            margin-left: auto;
         }
 
         .filter-row {
@@ -570,6 +576,7 @@
         /* Compare textarea */
         .tab-content textarea {
             width: 100%;
+            max-width: 400px;
             font-family: monospace;
             font-size: 0.9rem;
             margin-bottom: 0.75rem;
@@ -579,6 +586,12 @@
         .tab-content[x-show*="compare"] form,
         .tab-content[x-show*="search"] form {
             flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .tab-content[x-show*="compare"] button,
+        .tab-content[x-show*="search"] button {
+            align-self: flex-end;
         }
 
         /* Footer */
