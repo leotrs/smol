@@ -16,20 +16,18 @@
     </div>
 
     <div class="tab-content" x-show="tab === 'lookup'">
-        <p class="tab-hint">Look up a graph by its <a href="/glossary#graph6">graph6</a> encoding.</p>
+        <p class="tab-hint">Look up a graph by its <a href="/glossary#graph6">graph6</a> encoding</p>
         <form class="lookup-form" onsubmit="window.location.href='/graph/' + encodeURIComponent(this.graph6.value); return false;">
-            <input type="text" name="graph6" placeholder="e.g. D?{" required>
-            <button type="submit">Go</button>
+            <input type="text" name="graph6" placeholder="e.g. D?{" required autocomplete="off">
+            <button type="submit">Lookup</button>
         </form>
     </div>
 
     <div class="tab-content" x-show="tab === 'compare'">
-        <p class="tab-hint">Compare multiple graphs side by side. Enter 2-10 <a href="/glossary#graph6">graph6</a> strings, one per line.</p>
+        <p class="tab-hint">Compare multiple graphs side by side (2-10 <a href="/glossary#graph6">graph6</a> strings, one per line)</p>
         <form onsubmit="compareGraphs(this); return false;">
-            <textarea name="graphs" rows="4" placeholder="D?{&#10;DEo"></textarea>
-            <div class="button-row">
-                <button type="submit">Compare</button>
-            </div>
+            <textarea name="graphs" rows="3" placeholder="D?{&#10;DEo"></textarea>
+            <button type="submit">Compare</button>
         </form>
     </div>
 
@@ -81,42 +79,50 @@
 
 <section id="results"></section>
 
-<section class="examples">
-    <h3>Example Graphs</h3>
-    <div class="examples-grid">
-        <a href="/graph/D~{" class="example-card">
-            <div id="ex-k5" class="example-viz"></div>
-            <div class="example-label">K₅ complete</div>
-        </a>
-        <a href="/graph/EEh_" class="example-card">
-            <div id="ex-c6" class="example-viz"></div>
-            <div class="example-label">C₆ cycle</div>
-        </a>
-        <a href="/graph/E%3FBw" class="example-card">
-            <div id="ex-s6" class="example-viz"></div>
-            <div class="example-label">S₆ star</div>
-        </a>
-        <a href="/graph/G%3FzTb_" class="example-card">
-            <div id="ex-cube" class="example-viz"></div>
-            <div class="example-label">Q₃ cube</div>
-        </a>
-        <a href="/graph/ICOf%40pSb%3F" class="example-card">
-            <div id="ex-petersen" class="example-viz"></div>
-            <div class="example-label">Petersen</div>
-        </a>
-        <a href="/graph/FEhfw" class="example-card">
-            <div id="ex-wheel" class="example-viz"></div>
-            <div class="example-label">W₆ wheel</div>
-        </a>
+<div class="examples-section" x-data="{ tab: 'examples' }">
+    <div class="tab-pills">
+        <button type="button" :class="{ active: tab === 'examples' }" @click="tab = 'examples'">Examples</button>
+        <button type="button" :class="{ active: tab === 'adjacency' }" @click="tab = 'adjacency'">Adjacency</button>
+        <button type="button" :class="{ active: tab === 'kirchhoff' }" @click="tab = 'kirchhoff'">Kirchhoff</button>
+        <button type="button" :class="{ active: tab === 'signless' }" @click="tab = 'signless'">Signless</button>
+        <button type="button" :class="{ active: tab === 'laplacian' }" @click="tab = 'laplacian'">Laplacian</button>
+        <button type="button" :class="{ active: tab === 'nb' }" @click="tab = 'nb'">NB</button>
+        <button type="button" :class="{ active: tab === 'nbl' }" @click="tab = 'nbl'">NBL</button>
     </div>
-</section>
 
-<section class="examples">
-    <h3>Cospectral Families</h3>
-    <p class="examples-subtitle">Graphs with identical spectra but different structure</p>
+    <div class="tab-content" x-show="tab === 'examples'">
+        <p class="examples-subtitle">Classic named graphs from graph theory</p>
+        <div class="examples-grid">
+            <a href="/graph/D~{" class="example-card">
+                <div id="ex-k5" class="example-viz"></div>
+                <div class="example-label">K₅ complete</div>
+            </a>
+            <a href="/graph/EEh_" class="example-card">
+                <div id="ex-c6" class="example-viz"></div>
+                <div class="example-label">C₆ cycle</div>
+            </a>
+            <a href="/graph/E%3FBw" class="example-card">
+                <div id="ex-s6" class="example-viz"></div>
+                <div class="example-label">S₆ star</div>
+            </a>
+            <a href="/graph/G%3FzTb_" class="example-card">
+                <div id="ex-cube" class="example-viz"></div>
+                <div class="example-label">Q₃ cube</div>
+            </a>
+            <a href="/graph/ICOf%40pSb%3F" class="example-card">
+                <div id="ex-petersen" class="example-viz"></div>
+                <div class="example-label">Petersen</div>
+            </a>
+            <a href="/graph/FEhfw" class="example-card">
+                <div id="ex-wheel" class="example-viz"></div>
+                <div class="example-label">W₆ wheel</div>
+            </a>
+        </div>
+    </div>
 
-    <h4 class="matrix-type">Adjacency</h4>
-    <div class="cospectral-families">
+    <div class="tab-content" x-show="tab === 'adjacency'">
+        <p class="examples-subtitle">Graphs with identical adjacency spectra but different structure</p>
+        <div class="cospectral-families">
         <a href="/compare?graphs=D%3F%7B,DEo" class="family-card">
             <div class="family-graphs">
                 <div class="family-graph">
@@ -145,10 +151,12 @@
                 </div>
             </div>
         </a>
+        </div>
     </div>
 
-    <h4 class="matrix-type">Kirchhoff</h4>
-    <div class="cospectral-families">
+    <div class="tab-content" x-show="tab === 'kirchhoff'">
+        <p class="examples-subtitle">Graphs with identical Kirchhoff spectra but different structure</p>
+        <div class="cospectral-families">
         <a href="/compare?graphs=ECZo,EEr_" class="family-card">
             <div class="family-graphs">
                 <div class="family-graph">
@@ -177,10 +185,12 @@
                 </div>
             </div>
         </a>
+        </div>
     </div>
 
-    <h4 class="matrix-type">Signless</h4>
-    <div class="cospectral-families">
+    <div class="tab-content" x-show="tab === 'signless'">
+        <p class="examples-subtitle">Graphs with identical signless Laplacian spectra but different structure</p>
+        <div class="cospectral-families">
         <a href="/compare?graphs=E%3Fzw,ECfw" class="family-card">
             <div class="family-graphs">
                 <div class="family-graph">
@@ -209,10 +219,12 @@
                 </div>
             </div>
         </a>
+        </div>
     </div>
 
-    <h4 class="matrix-type">Laplacian</h4>
-    <div class="cospectral-families">
+    <div class="tab-content" x-show="tab === 'laplacian'">
+        <p class="examples-subtitle">Graphs with identical normalized Laplacian spectra but different structure</p>
+        <div class="cospectral-families">
         <a href="/compare?graphs=F%3Fb~w,FEzfw" class="family-card">
             <div class="family-graphs">
                 <div class="family-graph">
@@ -241,10 +253,12 @@
                 </div>
             </div>
         </a>
+        </div>
     </div>
 
-    <h4 class="matrix-type">Non-backtracking</h4>
-    <div class="cospectral-families">
+    <div class="tab-content" x-show="tab === 'nb'">
+        <p class="examples-subtitle">Graphs with identical non-backtracking spectra but different structure</p>
+        <div class="cospectral-families">
         <a href="/compare?graphs=GCXmew,GCdevg" class="family-card">
             <div class="family-graphs">
                 <div class="family-graph">
@@ -269,10 +283,12 @@
                 </div>
             </div>
         </a>
+        </div>
     </div>
 
-    <h4 class="matrix-type">NB-Laplacian</h4>
-    <div class="cospectral-families">
+    <div class="tab-content" x-show="tab === 'nbl'">
+        <p class="examples-subtitle">Graphs with identical non-backtracking Laplacian spectra but different structure</p>
+        <div class="cospectral-families">
         <a href="/compare?graphs=I%3Fqa%60hidg,I%3Fqa%60iYXg" class="family-card">
             <div class="family-graphs">
                 <div class="family-graph">
@@ -297,8 +313,9 @@
                 </div>
             </div>
         </a>
+        </div>
     </div>
-</section>
+</div>
 
 <script>
 function compareGraphs(form) {
