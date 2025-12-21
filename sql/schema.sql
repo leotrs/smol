@@ -57,7 +57,8 @@ CREATE TABLE IF NOT EXISTS graphs (
     assortativity           DOUBLE PRECISION,
 
     -- Tags (e.g., 'complete', 'cycle', 'tree', 'petersen', etc.)
-    tags                TEXT[] DEFAULT '{}',
+    -- NULL = not computed, '{}' = computed but no tags, array = tags found
+    tags                TEXT[] DEFAULT NULL,
 
     -- Extensible metadata
     extra               JSONB DEFAULT '{}'::jsonb,

@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 """Compute tags for all graphs in the database.
 
+Only processes graphs where tags IS NULL (not yet computed).
+After computation, tags will be either:
+- Empty array '{}' if no tags apply
+- Array of strings if tags were found
+
 Usage:
     python scripts/compute_tags.py [--batch-size 1000]
+    python scripts/compute_tags.py --recompute  # Recompute all tags
 """
 
 import argparse
@@ -31,7 +37,7 @@ def main():
     if args.recompute:
         cur.execute("SELECT COUNT(*) FROM graphs")
     else:
-        cur.execute("SELECT COUNT(*) FROM graphs WHERE tags = '{}'")
+        cur.execute("SELECT COUNT(*) FROM graphs WHERE tags IS NULL")
     total = cur.fetchone()[0]
     action = "Recomputing" if args.recompute else "Computing"
     print(f"{action} tags for {total:,} graphs...")
@@ -44,7 +50,7 @@ def main():
             """
             SELECT id, graph6
             FROM graphs
-            WHERE tags = '{}'
+            WHERE tags IS NULL
             ORDER BY id
             """
         )
