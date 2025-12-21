@@ -15,7 +15,6 @@ Let's understand WHY this Φ relationship implies the pairing invariant.
 """
 
 import networkx as nx
-import numpy as np
 import psycopg2
 from itertools import permutations
 

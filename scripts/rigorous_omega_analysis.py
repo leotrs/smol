@@ -218,15 +218,15 @@ for idx, (g6_1, g6_2, G1, G2, v1, v2, w1, w2) in enumerate(switches):
     print(f"Switch {idx}: max|Ω - P_σ Ω P_σ^T| = {max_diff:.2e} {status}")
     
     if not is_symmetric:
-        print(f"  Ω:")
+        print("  Ω:")
         for i, row_name in enumerate(types):
             row_str = " ".join(f"{Omega[i,j]:8.4f}" for j in range(6))
             print(f"    {row_name}: {row_str}")
-        print(f"  P_σ Ω P_σ^T:")
+        print("  P_σ Ω P_σ^T:")
         for i, row_name in enumerate(types):
             row_str = " ".join(f"{Omega_transformed[i,j]:8.4f}" for j in range(6))
             print(f"    {row_name}: {row_str}")
-        print(f"  Difference (Ω - P_σ Ω P_σ^T):")
+        print("  Difference (Ω - P_σ Ω P_σ^T):")
         for i, row_name in enumerate(types):
             row_str = " ".join(f"{diff[i,j]:8.4f}" for j in range(6))
             print(f"    {row_name}: {row_str}")

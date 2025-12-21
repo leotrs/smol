@@ -136,7 +136,7 @@ for idx, (g6_1, g6_2, G, v1, v2, w1, w2) in enumerate(two_edge_switches):
         mechanism_a_satisfied.append(idx)
     
     print(f"Switch {idx}: {g6_1}")
-    print(f"  Cond 1 (deg equal):     ✓")
+    print("  Cond 1 (deg equal):     ✓")
     print(f"  Cond 2 (parallel):      {'✓' if cond2 else '✗'} (v1-v2:{has_v1v2}, w1-w2:{has_w1w2})")
     print(f"  Cond 3 (|shared|=2):    {'✓' if cond3 else '✗'} (|shared|={cond3_val})")
     print(f"  Cond 4 (uniform cross): {'✓' if cond4 else '✗'} ({c11},{c12},{c21},{c22})")

@@ -186,7 +186,7 @@ for idx, (g6_1, g6_2, G1, G2, v1, v2, w1, w2) in enumerate(switches):
                     
                     P[exit_type][entry_type] += T1[exit_idx, entry_idx]
     
-    print(f"  First-step matrix P (exit -> entry):")
+    print("  First-step matrix P (exit -> entry):")
     for ft in from_types:
         row = [P[ft][tt] for tt in to_types]
         print(f"    {ft}: {[f'{x:.4f}' for x in row]}")
@@ -210,7 +210,7 @@ for idx, (g6_1, g6_2, G1, G2, v1, v2, w1, w2) in enumerate(switches):
                 print(f"  ✗ Asymmetry: P[{ft},{tt}]={val1:.4f} != P[{sigma(ft)},{sigma(tt)}]={val2:.4f}")
     
     if symmetric:
-        print(f"  ✓ First-step matrix is σ-symmetric!")
+        print("  ✓ First-step matrix is σ-symmetric!")
     
     print()
 

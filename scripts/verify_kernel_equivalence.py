@@ -206,11 +206,11 @@ for idx, (g6_1, g6_2, G1, G2, v1, v2, w1, w2) in enumerate(switches):
         print(f"  ✓ Kernel equivalence holds! (max diff: {max_diff:.2e})")
     else:
         print(f"  ✗ Kernel equivalence FAILS! (max diff: {max_diff:.2e})")
-        print(f"  K1:")
+        print("  K1:")
         print(K1)
-        print(f"  P_σ K2 P_σ^T:")
+        print("  P_σ K2 P_σ^T:")
         print(K2_conjugated)
-        print(f"  Difference:")
+        print("  Difference:")
         print(K1 - K2_conjugated)
     print()
 

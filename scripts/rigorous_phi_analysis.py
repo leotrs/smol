@@ -9,7 +9,7 @@ import networkx as nx
 import numpy as np
 import psycopg2
 from itertools import permutations
-from numpy.linalg import inv, matrix_power
+from numpy.linalg import inv
 
 def get_switches():
     conn = psycopg2.connect('dbname=smol')
@@ -279,9 +279,9 @@ for idx, (g6_1, g6_2, G1, G2, v1, v2, w1, w2) in enumerate(switches):
     print(f"Switch {idx}: max|Φ_G - P_σ Φ_{{G'}} P_σ^T| = {max_diff:.2e} {status}")
     
     if not step5_holds:
-        print(f"  Φ_G:")
+        print("  Φ_G:")
         print(Phi1)
-        print(f"  P_σ Φ_{{G'}} P_σ^T:")
+        print("  P_σ Φ_{G'} P_σ^T:")
         print(Phi2_transformed)
 
 print()

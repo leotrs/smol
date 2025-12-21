@@ -412,110 +412,86 @@ async def fetch_random_graph() -> dict[str, Any] | None:
 
 async def fetch_random_cospectral_class(matrix: str = "adj") -> list[str]:
     """Fetch a random cospectral class using pre-computed pairs."""
-    import random
     ph = _placeholder()
 
     async with get_db() as conn:
         if IS_SQLITE:
-            # Get id range from cospectral_mates for this matrix type
+            # Get a random pair directly using ORDER BY RANDOM()
             cursor = await conn.execute(
-                f"SELECT MIN(id), MAX(id) FROM cospectral_mates WHERE matrix_type = {ph}",
+                f"""
+                SELECT graph1_id, graph2_id
+                FROM cospectral_mates
+                WHERE matrix_type = {ph}
+                ORDER BY RANDOM()
+                LIMIT 1
+                """,
                 (matrix,),
             )
             row = await cursor.fetchone()
-            if not row or not row[0]:
+            if not row:
                 return []
-            min_id, max_id = int(row[0]), int(row[1])
 
-            for _ in range(20):
-                rand_id = random.randint(min_id, max_id)
-                cursor = await conn.execute(
-                    f"""
-                    SELECT graph1_id, graph2_id
-                    FROM cospectral_mates
-                    WHERE id >= {ph} AND matrix_type = {ph}
-                    LIMIT 1
-                    """,
-                    (rand_id, matrix),
+            seed_id1, seed_id2 = row
+
+            # Get all graphs in this cospectral family by finding all pairs involving these graphs
+            cursor = await conn.execute(
+                f"""
+                WITH family_ids AS (
+                    SELECT DISTINCT graph1_id as gid FROM cospectral_mates
+                    WHERE matrix_type = {ph} AND (graph1_id = {ph} OR graph2_id = {ph})
+                    UNION
+                    SELECT DISTINCT graph2_id as gid FROM cospectral_mates
+                    WHERE matrix_type = {ph} AND (graph1_id = {ph} OR graph2_id = {ph})
                 )
-                row = await cursor.fetchone()
-                if not row:
-                    continue
-
-                seed_id1, seed_id2 = row
-
-                # Get all graphs in this cospectral family by finding all pairs involving these graphs
-                cursor = await conn.execute(
-                    f"""
-                    WITH family_ids AS (
-                        SELECT DISTINCT graph1_id as gid FROM cospectral_mates
-                        WHERE matrix_type = {ph} AND (graph1_id = {ph} OR graph2_id = {ph})
-                        UNION
-                        SELECT DISTINCT graph2_id as gid FROM cospectral_mates
-                        WHERE matrix_type = {ph} AND (graph1_id = {ph} OR graph2_id = {ph})
-                    )
-                    SELECT g.graph6
-                    FROM family_ids f
-                    JOIN graphs g ON g.id = f.gid
-                    ORDER BY g.graph6
-                    LIMIT 10
-                    """,
-                    (matrix, seed_id1, seed_id1, matrix, seed_id2, seed_id2),
-                )
-                graphs = [r[0] for r in await cursor.fetchall()]
-                if len(graphs) > 1:
-                    return graphs
-            return []
+                SELECT g.graph6
+                FROM family_ids f
+                JOIN graphs g ON g.id = f.gid
+                ORDER BY g.graph6
+                LIMIT 10
+                """,
+                (matrix, seed_id1, seed_id1, matrix, seed_id2, seed_id2),
+            )
+            graphs = [r[0] for r in await cursor.fetchall()]
+            return graphs
         else:
             cur = conn.cursor()
+            # Get a random pair directly using ORDER BY RANDOM()
             cur.execute(
-                f"SELECT MIN(id), MAX(id) FROM cospectral_mates WHERE matrix_type = {ph}",
+                f"""
+                SELECT graph1_id, graph2_id
+                FROM cospectral_mates
+                WHERE matrix_type = {ph}
+                ORDER BY RANDOM()
+                LIMIT 1
+                """,
                 (matrix,),
             )
             row = cur.fetchone()
-            if not row or not row[0]:
+            if not row:
                 return []
-            min_id, max_id = int(row[0]), int(row[1])
 
-            for _ in range(20):
-                rand_id = random.randint(min_id, max_id)
-                cur.execute(
-                    f"""
-                    SELECT graph1_id, graph2_id
-                    FROM cospectral_mates
-                    WHERE id >= {ph} AND matrix_type = {ph}
-                    LIMIT 1
-                    """,
-                    (rand_id, matrix),
+            seed_id1, seed_id2 = row
+
+            # Get all graphs in this cospectral family by finding all pairs involving these graphs
+            cur.execute(
+                f"""
+                WITH family_ids AS (
+                    SELECT DISTINCT graph1_id as gid FROM cospectral_mates
+                    WHERE matrix_type = {ph} AND (graph1_id = {ph} OR graph2_id = {ph})
+                    UNION
+                    SELECT DISTINCT graph2_id as gid FROM cospectral_mates
+                    WHERE matrix_type = {ph} AND (graph1_id = {ph} OR graph2_id = {ph})
                 )
-                row = cur.fetchone()
-                if not row:
-                    continue
-
-                seed_id1, seed_id2 = row
-
-                # Get all graphs in this cospectral family by finding all pairs involving these graphs
-                cur.execute(
-                    f"""
-                    WITH family_ids AS (
-                        SELECT DISTINCT graph1_id as gid FROM cospectral_mates
-                        WHERE matrix_type = {ph} AND (graph1_id = {ph} OR graph2_id = {ph})
-                        UNION
-                        SELECT DISTINCT graph2_id as gid FROM cospectral_mates
-                        WHERE matrix_type = {ph} AND (graph1_id = {ph} OR graph2_id = {ph})
-                    )
-                    SELECT g.graph6
-                    FROM family_ids f
-                    JOIN graphs g ON g.id = f.gid
-                    ORDER BY g.graph6
-                    LIMIT 10
-                    """,
-                    (matrix, seed_id1, seed_id1, matrix, seed_id2, seed_id2),
-                )
-                graphs = [r[0] for r in cur.fetchall()]
-                if len(graphs) > 1:
-                    return graphs
-            return []
+                SELECT g.graph6
+                FROM family_ids f
+                JOIN graphs g ON g.id = f.gid
+                ORDER BY g.graph6
+                LIMIT 10
+                """,
+                (matrix, seed_id1, seed_id1, matrix, seed_id2, seed_id2),
+            )
+            graphs = [r[0] for r in cur.fetchall()]
+            return graphs
 
 
 async def fetch_similar_graphs(

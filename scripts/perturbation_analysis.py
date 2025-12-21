@@ -123,7 +123,7 @@ for g6_1, g6_2, G1, G2, v1, v2, w1, w2 in switches:
     # Instead of direct matrix comparison, let's look at the effect on closed walks
     
     # Count closed NB walks of length 3 through each edge
-    print(f"\n  Length-3 closed walk analysis:")
+    print("\n  Length-3 closed walk analysis:")
     
     # For edges involved in the switch
     for e in switched_G1:
@@ -140,7 +140,7 @@ for g6_1, g6_2, G1, G2, v1, v2, w1, w2 in switches:
     
     # Key insight: check if there's a pairing between G1 switched edges and G2 switched edges
     # such that the diagonal entries match
-    print(f"\n  Checking diagonal pairing:")
+    print("\n  Checking diagonal pairing:")
     T1_cubed = np.linalg.matrix_power(T1, 3)
     T2_cubed = np.linalg.matrix_power(T2, 3)
     

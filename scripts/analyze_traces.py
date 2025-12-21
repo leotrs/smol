@@ -104,7 +104,7 @@ for idx, desc in interesting_switches:
         Tk1 = Tk1 @ T1
         Tk2 = Tk2 @ T2
     
-    print(f"  Traces (k=1..10):")
+    print("  Traces (k=1..10):")
     for k in range(1, 11):
         tr1 = traces1[k-1]
         tr2 = traces2[k-1]
@@ -125,7 +125,7 @@ for idx, desc in interesting_switches:
     print(f"  Switched edges in G2: {switched_edges_G2}")
     
     # Look at diagonal entries (contribute to trace)
-    print(f"  Diagonal entries at switched edge indices:")
+    print("  Diagonal entries at switched edge indices:")
     Tk1 = T1.copy()
     Tk2 = T2.copy()
     for k in range(1, 6):
@@ -155,18 +155,18 @@ for idx, desc in interesting_switches:
     sw1 = [(v1, w1), (w1, v1), (v2, w2), (w2, v2)]
     sw2 = [(v1, w2), (w2, v1), (v2, w1), (w1, v2)]
     
-    print(f"  Row sums in G1 at switched edges:")
+    print("  Row sums in G1 at switched edges:")
     for e in sw1:
         i = e2i1[e]
         print(f"    {e}: row sum = {T1[i].sum():.4f}")
     
-    print(f"  Row sums in G2 at switched edges:")
+    print("  Row sums in G2 at switched edges:")
     for e in sw2:
         i = e2i2[e]
         print(f"    {e}: row sum = {T2[i].sum():.4f}")
     
     # Compare specific entries
-    print(f"  Entry analysis:")
+    print("  Entry analysis:")
     # In G1: (v1,w1) can go to (w1, x) for x in N(w1)\{v1}
     # In G2: (v1,w2) can go to (w2, x) for x in N(w2)\{v1}
     

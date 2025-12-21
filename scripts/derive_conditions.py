@@ -8,7 +8,6 @@ Let's verify this and find the TRUE minimal conditions.
 """
 
 import networkx as nx
-import numpy as np
 import psycopg2
 from itertools import permutations
 
@@ -117,7 +116,7 @@ for idx, (g6_1, g6_2, G1, G2, v1, v2, w1, w2) in enumerate(switches):
     v2_sym = (v2_u1 == v2_u2)
     
     if uniform:
-        assert v1_sym and v2_sym, f"Uniform cross should imply symmetry!"
+        assert v1_sym and v2_sym, "Uniform cross should imply symmetry!"
     
     status = "✓" if uniform else "✗"
     print(f"  Switch {idx}: cross=({c11},{c12},{c21},{c22}), v1:(sh={v1_shared},u1={v1_u1},u2={v1_u2}), v2:(sh={v2_shared},u1={v2_u1},u2={v2_u2}) {status}")

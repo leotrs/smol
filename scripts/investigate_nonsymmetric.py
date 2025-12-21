@@ -8,7 +8,6 @@ import networkx as nx
 import numpy as np
 import psycopg2
 from itertools import permutations
-from collections import defaultdict
 
 def build_nbl_matrix(G):
     edges = [(u, v) for u, v in G.edges()] + [(v, u) for u, v in G.edges()]
@@ -160,7 +159,7 @@ for idx in [0, 1, 10]:
             return 'external'
     
     # Compare diagonal contributions from different edge types
-    print(f"  Diagonal sum by edge type for T^k:")
+    print("  Diagonal sum by edge type for T^k:")
     
     Tk1 = np.eye(len(edges1))
     Tk2 = np.eye(len(edges2))

@@ -97,7 +97,7 @@ for g6_1, g6_2, G1, G2, v1, v2, w1, w2 in mech_b:
     print(f"  unique_1={unique_1}, unique_2={unique_2}")
     
     # For each external vertex, print its full adjacency
-    print(f"  External vertex adjacencies:")
+    print("  External vertex adjacencies:")
     all_ext = ext_v1 | ext_v2 | ext_w1 | ext_w2
     for x in sorted(all_ext):
         adj_in_S = [s for s in S if G1.has_edge(x, s)]
@@ -106,7 +106,7 @@ for g6_1, g6_2, G1, G2, v1, v2, w1, w2 in mech_b:
     
     # Check if there's an automorphism of the external graph
     # that swaps unique_1 with unique_2 and fixes shared
-    print(f"\n  Checking for external symmetry...")
+    print("\n  Checking for external symmetry...")
     
     # Build the external graph (vertices = all_ext, edges = edges between them)
     ext_graph = G1.subgraph(all_ext).copy()
@@ -208,10 +208,10 @@ for g6_1, g6_2, G1, G2, v1, v2, w1, w2 in mech_b:
         for m in valid_mappings:
             print(f"    {m}")
     else:
-        print(f"  No valid u1<->u2 mapping found!")
+        print("  No valid u1<->u2 mapping found!")
     
     # NEW: Check if the shared vertex(s) have a special structure
-    print(f"\n  Shared vertex analysis:")
+    print("\n  Shared vertex analysis:")
     for z in shared:
         adj_v1 = G1.has_edge(z, v1)
         adj_v2 = G1.has_edge(z, v2)
@@ -257,7 +257,7 @@ for g6_1, g6_2, G1, G2, v1, v2, w1, w2 in mech_b:
     
     # Let's compute P under the identity (no swap on v's) and see if u1<->u2 works alone
     
-    print(f"  Testing if P is symmetric under u1<->u2 swap only (fixing v1,v2):")
+    print("  Testing if P is symmetric under u1<->u2 swap only (fixing v1,v2):")
     
     T1, edges1, e2i1 = build_nbl_matrix(G1)
     
@@ -338,7 +338,7 @@ for g6_1, g6_2, G1, G2, v1, v2, w1, w2 in mech_b:
         print(f"    {name}: {'symmetric' if symmetric else 'NOT symmetric'}")
     
     # Print the P matrix
-    print(f"  P matrix:")
+    print("  P matrix:")
     for ft in types:
         row = [f"{P[ft][tt]:.3f}" for tt in types]
         print(f"    {ft}: {row}")

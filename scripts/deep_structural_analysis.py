@@ -6,7 +6,6 @@ Deep structural analysis of all 11 switches to find the underlying mechanisms.
 import networkx as nx
 import psycopg2
 from itertools import permutations
-import numpy as np
 
 conn = psycopg2.connect('dbname=smol')
 cur = conn.cursor()
@@ -256,7 +255,7 @@ for d in mechanism_b_candidates:
     # By uniform cross-intersection, these are equal!
     c = d['cross'][0]  # All cross values are equal
     print(f"  Cross-intersection c = {c}")
-    print(f"  |ext(v1) ∩ unique_1| = |ext(v1) ∩ unique_2| = c - |ext(v1) ∩ shared|")
+    print("  |ext(v1) ∩ unique_1| = |ext(v1) ∩ unique_2| = c - |ext(v1) ∩ shared|")
     
     # The shared vertex is key
     print(f"  Shared vertices: {d['shared']}")

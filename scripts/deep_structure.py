@@ -123,7 +123,7 @@ for idx, (g6_1, g6_2, G1, G2, v1, v2, w1, w2) in enumerate(switches):
     for x, t in vertex_types.items():
         types_to_verts[t].add(x)
     
-    print(f"  External vertex types:")
+    print("  External vertex types:")
     for t in sorted(types_to_verts.keys()):
         verts = types_to_verts[t]
         degs = [G1.degree(x) for x in verts]

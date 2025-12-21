@@ -68,3 +68,33 @@ dev = [
 markers = [
     "needs_db: marks tests that require a populated database (skip in CI)",
 ]
+
+[tool.ruff]
+exclude = [
+    "scripts/algebraic_approach.py",
+    "scripts/analyze_*.py",
+    "scripts/block_structure_analysis.py",
+    "scripts/boundary_analysis.py",
+    "scripts/check_*.py",
+    "scripts/classify_switches.py",
+    "scripts/combined_transfer_analysis.py",
+    "scripts/compute_all_resolvents.py",
+    "scripts/deep_*.py",
+    "scripts/eigenvalue_analysis.py",
+    "scripts/final_verification.py",
+    "scripts/find_*.py",
+    "scripts/fix_eigenvalue_sort.py",
+    "scripts/investigate_*.py",
+    "scripts/lumped_trace_proof.py",
+    "scripts/matrix_difference_analysis.py",
+    "scripts/mechanism_*.py",
+    "scripts/new_nbl_analysis.py",
+    "scripts/prove_*.py",
+    "scripts/research_nbl.py",
+    "scripts/rigorous_*.py",
+    "scripts/structural_analysis.py",
+    "scripts/switch_*.py",
+    "scripts/test_*.py",
+    "scripts/trace_decomposition.py",
+    "scripts/verify_*.py",
+]

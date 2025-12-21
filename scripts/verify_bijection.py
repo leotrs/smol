@@ -6,7 +6,6 @@ The issue: When we swap edges, do the transitions remain valid?
 """
 
 import networkx as nx
-import numpy as np
 import psycopg2
 from itertools import permutations
 

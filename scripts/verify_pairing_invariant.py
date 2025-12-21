@@ -8,7 +8,6 @@ This explains why traces match even without full similarity.
 """
 
 import networkx as nx
-import numpy as np
 import psycopg2
 from itertools import permutations
 from collections import defaultdict
@@ -140,7 +139,7 @@ for idx, (g6_1, g6_2, G1, G2, v1, v2, w1, w2) in enumerate(switches):
             print(f"    w→v: G1={sum_G1_wtov:.6f}, G2={sum_G2_wtov:.6f}, diff={diff_wtov:.2e}")
     
     if switch_pass:
-        print(f"  All k: ✓ PASS")
+        print("  All k: ✓ PASS")
     else:
         all_pass = False
     print()

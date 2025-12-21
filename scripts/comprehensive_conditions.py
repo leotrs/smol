@@ -13,7 +13,6 @@ import networkx as nx
 import numpy as np
 import psycopg2
 from itertools import permutations
-from collections import defaultdict
 
 def build_nbl_matrix(G):
     edges = [(u, v) for u, v in G.edges()] + [(v, u) for u, v in G.edges()]

@@ -7,7 +7,6 @@ by decomposing contributions by which switched edges are used.
 """
 
 import networkx as nx
-import numpy as np
 import psycopg2
 from itertools import permutations
 from collections import defaultdict
