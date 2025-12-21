@@ -3,8 +3,29 @@
 {% block title %}Compare - SMOL{% endblock %}
 
 {% block content %}
+{% set cospectral_matrices = [] %}
+{% for matrix, status in result.spectral_comparison.items() %}
+    {% if (status == 'same' or status == '0.0000' or (status is number and status == 0.0)) %}
+        {% set _ = cospectral_matrices.append(matrix) %}
+    {% endif %}
+{% endfor %}
+
+{% set matrix_labels = {'adj': 'adj', 'kirchhoff': 'kir', 'signless': 'sgl', 'lap': 'lap', 'nb': 'nb', 'nbl': 'nbl'} %}
+
 <hgroup>
-    <h1>Compare Graphs</h1>
+    <h1 style="display: flex; justify-content: space-between; align-items: baseline; gap: 1rem;">
+        <span>Compare Graphs</span>
+        {% if cospectral_matrices|length > 0 %}
+        <span style="font-size: 0.5em; font-weight: 500; color: var(--pico-muted-color); white-space: nowrap;">
+            cospectral for
+            {% for matrix in cospectral_matrices %}
+            <span class="tag" style="background: var(--pico-primary); color: white; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.9em; margin-left: 0.25rem;">{{ matrix_labels[matrix] }}</span>
+            {% endfor %}
+        </span>
+        {% else %}
+        <span style="font-size: 0.5em; font-weight: 400; color: var(--pico-muted-color);">not cospectral</span>
+        {% endif %}
+    </h1>
     <p>Comparing {{ result.graphs|length }} graphs side by side.</p>
 </hgroup>
 
@@ -35,15 +56,15 @@
     {% endfor %}
 </div>
 {% endif %}
-<div style="display: flex; gap: 2rem;">
-    <div class="viz-container" style="flex: 1;">
-        <div id="compare-spectrum-real-plot" style="height: 280px;"></div>
+<div style="display: flex; gap: 3rem; flex-wrap: wrap;">
+    <div class="viz-container" style="flex: 1; min-width: 450px;">
+        <div id="compare-spectrum-real-plot" style="height: 350px;"></div>
         <button class="viz-reset-btn" onclick="resetCompareSpectrumRealPlot()" title="Reset view">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
         </button>
     </div>
-    <div class="viz-container" style="flex: 1;">
-        <div id="compare-spectrum-complex-plot" style="height: 280px;"></div>
+    <div class="viz-container" style="flex: 1; min-width: 450px;">
+        <div id="compare-spectrum-complex-plot" style="height: 350px;"></div>
         <button class="viz-reset-btn" onclick="resetCompareSpectrumComplexPlot()" title="Reset view">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
         </button>
@@ -52,36 +73,114 @@
 
 <h3>{% if result.graphs|length == 2 %}Spectral Distance{% else %}Spectral Comparison{% endif %}</h3>
 {% if result.distance_matrix %}
-<div id="distance-matrix-heatmap"></div>
+{% set matrix_labels = {'adj': 'adj', 'kirchhoff': 'kir', 'signless': 'sgl', 'lap': 'lap', 'nb': 'nb', 'nbl': 'nbl'} %}
+{% set graph_labels = result.graphs | map(attribute='graph6') | list %}
+{% set n = graph_labels|length %}
+
+<div class="distance-matrices-container">
+    {% for matrix_name, matrix_data in result.distance_matrix.items() %}
+    <div class="distance-matrix">
+        <h4 class="matrix-label">{{ matrix_labels[matrix_name] }}</h4>
+        <div class="matrix-grid" style="grid-template-columns: auto repeat({{ n - 1 }}, 1fr);">
+            {# Header row with column labels #}
+            <div class="cell empty"></div>
+            {% for i in range(1, n) %}
+            <div class="cell header col-header">
+                <span class="rotated-label">{{ graph_labels[i] }}</span>
+            </div>
+            {% endfor %}
+
+            {# Data rows #}
+            {% for i in range(n - 1) %}
+                {# Row label #}
+                <div class="cell header row-header">{{ graph_labels[i] }}</div>
+
+                {# Data cells (only upper diagonal) #}
+                {% for j in range(1, n) %}
+                    {% if j > i %}
+                        {% set value = matrix_data[i][j] %}
+                        {% set is_mate = (value == 0.0 and value is number) %}
+                        {% set is_nan = (value != value) %}
+                        <div class="cell data-cell{% if is_mate %} mate-cell{% elif is_nan %} na-cell{% endif %}"
+                             {% if not is_nan %}style="background: linear-gradient(to right, var(--cell-color-start), var(--cell-color-end)); --distance: {{ value }};"{% endif %}
+                             data-distance="{{ value if not is_nan else 'N/A' }}">
+                            {% if is_mate %}
+                                <span class="mate-text">mate</span>
+                                <span class="mate-value">0.0000</span>
+                            {% elif not is_nan %}
+                                <span class="distance-value">{{ "%.4f"|format(value) }}</span>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <div class="cell empty"></div>
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="distance-legend">
+    <div class="legend-bar"></div>
+    <div class="legend-labels">
+        <span>0</span>
+        <span>Distance</span>
+        <span id="legend-max">—</span>
+    </div>
+</div>
+
 <script>
+// Compute color scale for all distance values
 const distanceMatrixData = {{ result.distance_matrix | tojson }};
-const graphLabels = {{ result.graphs | map(attribute='graph6') | list | tojson }};
-
-if (typeof d3 !== 'undefined') {
-    renderDistanceMatrixHeatmap();
-} else {
-    document.addEventListener('DOMContentLoaded', () => {
-        const checkD3 = setInterval(() => {
-            if (typeof d3 !== 'undefined' && typeof renderDistanceMatrixHeatmap === 'function') {
-                clearInterval(checkD3);
-                renderDistanceMatrixHeatmap();
-            }
-        }, 50);
+const allValues = [];
+Object.values(distanceMatrixData).forEach(matrix => {
+    matrix.forEach((row, i) => {
+        row.forEach((val, j) => {
+            if (j > i && !isNaN(val)) allValues.push(val);
+        });
     });
-}
+});
 
-// Re-render on theme change
-const themeObserver = new MutationObserver(() => {
-    const container = document.getElementById('distance-matrix-heatmap');
-    if (container) {
-        container.innerHTML = '';
-        renderDistanceMatrixHeatmap();
+const maxDist = Math.max(...allValues) || 1;
+document.getElementById('legend-max').textContent = maxDist.toFixed(2);
+
+// Apply colors to cells based on distance
+document.querySelectorAll('.data-cell[data-distance]').forEach(cell => {
+    const dist = parseFloat(cell.dataset.distance);
+    if (!isNaN(dist)) {
+        const ratio = dist / maxDist;
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const startColor = '#14B8A6';  // Teal for low distance
+        const endColor = isDark ? '#0f172a' : '#ffffff';  // Dark/white for high distance
+
+        // Interpolate between colors
+        cell.style.setProperty('--cell-color-start', startColor);
+        cell.style.setProperty('--cell-color-end', endColor);
+        cell.style.background = `color-mix(in srgb, ${startColor} ${(1-ratio)*100}%, ${endColor})`;
+
+        // Set text color based on background
+        const textColor = ratio > 0.5 ? (isDark ? '#ddd' : '#000') : '#fff';
+        cell.style.color = textColor;
     }
 });
-themeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['data-theme']
+
+// Update on theme change
+const observer = new MutationObserver(() => {
+    document.querySelectorAll('.data-cell[data-distance]').forEach(cell => {
+        const dist = parseFloat(cell.dataset.distance);
+        if (!isNaN(dist)) {
+            const ratio = dist / maxDist;
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const endColor = isDark ? '#0f172a' : '#ffffff';
+            const startColor = '#14B8A6';
+            cell.style.background = `color-mix(in srgb, ${startColor} ${(1-ratio)*100}%, ${endColor})`;
+            const textColor = ratio > 0.5 ? (isDark ? '#ddd' : '#000') : '#fff';
+            cell.style.color = textColor;
+        }
+    });
 });
+observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 </script>
 {% else %}
 <p>
@@ -245,8 +344,8 @@ function renderCompareSpectrumRealPlot() {
     }));
 
     const width = container.clientWidth || 500;
-    const height = 280;
-    const margin = {top: 10, right: 20, bottom: 45, left: 80};
+    const height = 350;
+    const margin = {top: 10, right: 20, bottom: 50, left: 100};
     const plotWidth = width - margin.left - margin.right;
     const plotHeight = height - margin.top - margin.bottom;
 
@@ -341,10 +440,10 @@ function renderCompareSpectrumRealPlot() {
 
     g.append('text')
         .attr('x', plotWidth / 2)
-        .attr('y', plotHeight + 35)
+        .attr('y', plotHeight + 40)
         .attr('text-anchor', 'middle')
         .attr('fill', axisColor)
-        .attr('font-size', '11px')
+        .attr('font-size', '13px')
         .text('Eigenvalue');
 
     const colors = {
@@ -371,12 +470,12 @@ function renderCompareSpectrumRealPlot() {
 
         // Label
         g.append('text')
-            .attr('x', -10)
+            .attr('x', -15)
             .attr('y', laneY + laneHeight / 2)
             .attr('text-anchor', 'end')
             .attr('dominant-baseline', 'middle')
             .attr('fill', colors[matrix])
-            .attr('font-size', '11px')
+            .attr('font-size', '13px')
             .attr('font-weight', '600')
             .text(labels[matrix]);
 
@@ -527,8 +626,8 @@ function renderCompareSpectrumComplexPlot() {
     }));
 
     const width = container.clientWidth || 500;
-    const height = 280;
-    const margin = {top: 20, right: 20, bottom: 40, left: 50};
+    const height = 350;
+    const margin = {top: 20, right: 20, bottom: 50, left: 65};
     const plotWidth = width - margin.left - margin.right;
     const plotHeight = height - margin.top - margin.bottom;
 
@@ -689,19 +788,19 @@ function renderCompareSpectrumComplexPlot() {
     // Axis labels
     g.append('text')
         .attr('x', plotWidth / 2)
-        .attr('y', plotHeight + 32)
+        .attr('y', plotHeight + 40)
         .attr('text-anchor', 'middle')
         .attr('fill', axisColor)
-        .attr('font-size', '11px')
+        .attr('font-size', '13px')
         .text('Re');
 
     g.append('text')
         .attr('transform', 'rotate(-90)')
         .attr('x', -plotHeight / 2)
-        .attr('y', -32)
+        .attr('y', -45)
         .attr('text-anchor', 'middle')
         .attr('fill', axisColor)
-        .attr('font-size', '11px')
+        .attr('font-size', '13px')
         .text('Im');
 
     // Zero lines (in content so they pan)
@@ -913,7 +1012,7 @@ function renderCompareSpectrumComplexPlot() {
         legendRow.append('text')
             .attr('text-anchor', 'end')
             .attr('fill', item.color)
-            .attr('font-size', '11px')
+            .attr('font-size', '13px')
             .attr('font-weight', '600')
             .text(item.label);
     });
@@ -1037,229 +1136,119 @@ function resetCompareSpectrumComplexPlot() {
 </table>
 </div>
 
-<script>
-function renderDistanceMatrixHeatmap() {
-    if (typeof distanceMatrixData === 'undefined' || typeof graphLabels === 'undefined') return;
-
-    const container = document.getElementById('distance-matrix-heatmap');
-    if (!container) return;
-
-    const matrices = Object.keys(distanceMatrixData);
-    const n = graphLabels.length;
-
-    const cellSize = 50;
-    const labelWidth = 5;
-    const matrixLabels = {adj: 'adj', kirchhoff: 'kir', signless: 'sgl', lap: 'lap', nb: 'nb', nbl: 'nbl'};
-
-    const matrixWidth = labelWidth + n * cellSize;
-    const headerHeight = 25;
-    const matrixHeight = (n - 1) * cellSize + headerHeight;
-
-    // 2 rows x 3 columns layout
-    const cols = 3;
-    const rows = 2;
-    const gapX = 75;
-    const gapY = 15;
-    const totalWidth = cols * matrixWidth + (cols - 1) * gapX;
-    const totalHeight = rows * matrixHeight + (rows - 1) * gapY;
-    const legendSpace = 55;
-
-    const svg = d3.select('#distance-matrix-heatmap')
-        .append('svg')
-        .attr('width', totalWidth)
-        .attr('height', totalHeight + legendSpace);
-
-    const style = getComputedStyle(document.documentElement);
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const textColor = style.getPropertyValue('--pico-muted-color').trim() || '#666';
-    const bgColor = isDark ? '#1a1a1a' : '#f0f0f0';
-    const naColor = isDark ? '#333' : '#ddd';
-
-    // Color scale: white/dark bg to teal
-    const allValues = [];
-    matrices.forEach(matrix => {
-        const data = distanceMatrixData[matrix];
-        for (let i = 0; i < n; i++) {
-            for (let j = i + 1; j < n; j++) {  // Only upper diagonal
-                if (!isNaN(data[i][j])) {
-                    allValues.push(data[i][j]);
-                }
-            }
-        }
-    });
-
-    const maxDist = d3.max(allValues) || 1;
-    const colorScale = d3.scaleLinear()
-        .domain([0, maxDist])
-        .range(['#14B8A6', isDark ? '#0f172a' : '#ffffff']);
-
-    matrices.forEach((matrix, matrixIdx) => {
-        const col = matrixIdx % cols;
-        const row = Math.floor(matrixIdx / cols);
-        const xOffset = col * (matrixWidth + gapX);
-        const yOffset = row * (matrixHeight + gapY);
-
-        const g = svg.append('g')
-            .attr('transform', `translate(${xOffset}, ${yOffset})`);
-
-        // Matrix label
-        g.append('text')
-            .attr('x', 0)
-            .attr('y', 15)
-            .attr('fill', textColor)
-            .attr('font-size', '14px')
-            .attr('font-weight', '600')
-            .text(matrixLabels[matrix]);
-
-        // Column labels (only for upper diagonal)
-        graphLabels.forEach((label, i) => {
-            if (i > 0) {  // Skip first column since no data there
-                g.append('text')
-                    .attr('x', labelWidth + i * cellSize + cellSize / 2)
-                    .attr('y', 20)
-                    .attr('fill', textColor)
-                    .attr('font-size', '9px')
-                    .attr('text-anchor', 'middle')
-                    .attr('font-family', 'monospace')
-                    .text(label);
-            }
-        });
-
-        const heatmap = g.append('g')
-            .attr('transform', `translate(${labelWidth}, ${headerHeight})`);
-
-        // Row labels (only for upper diagonal)
-        graphLabels.forEach((label, i) => {
-            if (i < n - 1) {  // Skip last row since no data there
-                g.append('text')
-                    .attr('x', labelWidth + cellSize - 5)
-                    .attr('y', headerHeight + i * cellSize + cellSize / 2)
-                    .attr('fill', textColor)
-                    .attr('font-size', '9px')
-                    .attr('text-anchor', 'end')
-                    .attr('dominant-baseline', 'middle')
-                    .attr('font-family', 'monospace')
-                    .text(label);
-            }
-        });
-
-        const data = distanceMatrixData[matrix];
-
-        // Draw cells (only upper diagonal)
-        for (let i = 0; i < n; i++) {
-            for (let j = 0; j < n; j++) {
-                if (j <= i) continue;  // Skip lower diagonal and diagonal
-
-                const value = data[i][j];
-                const isNaN = Number.isNaN(value);
-                const isExactMatch = !isNaN && value === 0;
-
-                heatmap.append('rect')
-                    .attr('x', j * cellSize)
-                    .attr('y', i * cellSize)
-                    .attr('width', cellSize)
-                    .attr('height', cellSize)
-                    .attr('fill', isNaN ? naColor : colorScale(value));
-
-                if (!isNaN) {
-                    const textFill = value < maxDist * 0.5 ? '#fff' : (isDark ? '#ddd' : '#000');
-
-                    if (isExactMatch) {
-                        // Show "mate" above and "0.0000" below
-                        heatmap.append('text')
-                            .attr('x', j * cellSize + cellSize / 2)
-                            .attr('y', i * cellSize + cellSize / 2 - 6)
-                            .attr('text-anchor', 'middle')
-                            .attr('dominant-baseline', 'middle')
-                            .attr('font-size', '11px')
-                            .attr('font-weight', '600')
-                            .attr('fill', textFill)
-                            .text('mate');
-
-                        heatmap.append('text')
-                            .attr('x', j * cellSize + cellSize / 2)
-                            .attr('y', i * cellSize + cellSize / 2 + 7)
-                            .attr('text-anchor', 'middle')
-                            .attr('dominant-baseline', 'middle')
-                            .attr('font-size', '8px')
-                            .attr('fill', textFill)
-                            .text('0.0000');
-                    } else {
-                        heatmap.append('text')
-                            .attr('x', j * cellSize + cellSize / 2)
-                            .attr('y', i * cellSize + cellSize / 2)
-                            .attr('text-anchor', 'middle')
-                            .attr('dominant-baseline', 'middle')
-                            .attr('font-size', '10px')
-                            .attr('fill', textFill)
-                            .text(value.toFixed(4));
-                    }
-                }
-            }
-        }
-    });
-
-    // Add legend
-    const legendWidth = 200;
-    const legendHeight = 20;
-    const legendX = (totalWidth - legendWidth) / 2;
-    const legendY = totalHeight + 15;
-
-    const legendGroup = svg.append('g')
-        .attr('transform', `translate(${legendX}, ${legendY})`);
-
-    // Create gradient
-    const gradientId = 'distance-gradient';
-    const defs = svg.append('defs');
-    const gradient = defs.append('linearGradient')
-        .attr('id', gradientId)
-        .attr('x1', '0%')
-        .attr('x2', '100%');
-
-    gradient.append('stop')
-        .attr('offset', '0%')
-        .attr('stop-color', '#14B8A6');
-
-    gradient.append('stop')
-        .attr('offset', '100%')
-        .attr('stop-color', isDark ? '#0f172a' : '#ffffff');
-
-    // Draw gradient bar
-    legendGroup.append('rect')
-        .attr('width', legendWidth)
-        .attr('height', legendHeight)
-        .attr('fill', `url(#${gradientId})`)
-        .attr('stroke', isDark ? '#666' : '#ccc')
-        .attr('stroke-width', 1);
-
-    // Add labels
-    legendGroup.append('text')
-        .attr('x', 0)
-        .attr('y', legendHeight + 12)
-        .attr('text-anchor', 'middle')
-        .attr('fill', textColor)
-        .attr('font-size', '11px')
-        .text('0');
-
-    legendGroup.append('text')
-        .attr('x', legendWidth / 2)
-        .attr('y', legendHeight + 12)
-        .attr('text-anchor', 'middle')
-        .attr('fill', textColor)
-        .attr('font-size', '11px')
-        .text('Distance');
-
-    legendGroup.append('text')
-        .attr('x', legendWidth)
-        .attr('y', legendHeight + 12)
-        .attr('text-anchor', 'middle')
-        .attr('fill', textColor)
-        .attr('font-size', '11px')
-        .text(maxDist.toFixed(2));
-}
-</script>
-
 <style>
+    /* Distance matrix grid layout */
+    .distance-matrices-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 3rem 4rem;
+        margin: 2rem 0;
+    }
+
+    .distance-matrix {
+        min-width: 0;
+    }
+
+    .distance-matrix .matrix-label {
+        margin: 0 0 0.75rem 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--pico-color);
+    }
+
+    .matrix-grid {
+        display: grid;
+        gap: 0;
+        width: fit-content;
+        max-width: 100%;
+        border: 1px solid var(--pico-muted-border-color);
+    }
+
+    .matrix-grid .cell {
+        background: var(--pico-background-color);
+        min-height: 50px;
+        min-width: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-family: monospace;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .matrix-grid .cell.empty {
+        background: transparent;
+    }
+
+    .matrix-grid .cell.header {
+        font-weight: 500;
+        color: var(--pico-muted-color);
+        font-size: 0.7rem;
+    }
+
+    .matrix-grid .cell.col-header {
+        padding-top: 2.5rem;
+        align-items: flex-start;
+    }
+
+    .matrix-grid .rotated-label {
+        transform: rotate(-35deg);
+        transform-origin: left bottom;
+        white-space: nowrap;
+        font-size: 0.7rem;
+        position: absolute;
+        left: 0.5rem;
+        bottom: 0.25rem;
+    }
+
+    .matrix-grid .cell.row-header {
+        padding-right: 0.5rem;
+        justify-content: flex-end;
+    }
+
+    .matrix-grid .cell.data-cell {
+        flex-direction: column;
+        gap: 0.15rem;
+        padding: 0.25rem;
+    }
+
+    .matrix-grid .cell.na-cell {
+        background: var(--pico-muted-border-color);
+        opacity: 0.3;
+    }
+
+    .matrix-grid .mate-text {
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+
+    .matrix-grid .mate-value {
+        font-size: 0.65rem;
+    }
+
+    .matrix-grid .distance-value {
+        font-size: 0.75rem;
+    }
+
+    @media (max-width: 768px) {
+        .distance-matrices-container {
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        .matrix-grid .cell {
+            min-height: 35px;
+            min-width: 35px;
+            height: 38px;
+            font-size: 0.55rem;
+        }
+
+        .matrix-grid .rotated-label {
+            font-size: 0.5rem;
+        }
+    }
+
     .mate-badge {
         display: inline-block;
         margin-left: 0.5rem;
@@ -1271,6 +1260,30 @@ function renderDistanceMatrixHeatmap() {
         text-transform: uppercase;
         border-radius: 3px;
         vertical-align: middle;
+    }
+
+    .distance-legend {
+        margin: 2rem auto 1rem;
+        max-width: 400px;
+    }
+
+    .legend-bar {
+        height: 20px;
+        background: linear-gradient(to right, #14B8A6, var(--pico-background-color));
+        border-radius: 4px;
+        border: 1px solid var(--pico-muted-border-color);
+        margin-bottom: 0.5rem;
+    }
+
+    .legend-labels {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.85rem;
+        color: var(--pico-muted-color);
+    }
+
+    .legend-labels span:nth-child(2) {
+        font-weight: 500;
     }
 </style>
 {% endblock %}

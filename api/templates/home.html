@@ -25,52 +25,111 @@
 
     <div class="tab-content" x-show="tab === 'compare'">
         <p class="tab-hint">Compare multiple graphs side by side (2-10 <a href="/glossary#graph6">graph6</a> strings, one per line)</p>
-        <form onsubmit="compareGraphs(this); return false;">
+        <form class="compare-form" onsubmit="compareGraphs(this); return false;">
             <textarea name="graphs" rows="3" placeholder="D?{&#10;DEo"></textarea>
             <button type="submit">Compare</button>
         </form>
     </div>
 
     <div class="tab-content" x-show="tab === 'search'">
-        <p class="tab-hint">Find graphs by structural properties.</p>
-        <form hx-get="/graphs" hx-target="#results" hx-trigger="submit" hx-indicator="#loading-indicator">
-            <div class="filter-row">
-                <label>
-                    <span>Vertices</span>
-                    <select name="n">
-                        <option value="">any</option>
-                        {% for i in range(1, 11) %}
-                        <option value="{{ i }}">{{ i }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
-                <label>
-                    <span>Edges</span>
-                    <input type="number" name="m" min="0" max="45" placeholder="any">
-                </label>
-                <label>
-                    <span>Limit</span>
-                    <select name="limit">
-                        <option value="20">20</option>
-                        <option value="50">50</option>
-                        <option value="100" selected>100</option>
-                        <option value="500">500</option>
-                    </select>
-                </label>
+        <p class="tab-hint">Find graphs by structural properties and tags</p>
+        <form hx-get="/graphs" hx-target="#results" hx-trigger="submit" hx-indicator="#loading-indicator" class="search-form">
+            <div class="search-columns">
+                <div class="search-column">
+                    <label>
+                        <span>Vertices</span>
+                        <select name="n">
+                            <option value="">any</option>
+                            {% for i in range(1, 11) %}
+                            <option value="{{ i }}">{{ i }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        <span>Edges</span>
+                        <input type="number" name="m" min="0" max="45" placeholder="any">
+                    </label>
+                    <label>
+                        <span>Min degree</span>
+                        <input type="number" name="min_degree" min="0" placeholder="any">
+                    </label>
+                    <label>
+                        <span>Max degree</span>
+                        <input type="number" name="max_degree" min="0" placeholder="any">
+                    </label>
+                </div>
+                <div class="search-column">
+                    <label>
+                        <span>Diameter</span>
+                        <input type="number" name="diameter" min="0" placeholder="any">
+                    </label>
+                    <label>
+                        <span>Radius</span>
+                        <input type="number" name="radius" min="0" placeholder="any">
+                    </label>
+                    <label>
+                        <span>Girth</span>
+                        <input type="number" name="girth" min="0" placeholder="any">
+                    </label>
+                    <label>
+                        <span>Triangles</span>
+                        <input type="number" name="triangle_count" min="0" placeholder="any">
+                    </label>
+                </div>
+                <div class="search-column">
+                    <div x-data="{
+                        selected: [],
+                        open: false,
+                        tags: ['complete', 'complete-bipartite', 'complete-multipartite', 'cubic', 'cycle', 'eulerian', 'fan', 'ladder', 'line-graph', 'path', 'petersen', 'prism', 'regular', 'star', 'strongly-regular', 'tree', 'triangle-free', 'vertex-transitive', 'wheel', 'windmill'],
+                        toggle(tag) {
+                            if (this.selected.includes(tag)) {
+                                this.selected = this.selected.filter(t => t !== tag);
+                            } else {
+                                this.selected.push(tag);
+                            }
+                        },
+                        remove(tag) {
+                            this.selected = this.selected.filter(t => t !== tag);
+                        }
+                    }">
+                        <div>
+                            <span class="search-column-label">Tags</span>
+                            <div class="multiselect-container">
+                                <div class="multiselect-selected" @click.stop="open = !open">
+                                    <span x-show="selected.length === 0" class="multiselect-placeholder">Select tags...</span>
+                                    <template x-for="tag in selected" :key="tag">
+                                        <span class="multiselect-chip">
+                                            <span x-text="tag"></span>
+                                            <button type="button" @click.stop="remove(tag)" class="chip-remove">×</button>
+                                        </span>
+                                    </template>
+                                </div>
+                                <div class="multiselect-dropdown" x-show="open" @click.away="open = false">
+                                    <template x-for="tag in tags" :key="tag">
+                                        <label class="multiselect-option">
+                                            <input type="checkbox" :checked="selected.includes(tag)" @change="toggle(tag)">
+                                            <span x-text="tag"></span>
+                                        </label>
+                                    </template>
+                                </div>
+                            </div>
+                            <template x-for="tag in selected" :key="tag">
+                                <input type="hidden" name="tags" :value="tag">
+                            </template>
+                        </div>
+                        <label>
+                            <span>Limit</span>
+                            <select name="limit">
+                                <option value="20">20</option>
+                                <option value="50">50</option>
+                                <option value="100" selected>100</option>
+                                <option value="500">500</option>
+                            </select>
+                        </label>
+                    </div>
+                </div>
             </div>
-            <div class="filter-row">
-                <label class="checkbox-label">
-                    <input type="checkbox" name="bipartite" value="true">
-                    Bipartite
-                </label>
-                <label class="checkbox-label">
-                    <input type="checkbox" name="planar" value="true">
-                    Planar
-                </label>
-                <label class="checkbox-label">
-                    <input type="checkbox" name="regular" value="true">
-                    Regular
-                </label>
+            <div class="search-footer">
                 <button type="submit">Search</button>
             </div>
         </form>
