@@ -156,7 +156,7 @@ smol/
 ├── sql/
 │   ├── schema.sql           # PostgreSQL schema
 │   └── schema_sqlite.sql    # SQLite schema
-└── tests/                   # 222 tests
+└── tests/                   # 239 tests
 ```
 
 ## Tech Stack

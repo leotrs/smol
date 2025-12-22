@@ -602,3 +602,138 @@ class TestLoadingIndicator:
         response = client.get("/")
         assert response.status_code == 200
         assert 'hx-indicator="#loading-indicator"' in response.text
+
+
+class TestAccessibility:
+    """Test accessibility features."""
+
+    def test_skip_link_present(self):
+        """Page should have skip to main content link."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert 'href="#main-content"' in response.text
+        assert "Skip to main content" in response.text
+
+    def test_main_content_landmark(self):
+        """Main element should have proper id and role."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert 'id="main-content"' in response.text
+        assert 'role="main"' in response.text
+
+    def test_header_landmark(self):
+        """Header should have proper role."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert 'role="banner"' in response.text
+
+    def test_nav_landmark(self):
+        """Navigation should have proper role and label."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert 'role="navigation"' in response.text
+        assert 'aria-label="Main navigation"' in response.text
+
+    def test_footer_landmark(self):
+        """Footer should have proper role."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert 'role="contentinfo"' in response.text
+
+    def test_query_tabs_have_aria_attributes(self):
+        """Query tabs should have proper ARIA attributes."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert 'role="tablist"' in response.text
+        assert 'aria-label="Query methods"' in response.text
+        assert 'role="tab"' in response.text
+        assert 'aria-selected' in response.text
+        assert 'aria-controls="lookup-panel"' in response.text
+        assert 'aria-controls="compare-panel"' in response.text
+        assert 'aria-controls="search-panel"' in response.text
+
+    def test_tab_panels_have_aria_attributes(self):
+        """Tab panels should have proper ARIA attributes."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert 'role="tabpanel"' in response.text
+        assert 'id="lookup-panel"' in response.text
+        assert 'id="compare-panel"' in response.text
+        assert 'id="search-panel"' in response.text
+        assert 'aria-labelledby="lookup-tab"' in response.text
+        assert 'aria-labelledby="compare-tab"' in response.text
+        assert 'aria-labelledby="search-tab"' in response.text
+
+    def test_examples_tabs_have_aria_attributes(self):
+        """Example category tabs should have proper ARIA attributes."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert 'aria-label="Example categories"' in response.text
+        assert 'aria-controls="examples-panel"' in response.text
+        assert 'aria-controls="adjacency-panel"' in response.text
+
+    def test_form_inputs_have_labels(self):
+        """Form inputs should have associated labels."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert 'for="graph6-input"' in response.text
+        assert 'id="graph6-input"' in response.text
+        assert 'for="compare-graphs-input"' in response.text
+        assert 'id="compare-graphs-input"' in response.text
+
+    def test_screen_reader_only_class_defined(self):
+        """Screen reader only utility class should be defined."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert ".sr-only" in response.text
+
+    def test_loading_indicator_has_aria_live(self):
+        """Loading indicator should have aria-live region."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert 'role="status"' in response.text
+        assert 'aria-live="polite"' in response.text
+        assert 'aria-label="Loading"' in response.text
+
+    def test_error_toast_has_aria_live(self):
+        """Error toast should have assertive aria-live region."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert 'role="alert"' in response.text
+        assert 'aria-live="assertive"' in response.text
+
+    def test_results_section_has_aria_live(self):
+        """Results section should have polite aria-live region."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert 'id="results"' in response.text
+        assert 'aria-live="polite"' in response.text
+
+    def test_theme_toggle_has_aria_pressed(self):
+        """Theme toggle should have aria-pressed attribute."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert 'aria-pressed' in response.text
+        assert 'id="theme-toggle-btn"' in response.text
+
+    def test_theme_icons_have_aria_hidden(self):
+        """Decorative theme icons should be hidden from screen readers."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert 'aria-hidden="true"' in response.text
+
+    def test_multiselect_has_aria_attributes(self):
+        """Multiselect dropdown should have proper ARIA attributes."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert 'role="button"' in response.text
+        assert 'aria-expanded' in response.text
+        assert 'role="listbox"' in response.text
+        assert 'id="tags-label"' in response.text
+
+    def test_focus_indicators_defined(self):
+        """Focus indicators should be defined in CSS."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert ":focus-visible" in response.text
+        assert "outline: 2px solid" in response.text
