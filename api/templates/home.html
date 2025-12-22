@@ -8,11 +8,13 @@
     <p>Spectra and matrices of all simple graphs with up to 10 vertices.</p>
 </hgroup>
 
+<h2 class="section-header">Query the DB</h2>
+
 <div class="search-box" x-data="{ tab: 'lookup' }">
     <div class="tab-pills">
         <button type="button" :class="{ active: tab === 'lookup' }" @click="tab = 'lookup'">Lookup</button>
-        <button type="button" :class="{ active: tab === 'search' }" @click="tab = 'search'">Search</button>
         <button type="button" :class="{ active: tab === 'compare' }" @click="tab = 'compare'">Compare</button>
+        <button type="button" :class="{ active: tab === 'search' }" @click="tab = 'search'">Search</button>
     </div>
 
     <div class="tab-content" x-show="tab === 'lookup'">
@@ -129,14 +131,14 @@
                     </div>
                 </div>
             </div>
-            <div class="search-footer">
-                <button type="submit">Search</button>
-            </div>
+            <button type="submit">Search</button>
         </form>
     </div>
 </div>
 
 <section id="results"></section>
+
+<h2 class="section-header">Browse examples</h2>
 
 <div class="examples-section" x-data="{ tab: 'examples' }">
     <div class="tab-pills">

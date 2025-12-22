@@ -136,11 +136,28 @@
 
         hgroup.hero {
             text-align: center;
-            padding: 2rem 0 2.5rem;
+            padding: 4.5rem 0 4rem;
         }
 
         hgroup.hero h1 {
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
+            font-size: 2.5rem;
+        }
+
+        hgroup.hero p {
+            font-size: 1.1rem;
+        }
+
+        .section-header {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--pico-color);
+        }
+
+        .section-header:first-of-type {
+            margin-top: 0;
         }
 
         /* Compact buttons - not full width */
@@ -449,9 +466,17 @@
         }
 
         .search-box .tab-content {
-            height: 400px;
             display: flex;
             flex-direction: column;
+        }
+
+        .tab-content[x-show*="lookup"],
+        .tab-content[x-show*="compare"] {
+            min-height: auto;
+        }
+
+        .tab-content[x-show*="search"] {
+            height: 400px;
         }
 
         .tab-pills {
@@ -497,11 +522,9 @@
         }
 
         .tab-content form {
-            flex: 1;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-            align-items: stretch;
+            gap: 0.75rem;
         }
 
         .tab-content[x-show*="lookup"] form {
@@ -510,7 +533,7 @@
 
         .tab-content[x-show*="compare"] form {
             flex-direction: row;
-            align-items: flex-start;
+            gap: 0.5rem;
         }
 
         /* Lookup form */
@@ -597,21 +620,21 @@
 
         .compare-form button {
             margin-bottom: 0;
-            margin-left: auto;
-            align-self: flex-start;
         }
 
         /* Search form */
         .search-form {
             display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
+            flex-direction: row;
+            gap: 1rem;
+            align-items: flex-end;
         }
 
         .search-columns {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 0.75rem;
+            flex: 1;
         }
 
         .search-column {
@@ -649,14 +672,9 @@
             margin-bottom: 0;
         }
 
-        .search-footer {
-            display: flex;
-            justify-content: flex-end;
-            margin-top: 1rem;
-        }
-
-        .search-footer button {
+        .search-form button[type="submit"] {
             margin-bottom: 0;
+            white-space: nowrap;
         }
 
         /* Multiselect component */
@@ -844,7 +862,6 @@
 
         /* Examples section */
         .examples-section {
-            margin-top: 3rem;
             text-align: center;
         }
 

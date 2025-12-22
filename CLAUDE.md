@@ -92,7 +92,7 @@ Content negotiation: Returns JSON by default, HTML for browser/HTMX requests.
 ## Website Structure
 
 ```
-/              Search with tabs (Lookup / Search), results via HTMX
+/              Search with tabs (Lookup / Compare / Search), results via HTMX
 /graph/{g6}    Graph detail: viz, properties, cospectral mates, spectra
 /compare       Side-by-side comparison with D3 visualizations
 /glossary      Terms and matrix definitions (uses MathJax)
@@ -104,7 +104,7 @@ Footer on all pages has "Random graph" and "Random cospectral family" links.
 ## Templates
 
 - `base.html` - Layout, Pico CSS, custom styles, header nav, footer
-- `home.html` - Alpine.js tabs for Lookup/Search, HTMX form submission
+- `home.html` - Alpine.js tabs for Lookup/Compare/Search, HTMX form submission
 - `graph_detail.html` - D3 force-directed graph, drag-enabled
 - `graph_list.html` - HTMX partial for search results
 - `compare.html` - Grid of D3 visualizations, properties table
@@ -140,4 +140,4 @@ The source of divergence is unidentified. Possibilities: precision differences (
   - `generate.py` - Parallel graph generation (multiprocessing, resumable)
   - `compute_tags.py` - Backfill tags for existing graphs
 - `sql/` - Database schema (PostgreSQL and SQLite versions)
-- `tests/` - Pytest tests (183 tests)
+- `tests/` - Pytest tests (222 tests)
