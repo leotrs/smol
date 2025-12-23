@@ -9,9 +9,11 @@ A database of all small connected graphs with their spectral properties.
 
 For each connected graph on up to 10 vertices, SMOL stores:
 
-**Spectra for four matrix types:**
+**Spectra for six matrix types:**
 - Adjacency matrix
 - Laplacian matrix (symmetric normalized)
+- Kirchhoff Laplacian (combinatorial)
+- Signless Laplacian
 - Non-backtracking (Hashimoto) matrix
 - Non-backtracking Laplacian
 
@@ -169,16 +171,18 @@ smol/
 
 ## Verification
 
-Cospectral counts have been verified against published data for all four matrix types:
+Cospectral counts have been verified against published data:
 
-| Matrix | Status |
-|--------|--------|
-| Adjacency | ✓ Perfect match |
-| Laplacian (normalized) | ✓ Perfect match (n≥5) |
-| Non-backtracking | Partial (matches for min_degree≥2) |
-| NB Laplacian | ✓ Perfect match |
+| Matrix | Pairs | Status |
+|--------|-------|--------|
+| Adjacency | 699,403 | ✓ Perfect match |
+| Laplacian (normalized) | 15,760 | ✓ Perfect match (n≥5) |
+| Kirchhoff | 28,220 | ✓ Complete |
+| Signless | 11,448 | ✓ Complete |
+| Non-backtracking | 13,119,364 | Partial (matches for min_degree≥2) |
+| NB Laplacian | 83,454 | ✓ Perfect match |
 
-See `scripts/verify_cospectral_counts*.sql` for details.
+All 12.3M graphs have complete spectral data for all six matrix types.
 
 ## License
 

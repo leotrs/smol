@@ -103,26 +103,34 @@ class TestGraphEndpoint:
         # D?{ has adj cospectral mate DEo
         assert "DEo" in mates["adj"]
 
-    def test_graph_with_null_kirchhoff_signless(self):
-        """Graphs with NULL kirchhoff/signless eigenvalues (n>8) should return successfully."""
-        # Try to find a graph with n=9 or n=10 that would have NULL values
+    def test_graph_with_kirchhoff_signless_eigenvalues(self):
+        """All graphs should have Kirchhoff and signless eigenvalues computed."""
+        # Test with a graph from n=9 (previously these were NULL)
         response = client.get("/graphs?n=9&limit=1")
         if response.status_code == 200:
             data = response.json()
             if len(data) > 0:
                 graph6 = data[0]["graph6"]
                 from urllib.parse import quote
-                # This should not crash with 500 error
                 detail_response = client.get(f"/graph/{quote(graph6, safe='')}")
                 assert detail_response.status_code == 200
                 detail_data = detail_response.json()
-                # Should have spectra fields even if empty
+                # Should have spectra fields with computed values
                 assert "spectra" in detail_data
                 assert "kirchhoff_eigenvalues" in detail_data["spectra"]
                 assert "signless_eigenvalues" in detail_data["spectra"]
-                # May be empty list if not computed
-                assert isinstance(detail_data["spectra"]["kirchhoff_eigenvalues"], list)
-                assert isinstance(detail_data["spectra"]["signless_eigenvalues"], list)
+                # Should have actual eigenvalues (not empty)
+                kirchhoff = detail_data["spectra"]["kirchhoff_eigenvalues"]
+                signless = detail_data["spectra"]["signless_eigenvalues"]
+                assert isinstance(kirchhoff, list)
+                assert isinstance(signless, list)
+                assert len(kirchhoff) == 9  # Should have n eigenvalues
+                assert len(signless) == 9
+                # Should have corresponding hashes
+                assert "kirchhoff_hash" in detail_data["spectra"]
+                assert "signless_hash" in detail_data["spectra"]
+                assert len(detail_data["spectra"]["kirchhoff_hash"]) == 16
+                assert len(detail_data["spectra"]["signless_hash"]) == 16
 
 
 @needs_db
