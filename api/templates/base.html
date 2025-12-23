@@ -1538,6 +1538,17 @@
             }
         }
 
+        /* Table wrapper for horizontal scrolling on mobile */
+        .table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 1rem 0;
+        }
+
+        .table-wrapper table {
+            min-width: 600px;
+        }
+
         /* Responsive mobile styles */
         @media (max-width: 768px) {
             .container {
@@ -1553,6 +1564,22 @@
             header .nav-links {
                 gap: 1rem;
                 font-size: 0.85rem;
+            }
+
+            /* Search form - single column on mobile */
+            .search-columns {
+                grid-template-columns: 1fr !important;
+                gap: 1rem;
+            }
+
+            .search-form {
+                flex-direction: column !important;
+                align-items: stretch !important;
+            }
+
+            .search-form button[type="submit"] {
+                width: 100%;
+                margin-top: 0.5rem;
             }
 
             .grid {
@@ -1608,8 +1635,46 @@
                 max-width: none;
             }
 
+            /* Compare form - stack vertically on mobile */
+            .compare-form {
+                flex-direction: column !important;
+            }
+
+            .compare-form textarea {
+                width: 100% !important;
+                max-width: none !important;
+            }
+
+            .compare-form button {
+                width: 100%;
+            }
+
             .tab-pills {
                 flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .tab-pills button {
+                min-height: 44px;
+            }
+
+            /* Hero section mobile adjustments */
+            hgroup.hero {
+                padding: 2.5rem 0 2rem;
+            }
+
+            hgroup.hero h1 {
+                font-size: 2rem;
+            }
+
+            hgroup.hero p {
+                font-size: 1rem;
+            }
+
+            /* Examples grid - 2 columns on tablet */
+            .examples-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
             }
 
             table {
@@ -1620,6 +1685,15 @@
                 padding: 0.4rem 0.5rem;
             }
 
+            /* Ensure minimum touch target size */
+            button,
+            [role="button"],
+            a.example-card,
+            .tab-pills button {
+                min-height: 44px;
+                min-width: 44px;
+            }
+
             .footer-actions {
                 flex-direction: column;
                 gap: 0.5rem;
@@ -1627,6 +1701,10 @@
 
             .footer-actions a {
                 text-align: center;
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
         }
 
@@ -1647,12 +1725,26 @@
                 font-size: 1.1rem;
             }
 
+            hgroup.hero h1 {
+                font-size: 1.75rem;
+            }
+
             .property-grid {
+                grid-template-columns: 1fr;
+            }
+
+            /* Single column for examples on small mobile */
+            .examples-grid {
                 grid-template-columns: 1fr;
             }
 
             button, [role="button"] {
                 padding: 0.5rem 1rem !important;
+            }
+
+            /* Smaller section headers on mobile */
+            .section-header {
+                font-size: 1.1rem;
             }
         }
 
