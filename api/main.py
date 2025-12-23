@@ -1,12 +1,14 @@
 """SMOL API - Spectral graph database."""
 
+import csv
+import io
 import logging
 import time
 from pathlib import Path
 
 import networkx as nx
 from fastapi import FastAPI, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -169,6 +171,7 @@ def row_to_graph_summary(row: dict) -> GraphSummary:
             closeness_centrality=row.get("closeness_centrality"),
             eigenvector_centrality=row.get("eigenvector_centrality"),
         ),
+        tags=row.get("tags", []) or [],
     )
 
 
@@ -297,7 +300,11 @@ async def list_graphs(
             )
         return [graph]
 
-    rows = await query_graphs(
+    # Cap count check at 10k for API performance
+    # API consumers can paginate through results or use export
+    MAX_COUNT = 10000
+
+    rows, total_count = await query_graphs(
         n=n,
         n_min=n_min,
         n_max=n_max,
@@ -310,6 +317,7 @@ async def list_graphs(
         connected=connected,
         limit=limit,
         offset=offset,
+        max_count=MAX_COUNT,
     )
     graphs = [row_to_graph_summary(row) for row in rows]
 
@@ -318,6 +326,367 @@ async def list_graphs(
             request, "graph_list.html", {"graphs": graphs}
         )
     return graphs
+
+
+@app.get("/search")
+async def search_graphs(
+    request: Request,
+    n: str | None = None,
+    m: str | None = None,
+    min_degree: str | None = None,
+    max_degree: str | None = None,
+    diameter: str | None = None,
+    radius: str | None = None,
+    girth: str | None = None,
+    triangle_count: str | None = None,
+    bipartite: str | None = None,
+    planar: str | None = None,
+    regular: str | None = None,
+    tags: list[str] = Query(default=[]),
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=100, le=1000),
+    sort_by: str = Query(default="n"),
+    sort_order: str = Query(default="asc"),
+):
+    """Search graphs with filters - returns HTML page with results."""
+    # Parse params
+    n_val = int(n) if n else None
+    m_val = int(m) if m else None
+    min_degree_val = int(min_degree) if min_degree else None
+    max_degree_val = int(max_degree) if max_degree else None
+    diameter_val = int(diameter) if diameter else None
+    radius_val = int(radius) if radius else None
+    girth_val = int(girth) if girth else None
+    triangle_count_val = int(triangle_count) if triangle_count else None
+    bipartite_val = bipartite == "true" if bipartite else None
+    planar_val = planar == "true" if planar else None
+    regular_val = regular == "true" if regular else None
+
+    # Cap results at 1000 to keep site responsive
+    MAX_RESULTS = 1000
+
+    # First, get the total count to check if we need to cap
+    offset = (page - 1) * limit
+
+    # Prevent accessing beyond the cap
+    if offset >= MAX_RESULTS:
+        offset = 0
+        page = 1
+
+    # Check if we'll need to cap results (fast count up to 1001)
+    _, estimated_count = await query_graphs(
+        n=n_val,
+        m=m_val,
+        min_degree=min_degree_val,
+        max_degree=max_degree_val,
+        diameter=diameter_val,
+        radius=radius_val,
+        girth=girth_val,
+        triangle_count=triangle_count_val,
+        bipartite=bipartite_val,
+        planar=planar_val,
+        regular=regular_val,
+        tags=tags if tags else None,
+        connected=True,
+        limit=0,
+        offset=0,
+        max_count=MAX_RESULTS,
+    )
+
+    # Check if results are capped
+    results_capped = estimated_count > MAX_RESULTS
+
+    if results_capped:
+        # For large result sets: fetch all 1000 results for client-side sorting/pagination
+        rows, total_count = await query_graphs(
+            n=n_val,
+            m=m_val,
+            min_degree=min_degree_val,
+            max_degree=max_degree_val,
+            diameter=diameter_val,
+            radius=radius_val,
+            girth=girth_val,
+            triangle_count=triangle_count_val,
+            bipartite=bipartite_val,
+            planar=planar_val,
+            regular=regular_val,
+            tags=tags if tags else None,
+            connected=True,
+            limit=MAX_RESULTS,
+            offset=0,
+            sort_by="n",  # Use fast indexed order
+            sort_order="asc",
+            max_count=MAX_RESULTS,
+        )
+
+        # Convert ALL results to graph objects for client-side use
+        graph_objects = [row_to_graph_summary(row) for row in rows]
+        graphs = graph_objects  # Pass all to template for server-side display
+        all_graphs = [g.model_dump() for g in graph_objects]  # Convert to dicts for JSON
+    else:
+        # For small result sets: use SQL ORDER BY (normal server-side pagination)
+        rows, total_count = await query_graphs(
+            n=n_val,
+            m=m_val,
+            min_degree=min_degree_val,
+            max_degree=max_degree_val,
+            diameter=diameter_val,
+            radius=radius_val,
+            girth=girth_val,
+            triangle_count=triangle_count_val,
+            bipartite=bipartite_val,
+            planar=planar_val,
+            regular=regular_val,
+            tags=tags if tags else None,
+            connected=True,
+            limit=limit,
+            offset=offset,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            max_count=MAX_RESULTS,
+        )
+        graphs = [row_to_graph_summary(row) for row in rows]
+        all_graphs = None  # Not needed for server-side pagination
+
+    display_count = min(total_count, MAX_RESULTS)
+
+    # Build query params for API call display and pagination
+    query_params = {}
+    if n:
+        query_params["n"] = n
+    if m:
+        query_params["m"] = m
+    if min_degree:
+        query_params["min_degree"] = min_degree
+    if max_degree:
+        query_params["max_degree"] = max_degree
+    if diameter:
+        query_params["diameter"] = diameter
+    if radius:
+        query_params["radius"] = radius
+    if girth:
+        query_params["girth"] = girth
+    if triangle_count:
+        query_params["triangle_count"] = triangle_count
+    if bipartite:
+        query_params["bipartite"] = bipartite
+    if planar:
+        query_params["planar"] = planar
+    if regular:
+        query_params["regular"] = regular
+    for tag in tags:
+        query_params.setdefault("tags", []).append(tag) if isinstance(query_params.get("tags"), list) else query_params.update({"tags": [tag]})
+
+    # Pagination info - use capped count for pagination
+    total_pages = (display_count + limit - 1) // limit
+    has_prev = page > 1
+    has_next = page < total_pages
+    start_idx = offset + 1 if display_count > 0 else 0
+    end_idx = min(offset + limit, display_count)
+
+    return templates.TemplateResponse(
+        request,
+        "search_results.html",
+        {
+            "graphs": graphs,
+            "all_graphs": all_graphs,  # All 1000 for client-side sorting when capped
+            "total_count": total_count,
+            "results_capped": results_capped,
+            "display_count": display_count,
+            "page": page,
+            "limit": limit,
+            "total_pages": total_pages,
+            "has_prev": has_prev,
+            "has_next": has_next,
+            "start_idx": start_idx,
+            "end_idx": end_idx,
+            "query_params": query_params,
+            "sort_by": sort_by,
+            "sort_order": sort_order,
+        },
+    )
+
+
+@app.get("/search/count")
+async def search_count(
+    n: str | None = None,
+    m: str | None = None,
+    min_degree: str | None = None,
+    max_degree: str | None = None,
+    diameter: str | None = None,
+    radius: str | None = None,
+    girth: str | None = None,
+    triangle_count: str | None = None,
+    bipartite: str | None = None,
+    planar: str | None = None,
+    regular: str | None = None,
+    tags: list[str] = Query(default=[]),
+):
+    """Get exact count of search results (async endpoint for updating UI)."""
+    # Parse params
+    n_val = int(n) if n else None
+    m_val = int(m) if m else None
+    min_degree_val = int(min_degree) if min_degree else None
+    max_degree_val = int(max_degree) if max_degree else None
+    diameter_val = int(diameter) if diameter else None
+    radius_val = int(radius) if radius else None
+    girth_val = int(girth) if girth else None
+    triangle_count_val = int(triangle_count) if triangle_count else None
+    bipartite_val = bipartite == "true" if bipartite else None
+    planar_val = planar == "true" if planar else None
+    regular_val = regular == "true" if regular else None
+
+    # Get exact count without limit
+    _, total_count = await query_graphs(
+        n=n_val,
+        m=m_val,
+        min_degree=min_degree_val,
+        max_degree=max_degree_val,
+        diameter=diameter_val,
+        radius=radius_val,
+        girth=girth_val,
+        triangle_count=triangle_count_val,
+        bipartite=bipartite_val,
+        planar=planar_val,
+        regular=regular_val,
+        tags=tags if tags else None,
+        connected=True,
+        limit=0,
+        offset=0,
+    )
+
+    # Return just the formatted count text
+    return Response(
+        content=f'{"{:,}".format(total_count)}',
+        media_type="text/plain",
+    )
+
+
+@app.get("/search/export")
+async def export_search_results(
+    n: str | None = None,
+    m: str | None = None,
+    min_degree: str | None = None,
+    max_degree: str | None = None,
+    diameter: str | None = None,
+    radius: str | None = None,
+    girth: str | None = None,
+    triangle_count: str | None = None,
+    bipartite: str | None = None,
+    planar: str | None = None,
+    regular: str | None = None,
+    tags: list[str] = Query(default=[]),
+    limit: int = Query(default=1000, le=10000),
+    format: str = Query(default="json"),
+    sort_by: str = Query(default="n"),
+    sort_order: str = Query(default="asc"),
+):
+    """Export search results in CSV, JSON, or graph6 format."""
+    # Parse params (same as search endpoint)
+    n_val = int(n) if n else None
+    m_val = int(m) if m else None
+    min_degree_val = int(min_degree) if min_degree else None
+    max_degree_val = int(max_degree) if max_degree else None
+    diameter_val = int(diameter) if diameter else None
+    radius_val = int(radius) if radius else None
+    girth_val = int(girth) if girth else None
+    triangle_count_val = int(triangle_count) if triangle_count else None
+    bipartite_val = bipartite == "true" if bipartite else None
+    planar_val = planar == "true" if planar else None
+    regular_val = regular == "true" if regular else None
+
+    rows, total_count = await query_graphs(
+        n=n_val,
+        m=m_val,
+        min_degree=min_degree_val,
+        max_degree=max_degree_val,
+        diameter=diameter_val,
+        radius=radius_val,
+        girth=girth_val,
+        triangle_count=triangle_count_val,
+        bipartite=bipartite_val,
+        planar=planar_val,
+        regular=regular_val,
+        tags=tags if tags else None,
+        connected=True,
+        limit=limit,
+        offset=0,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
+    graphs = [row_to_graph_summary(row) for row in rows]
+
+    # Export based on format
+    format_lower = format.lower()
+
+    if format_lower == "csv":
+        # CSV export
+        output = io.StringIO()
+        if graphs:
+            # Get all keys from first graph
+            fieldnames = [
+                "graph6",
+                "n",
+                "m",
+                "diameter",
+                "girth",
+                "radius",
+                "min_degree",
+                "max_degree",
+                "triangle_count",
+                "is_bipartite",
+                "is_planar",
+                "is_regular",
+                "tags",
+            ]
+            writer = csv.DictWriter(output, fieldnames=fieldnames)
+            writer.writeheader()
+
+            for graph in graphs:
+                row_data = {
+                    "graph6": graph.graph6,
+                    "n": graph.n,
+                    "m": graph.m,
+                    "diameter": graph.properties.diameter if graph.properties else None,
+                    "girth": graph.properties.girth if graph.properties else None,
+                    "radius": graph.properties.radius if graph.properties else None,
+                    "min_degree": graph.properties.min_degree if graph.properties else None,
+                    "max_degree": graph.properties.max_degree if graph.properties else None,
+                    "triangle_count": graph.properties.triangle_count if graph.properties else None,
+                    "is_bipartite": graph.properties.is_bipartite if graph.properties else None,
+                    "is_planar": graph.properties.is_planar if graph.properties else None,
+                    "is_regular": graph.properties.is_regular if graph.properties else None,
+                    "tags": ",".join(graph.tags) if graph.tags else "",
+                }
+                writer.writerow(row_data)
+
+        content = output.getvalue()
+        return Response(
+            content=content,
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=graphs.csv"},
+        )
+
+    elif format_lower == "graph6":
+        # graph6 list export (one per line)
+        lines = [graph.graph6 for graph in graphs]
+        content = "\n".join(lines)
+        if content:
+            content += "\n"
+
+        return Response(
+            content=content,
+            media_type="text/plain",
+            headers={"Content-Disposition": "attachment; filename=graphs.g6"},
+        )
+
+    else:
+        # JSON export (default)
+        data = [graph.model_dump() for graph in graphs]
+        return JSONResponse(
+            content=data,
+            headers={"Content-Disposition": "attachment; filename=graphs.json"},
+        )
 
 
 @app.get("/compare")

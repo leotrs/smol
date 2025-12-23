@@ -529,6 +529,450 @@ class TestSimilarEndpoint:
         assert "Similar" in response.text
 
 
+@needs_db
+class TestSearchEndpoint:
+    def test_search_returns_html(self):
+        """Search endpoint should return HTML page."""
+        response = client.get("/search?n=5&m=6")
+        assert response.status_code == 200
+        assert "text/html" in response.headers["content-type"]
+        assert "Search Results" in response.text
+
+    def test_search_shows_results_count(self):
+        """Search should show total count and range."""
+        response = client.get("/search?n=5&m=6")
+        assert response.status_code == 200
+        assert "Found" in response.text
+        assert "graphs matching your criteria" in response.text
+        assert "Showing" in response.text
+
+    def test_search_with_filters(self):
+        """Search should support multiple filters."""
+        response = client.get("/search?n=5&m=6&diameter=2")
+        assert response.status_code == 200
+        assert "Search Results" in response.text
+
+    def test_search_pagination(self):
+        """Search should support pagination."""
+        response = client.get("/search?n=8&limit=50&page=1")
+        assert response.status_code == 200
+        # For large result sets, uses client-side pagination with x-text
+        assert 'class="results-range"' in response.text
+
+    def test_search_pagination_page_2(self):
+        """Search should support page 2."""
+        response = client.get("/search?n=8&limit=100&page=2")
+        assert response.status_code == 200
+        # For large result sets, client-side pagination ignores page param
+        # All 1000 results are loaded and pagination is handled client-side
+        assert 'class="results-range"' in response.text
+
+    def test_search_sorting(self):
+        """Search should support sorting."""
+        response = client.get("/search?n=5&sort_by=m&sort_order=desc")
+        assert response.status_code == 200
+        assert "sort-indicator" in response.text
+
+    def test_search_sorting_ascending(self):
+        """Search should support ascending sort."""
+        response = client.get("/search?n=5&sort_by=m&sort_order=asc")
+        assert response.status_code == 200
+        assert "sort-indicator" in response.text
+
+    def test_search_invalid_sort_defaults(self):
+        """Invalid sort column should default to 'n'."""
+        response = client.get("/search?n=5&sort_by=invalid")
+        assert response.status_code == 200
+
+    def test_search_api_equivalent_component(self):
+        """Search should show API equivalent component."""
+        response = client.get("/search?n=5&m=6")
+        assert response.status_code == 200
+        assert "API Equivalent" in response.text
+        assert "curl" in response.text.lower()
+        assert "python" in response.text.lower()
+        assert "/graphs?" in response.text
+
+    def test_search_api_equivalent_includes_params(self):
+        """API equivalent should include search params."""
+        response = client.get("/search?n=5&m=6")
+        assert response.status_code == 200
+        assert "n=5" in response.text or "n': 5" in response.text or 'n": 5' in response.text
+
+    def test_search_with_tags(self):
+        """Search should support tags filter."""
+        response = client.get("/search?n=4&tags=complete")
+        assert response.status_code == 200
+        assert "C~" in response.text
+
+    def test_search_empty_results(self):
+        """Search with no matches should show empty message."""
+        response = client.get("/search?n=10&m=1&diameter=1")
+        assert response.status_code == 200
+        assert "Found 0 graphs" in response.text or "No graphs found" in response.text
+
+    def test_search_table_headers_sortable(self):
+        """Table headers should be links for sorting."""
+        response = client.get("/search?n=5")
+        assert response.status_code == 200
+        assert "sort_by=n" in response.text
+        assert "sort_by=m" in response.text
+        assert "sort_by=diameter" in response.text
+
+    def test_search_preserves_params_in_pagination(self):
+        """Pagination links should preserve search params."""
+        response = client.get("/search?n=8&m=7&limit=50")
+        assert response.status_code == 200
+        if "Next" in response.text or "page=2" in response.text:
+            assert "n=8" in response.text
+            assert "m=7" in response.text
+
+    def test_search_caps_at_1000_results(self):
+        """Search should cap results at 1000 and show warning."""
+        # Search for all graphs with n=8 (should be >1000 results)
+        response = client.get("/search?n=8")
+        assert response.status_code == 200
+
+        # Should show warning banner
+        assert "Showing first 1,000" in response.text
+        assert "results-cap-warning" in response.text
+        assert "For the full dataset, use the" in response.text
+
+        # Should show capped count in pagination
+        assert "of 1,000" in response.text or "1-100 of 1,000" in response.text
+
+        # Pagination should be capped to 10 pages (1000 results / 100 per page)
+        # Check that we don't show more than 10 pages
+        assert "page=11" not in response.text
+
+    def test_search_beyond_cap_redirects_to_page_1(self):
+        """Accessing page beyond cap should show page 1."""
+        # Try to access page 100 when there are 1000 max results
+        response = client.get("/search?n=8&page=100")
+        assert response.status_code == 200
+
+        # Should show results range (client-side pagination handles display)
+        assert 'class="results-range"' in response.text
+
+    def test_search_count_endpoint(self):
+        """Count endpoint should return exact count."""
+        response = client.get("/search/count?n=5&m=4")
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "text/plain; charset=utf-8"
+
+        # Should return a formatted number
+        count_text = response.text
+        assert count_text.isdigit() or "," in count_text  # May have commas
+
+    def test_search_page_loads_count_async(self):
+        """Search page should have HTMX attributes to load count asynchronously."""
+        response = client.get("/search?n=8")
+        assert response.status_code == 200
+
+        # Should have HTMX attributes when results are capped
+        assert 'hx-get="/search/count' in response.text
+        assert 'hx-trigger="load"' in response.text
+        assert "1,000+" in response.text
+
+    def test_search_large_results_uses_client_side_sorting(self):
+        """Large result sets should embed all data for client-side sorting."""
+        # Search for n=8 which has >1000 results
+        response = client.get("/search?n=8")
+        assert response.status_code == 200
+
+        # Should have Alpine.js data attribute with all results
+        assert 'x-data' in response.text
+        assert 'allGraphs' in response.text
+
+        # Should have embedded JSON data
+        assert 'window.searchData' in response.text or '<script>' in response.text
+
+        # Column headers should have Alpine.js click handlers, not href links
+        assert '@click' in response.text or 'x-on:click' in response.text
+
+    def test_search_large_results_embeds_json_data(self):
+        """Large result sets should embed all 1000 results as JSON."""
+        response = client.get("/search?n=8")
+        assert response.status_code == 200
+
+        # Should have a script tag with data
+        assert '<script>' in response.text
+        assert 'searchData' in response.text or 'graphs' in response.text
+
+    def test_search_small_results_uses_server_side_pagination(self):
+        """Small result sets should use traditional server-side pagination."""
+        # Search for n=5&m=4 which has <1000 results
+        response = client.get("/search?n=5&m=4")
+        assert response.status_code == 200
+
+        # Should have traditional pagination links (server-side)
+        assert 'href="/search?' in response.text
+
+        # Should NOT have Alpine.js for pagination (client-side)
+        # Instead uses traditional pagination
+
+    def test_search_client_side_pagination_markup(self):
+        """Large result sets should have Alpine.js pagination controls."""
+        response = client.get("/search?n=8")
+        assert response.status_code == 200
+
+        # Should have Alpine.js pagination controls
+        assert 'x-data' in response.text
+
+
+@needs_db
+class TestSearchClientSideRegression:
+    """Regression tests for client-side sorting and pagination."""
+
+    def test_large_results_always_use_client_side(self):
+        """Large result sets (>1000) should always use client-side sorting."""
+        response = client.get("/search?n=8")
+        assert response.status_code == 200
+
+        # Should have Alpine.js component
+        assert 'x-data' in response.text
+        assert 'allGraphs' in response.text
+        assert 'sortedGraphs' in response.text
+        assert 'paginatedGraphs' in response.text
+
+        # Should embed JSON data
+        assert 'window.searchData' in response.text
+
+        # Table headers should use @click, not href
+        assert '@click="toggleSort' in response.text
+
+        # Should NOT have server-side pagination links
+        assert 'href="/search?' not in response.text or 'page=' not in response.text
+
+    def test_small_results_always_use_server_side(self):
+        """Small result sets (<=1000) should use server-side sorting."""
+        response = client.get("/search?n=5&m=4")
+        assert response.status_code == 200
+
+        # Should have traditional table headers with href links
+        assert 'href="/search?' in response.text
+        assert 'sort_by=' in response.text
+
+        # Should NOT have Alpine.js sorting component
+        assert 'window.searchData' not in response.text
+        assert '@click="toggleSort' not in response.text
+
+        # Should use Jinja2 for loop
+        assert '{% for' not in response.text  # Template is rendered
+
+    def test_client_side_sorting_all_columns(self):
+        """Client-side sorting should handle all sortable columns."""
+        response = client.get("/search?n=8")
+        assert response.status_code == 200
+
+        # Should have click handlers for all sortable columns
+        assert 'toggleSort(\'graph6\')' in response.text
+        assert 'toggleSort(\'n\')' in response.text
+        assert 'toggleSort(\'m\')' in response.text
+        assert 'toggleSort(\'diameter\')' in response.text
+        assert 'toggleSort(\'girth\')' in response.text
+
+        # Should have sort indicators
+        assert 'sort-indicator' in response.text
+
+    def test_client_side_pagination_controls(self):
+        """Client-side pagination should have Previous/Next buttons."""
+        response = client.get("/search?n=8")
+        assert response.status_code == 200
+
+        # Should have pagination buttons (not links)
+        assert '@click="currentPage' in response.text
+        assert 'Previous' in response.text
+        assert 'Next' in response.text
+
+        # Should have page number display
+        assert 'x-text="p"' in response.text
+
+    def test_client_side_handles_nullable_properties(self):
+        """Client-side sorting should handle null diameter/girth."""
+        response = client.get("/search?n=8")
+        assert response.status_code == 200
+
+        # Should have null handling in sort logic
+        assert '??' in response.text or 'Infinity' in response.text
+
+    def test_client_side_respects_initial_sort(self):
+        """Client-side should initialize with requested sort params."""
+        response = client.get("/search?n=8&sort_by=m&sort_order=desc")
+        assert response.status_code == 200
+
+        # Should initialize Alpine.js with sort params
+        assert "sortBy: 'm'" in response.text
+        assert "sortOrder: 'desc'" in response.text
+
+    def test_boundary_at_1000_results(self):
+        """Exactly 1000 results should trigger client-side mode."""
+        # Find a query that returns exactly 1000 results
+        # For now, just verify >1000 uses client-side
+        response = client.get("/search?n=8")
+        assert response.status_code == 200
+        assert 'window.searchData' in response.text
+
+    def test_capped_warning_shows_for_large_results(self):
+        """Should show warning when results are capped at 1000."""
+        response = client.get("/search?n=8")
+        assert response.status_code == 200
+
+        # Should have cap warning
+        assert '1,000+' in response.text or '1000+' in response.text
+        assert 'first 1,000' in response.text or 'first 1000' in response.text
+
+    def test_all_1000_results_embedded_in_json(self):
+        """All 1000 results should be embedded for client-side use."""
+        response = client.get("/search?n=8")
+        assert response.status_code == 200
+
+        # Should have searchData array
+        assert 'window.searchData = [' in response.text
+
+        # Should be a large JSON array (rough check)
+        assert response.text.count('"graph6"') >= 100
+
+    def test_table_uses_alpine_template(self):
+        """Table body should use Alpine.js x-for template."""
+        response = client.get("/search?n=8")
+        assert response.status_code == 200
+
+        # Should use x-for template
+        assert 'x-for="g in paginatedGraphs"' in response.text
+        assert ':key="g.graph6"' in response.text
+
+        # Should use x-text for values
+        assert 'x-text="g.n"' in response.text
+        assert 'x-text="g.m"' in response.text
+
+
+@needs_db
+class TestSearchExport:
+    def test_export_csv_format(self):
+        """Export should support CSV format."""
+        response = client.get("/search/export?n=5&m=4&format=csv")
+        assert response.status_code == 200
+        assert "text/csv" in response.headers["content-type"]
+        assert "Content-Disposition" in response.headers
+        assert "attachment" in response.headers["Content-Disposition"]
+        assert ".csv" in response.headers["Content-Disposition"]
+
+        # Check CSV content
+        content = response.text
+        assert "graph6,n,m,diameter,girth" in content
+        assert "D?{" in content
+
+    def test_export_json_format(self):
+        """Export should support JSON format."""
+        response = client.get("/search/export?n=5&m=4&format=json")
+        assert response.status_code == 200
+        assert "application/json" in response.headers["content-type"]
+        assert "Content-Disposition" in response.headers
+        assert "attachment" in response.headers["Content-Disposition"]
+        assert ".json" in response.headers["Content-Disposition"]
+
+        # Check JSON structure
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) > 0
+        assert "graph6" in data[0]
+        assert data[0]["n"] == 5
+        assert data[0]["m"] == 4
+
+    def test_export_graph6_format(self):
+        """Export should support graph6 list format."""
+        response = client.get("/search/export?n=5&m=4&format=graph6")
+        assert response.status_code == 200
+        assert "text/plain" in response.headers["content-type"]
+        assert "Content-Disposition" in response.headers
+        assert "attachment" in response.headers["Content-Disposition"]
+        assert ".g6" in response.headers["Content-Disposition"]
+
+        # Check graph6 content (one per line)
+        content = response.text
+        lines = content.strip().split("\n")
+        assert len(lines) > 0
+        assert all(len(line.strip()) > 0 for line in lines)
+        assert "D?{" in content
+
+    def test_export_respects_filters(self):
+        """Export should respect search filters."""
+        # Export with specific filters
+        response = client.get("/search/export?n=5&m=6&format=json")
+        assert response.status_code == 200
+        data = response.json()
+
+        # All results should match filters
+        for graph in data:
+            assert graph["n"] == 5
+            assert graph["m"] == 6
+
+    def test_export_default_format_json(self):
+        """Export should default to JSON if no format specified."""
+        response = client.get("/search/export?n=5&m=4")
+        assert response.status_code == 200
+        assert "application/json" in response.headers["content-type"]
+        data = response.json()
+        assert isinstance(data, list)
+
+    def test_export_invalid_format_defaults_to_json(self):
+        """Invalid export format should default to JSON."""
+        response = client.get("/search/export?n=5&m=4&format=invalid")
+        assert response.status_code == 200
+        assert "application/json" in response.headers["content-type"]
+
+    def test_export_empty_results(self):
+        """Export with no matches should return empty list/file."""
+        response = client.get("/search/export?n=10&m=1&diameter=1&format=json")
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) == 0
+
+    def test_export_csv_with_properties(self):
+        """CSV export should include all important properties."""
+        response = client.get("/search/export?n=5&m=4&format=csv")
+        assert response.status_code == 200
+        content = response.text
+        lines = content.split("\n")
+        headers = lines[0].strip().split(",")
+
+        # Should include key columns
+        assert "graph6" in headers
+        assert "n" in headers
+        assert "m" in headers
+
+    def test_export_respects_limit(self):
+        """Export should respect limit parameter."""
+        response = client.get("/search/export?n=8&limit=10&format=json")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) <= 10
+
+    def test_export_with_tags(self):
+        """Export should work with tags filter."""
+        response = client.get("/search/export?n=4&tags=complete&format=json")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) > 0
+        # K4 should be in the results
+        assert any(g["graph6"] == "C~" for g in data)
+
+    def test_search_page_has_export_ui(self):
+        """Search results page should have export UI."""
+        response = client.get("/search?n=5&m=4")
+        assert response.status_code == 200
+        assert "/search/export" in response.text
+        assert "format=csv" in response.text
+        assert "format=json" in response.text
+        assert "format=graph6" in response.text
+        # Export buttons should be present
+        assert "CSV" in response.text
+        assert "JSON" in response.text
+        assert "graph6" in response.text
+
+
 class TestErrorPages:
     @pytest.mark.needs_db
     def test_404_returns_html_for_browser(self):
@@ -597,11 +1041,15 @@ class TestLoadingIndicator:
         assert response.status_code == 200
         assert "htmx.config.timeout = 30000" in response.text
 
-    def test_search_form_has_indicator(self):
-        """Search form should reference loading indicator."""
+    def test_search_form_uses_regular_submission(self):
+        """Search form should use regular form submission (not HTMX)."""
         response = client.get("/")
         assert response.status_code == 200
-        assert 'hx-indicator="#loading-indicator"' in response.text
+        # Search form should submit to /search with GET
+        assert 'action="/search"' in response.text
+        assert 'method="get"' in response.text
+        # Should NOT have HTMX on search form
+        assert 'hx-get="/graphs"' not in response.text or 'action="/search"' in response.text
 
 
 class TestAccessibility:

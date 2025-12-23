@@ -1,0 +1,363 @@
+{% extends "base.html" %}
+
+{% block title %}Search Results - SMOL{% endblock %}
+
+{% block content %}
+<div class="search-header">
+    <div>
+        <h1>Search Results</h1>
+        <p>Found <strong {% if results_capped %}hx-get="/search/count?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}" hx-trigger="load" hx-swap="innerHTML"{% endif %}>{% if results_capped %}1,000+{% else %}{{ "{:,}".format(total_count) }}{% endif %}</strong> graph{% if total_count != 1 %}s{% endif %} matching your criteria.</p>
+    </div>
+    {% if total_count > 0 %}
+    <div class="export-buttons">
+        <a href="/search/export?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}limit={{ limit }}&format=csv" class="export-btn" download>
+            📄 CSV
+        </a>
+        <a href="/search/export?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}limit={{ limit }}&format=json" class="export-btn" download>
+            📋 JSON
+        </a>
+        <a href="/search/export?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}limit={{ limit }}&format=graph6" class="export-btn" download>
+            🔢 graph6
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+{% if total_count > 0 %}
+
+{% if results_capped %}
+<!-- Embed all results as JSON for client-side sorting/pagination -->
+<script>
+window.searchData = {{ all_graphs | tojson }};
+</script>
+
+<div class="results-cap-warning">
+    <strong>⚠️ Showing first 1,000 of 1,000+ results.</strong>
+    For the full dataset, use the <a href="#api-equivalent">API</a> or export functionality above.
+</div>
+
+<!-- Alpine.js powered client-side sorting and pagination -->
+<div x-data="{
+    allGraphs: window.searchData || [],
+    sortBy: '{{ sort_by }}',
+    sortOrder: '{{ sort_order }}',
+    currentPage: 1,
+    perPage: {{ limit }},
+    get sortedGraphs() {
+        let sorted = [...this.allGraphs];
+        const reverse = this.sortOrder === 'desc';
+
+        if (this.sortBy === 'graph6') {
+            sorted.sort((a, b) => reverse ? b.graph6.localeCompare(a.graph6) : a.graph6.localeCompare(b.graph6));
+        } else if (this.sortBy === 'n') {
+            sorted.sort((a, b) => reverse ? b.n - a.n : a.n - b.n);
+        } else if (this.sortBy === 'm') {
+            sorted.sort((a, b) => reverse ? b.m - a.m : a.m - b.m);
+        } else if (this.sortBy === 'diameter') {
+            sorted.sort((a, b) => {
+                const aVal = a.properties.diameter ?? Infinity;
+                const bVal = b.properties.diameter ?? Infinity;
+                return reverse ? bVal - aVal : aVal - bVal;
+            });
+        } else if (this.sortBy === 'girth') {
+            sorted.sort((a, b) => {
+                const aVal = a.properties.girth ?? Infinity;
+                const bVal = b.properties.girth ?? Infinity;
+                return reverse ? bVal - aVal : aVal - bVal;
+            });
+        }
+
+        return sorted;
+    },
+    get paginatedGraphs() {
+        const start = (this.currentPage - 1) * this.perPage;
+        const end = start + this.perPage;
+        return this.sortedGraphs.slice(start, end);
+    },
+    get totalPages() {
+        return Math.ceil(this.sortedGraphs.length / this.perPage);
+    },
+    toggleSort(column) {
+        if (this.sortBy === column) {
+            this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
+        } else {
+            this.sortBy = column;
+            this.sortOrder = 'asc';
+        }
+        this.currentPage = 1;
+    }
+}">
+
+<p class="results-range">
+    Showing <span x-text="((currentPage - 1) * perPage + 1).toLocaleString()"></span>-<span x-text="Math.min(currentPage * perPage, sortedGraphs.length).toLocaleString()"></span> of <span x-text="sortedGraphs.length.toLocaleString()"></span>
+</p>
+
+<!-- Results Table -->
+<div class="table-wrapper">
+<table>
+    <thead>
+        <tr>
+            <th>
+                <span @click="toggleSort('graph6')" style="cursor: pointer;">
+                    graph6
+                    <span x-show="sortBy === 'graph6'" class="sort-indicator" x-text="sortOrder === 'asc' ? '↑' : '↓'"></span>
+                </span>
+            </th>
+            <th>
+                <span @click="toggleSort('n')" style="cursor: pointer;">
+                    n
+                    <span x-show="sortBy === 'n'" class="sort-indicator" x-text="sortOrder === 'asc' ? '↑' : '↓'"></span>
+                </span>
+            </th>
+            <th>
+                <span @click="toggleSort('m')" style="cursor: pointer;">
+                    m
+                    <span x-show="sortBy === 'm'" class="sort-indicator" x-text="sortOrder === 'asc' ? '↑' : '↓'"></span>
+                </span>
+            </th>
+            <th>Tags</th>
+            <th>
+                <span @click="toggleSort('diameter')" style="cursor: pointer;">
+                    Diameter
+                    <span x-show="sortBy === 'diameter'" class="sort-indicator" x-text="sortOrder === 'asc' ? '↑' : '↓'"></span>
+                </span>
+            </th>
+            <th>
+                <span @click="toggleSort('girth')" style="cursor: pointer;">
+                    Girth
+                    <span x-show="sortBy === 'girth'" class="sort-indicator" x-text="sortOrder === 'asc' ? '↑' : '↓'"></span>
+                </span>
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        <template x-for="g in paginatedGraphs" :key="g.graph6">
+        <tr>
+            <td><a :href="'/graph/' + encodeURIComponent(g.graph6)"><code x-text="g.graph6"></code></a></td>
+            <td x-text="g.n"></td>
+            <td x-text="g.m"></td>
+            <td>
+                <template x-if="g.tags && g.tags.length > 0">
+                    <span>
+                        <template x-for="tag in g.tags.sort()" :key="tag">
+                            <span class="tag tag-sm" x-text="tag"></span>
+                        </template>
+                    </span>
+                </template>
+                <template x-if="!g.tags || g.tags.length === 0">
+                    <span>-</span>
+                </template>
+            </td>
+            <td x-text="g.properties.diameter ?? '-'"></td>
+            <td x-text="g.properties.girth ?? '-'"></td>
+        </tr>
+        </template>
+    </tbody>
+</table>
+</div>
+
+<!-- Client-side Pagination -->
+<div class="pagination" x-show="totalPages > 1">
+    <button @click="currentPage > 1 && currentPage--" :disabled="currentPage === 1" class="page-link" :style="currentPage === 1 ? 'opacity: 0.5; cursor: not-allowed;' : ''">&laquo; Previous</button>
+
+    <template x-for="p in Array.from({length: totalPages}, (_, i) => i + 1)" :key="p">
+        <span>
+            <template x-if="p === 1 || p === totalPages || (p >= currentPage - 2 && p <= currentPage + 2)">
+                <button @click="currentPage = p"
+                        :class="p === currentPage ? 'page-current' : 'page-link'"
+                        x-text="p"
+                        :style="p === currentPage ? 'font-weight: bold;' : ''"></button>
+            </template>
+            <template x-if="p === currentPage - 3 || p === currentPage + 3">
+                <span class="page-ellipsis">...</span>
+            </template>
+        </span>
+    </template>
+
+    <button @click="currentPage < totalPages && currentPage++" :disabled="currentPage === totalPages" class="page-link" :style="currentPage === totalPages ? 'opacity: 0.5; cursor: not-allowed;' : ''">Next &raquo;</button>
+</div>
+
+</div> <!-- Close Alpine.js x-data div -->
+
+{% else %}
+<!-- Server-side sorting and pagination for small result sets -->
+
+<p class="results-range">
+    Showing {{ "{:,}".format(start_idx) }}-{{ "{:,}".format(end_idx) }} of {{ "{:,}".format(total_count) }}
+</p>
+
+<!-- Results Table -->
+<div class="table-wrapper">
+<table>
+    <thead>
+        <tr>
+            <th>
+                <a href="/search?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page }}&limit={{ limit }}&sort_by=graph6&sort_order={% if sort_by == 'graph6' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">
+                    graph6
+                    {% if sort_by == 'graph6' %}<span class="sort-indicator">{{ '↑' if sort_order == 'asc' else '↓' }}</span>{% endif %}
+                </a>
+            </th>
+            <th>
+                <a href="/search?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page }}&limit={{ limit }}&sort_by=n&sort_order={% if sort_by == 'n' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">
+                    n
+                    {% if sort_by == 'n' %}<span class="sort-indicator">{{ '↑' if sort_order == 'asc' else '↓' }}</span>{% endif %}
+                </a>
+            </th>
+            <th>
+                <a href="/search?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page }}&limit={{ limit }}&sort_by=m&sort_order={% if sort_by == 'm' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">
+                    m
+                    {% if sort_by == 'm' %}<span class="sort-indicator">{{ '↑' if sort_order == 'asc' else '↓' }}</span>{% endif %}
+                </a>
+            </th>
+            <th>Tags</th>
+            <th>
+                <a href="/search?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page }}&limit={{ limit }}&sort_by=diameter&sort_order={% if sort_by == 'diameter' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">
+                    Diameter
+                    {% if sort_by == 'diameter' %}<span class="sort-indicator">{{ '↑' if sort_order == 'asc' else '↓' }}</span>{% endif %}
+                </a>
+            </th>
+            <th>
+                <a href="/search?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page }}&limit={{ limit }}&sort_by=girth&sort_order={% if sort_by == 'girth' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">
+                    Girth
+                    {% if sort_by == 'girth' %}<span class="sort-indicator">{{ '↑' if sort_order == 'asc' else '↓' }}</span>{% endif %}
+                </a>
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for g in graphs %}
+        <tr>
+            <td><a href="/graph/{{ g.graph6 }}"><code>{{ g.graph6 }}</code></a></td>
+            <td>{{ g.n }}</td>
+            <td>{{ g.m }}</td>
+            <td>
+                {% if g.tags %}
+                    {% for tag in g.tags|sort %}
+                    <span class="tag tag-sm">{{ tag }}</span>
+                    {% endfor %}
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+            <td>{{ g.properties.diameter if g.properties.diameter is not none else '-' }}</td>
+            <td>{{ g.properties.girth if g.properties.girth is not none else '-' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<!-- Server-side Pagination -->
+{% if total_pages > 1 %}
+<div class="pagination">
+    {% if has_prev %}
+    <a href="/search?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page - 1 }}&limit={{ limit }}&sort_by={{ sort_by }}&sort_order={{ sort_order }}" class="page-link">&laquo; Previous</a>
+    {% endif %}
+
+    {% for p in range(1, total_pages + 1) %}
+        {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+            {% if p == page %}
+                <span class="page-current">{{ p }}</span>
+            {% else %}
+                <a href="/search?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ p }}&limit={{ limit }}&sort_by={{ sort_by }}&sort_order={{ sort_order }}" class="page-link">{{ p }}</a>
+            {% endif %}
+        {% elif p == page - 3 or p == page + 3 %}
+            <span class="page-ellipsis">...</span>
+        {% endif %}
+    {% endfor %}
+
+    {% if has_next %}
+    <a href="/search?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page + 1 }}&limit={{ limit }}&sort_by={{ sort_by }}&sort_order={{ sort_order }}" class="page-link">Next &raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% endif %} <!-- Close results_capped if -->
+
+<!-- API Equivalent Component -->
+<div class="api-equivalent" id="api-equivalent" x-data="{ activeTab: 'url' }">
+    <h3>API Equivalent</h3>
+    <p>Use these requests to get the same data programmatically:</p>
+
+    <div class="code-tab-buttons">
+        <button
+            class="code-tab-btn"
+            :class="{ active: activeTab === 'url' }"
+            @click="activeTab = 'url'"
+            role="tab"
+            :aria-selected="(activeTab === 'url').toString()">
+            URL
+        </button>
+        <button
+            class="code-tab-btn"
+            :class="{ active: activeTab === 'curl' }"
+            @click="activeTab = 'curl'"
+            role="tab"
+            :aria-selected="(activeTab === 'curl').toString()">
+            cURL
+        </button>
+        <button
+            class="code-tab-btn"
+            :class="{ active: activeTab === 'python' }"
+            @click="activeTab = 'python'"
+            role="tab"
+            :aria-selected="(activeTab === 'python').toString()">
+            Python
+        </button>
+    </div>
+
+    <div class="code-tab-content" :class="{ active: activeTab === 'url' }" x-cloak>
+        <div class="code-block">
+            <button class="copy-btn" onclick="copyToClipboard(this.nextElementSibling.textContent)" aria-label="Copy to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+<pre><code>{{ request.url.scheme }}://{{ request.url.netloc }}/graphs?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}{% if not loop.last %}&{% endif %}{% endfor %}{% else %}{{ key }}={{ value }}{% endif %}{% if not loop.last %}&{% endif %}{% endfor %}&limit={{ limit }}{% if page > 1 %}&page={{ page }}{% endif %}</code></pre>
+        </div>
+    </div>
+
+    <div class="code-tab-content" :class="{ active: activeTab === 'curl' }" x-cloak>
+        <div class="code-block">
+            <button class="copy-btn" onclick="copyToClipboard(this.nextElementSibling.textContent)" aria-label="Copy to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+<pre><code>curl '{{ request.url.scheme }}://{{ request.url.netloc }}/graphs?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}{% if not loop.last %}&{% endif %}{% endfor %}{% else %}{{ key }}={{ value }}{% endif %}{% if not loop.last %}&{% endif %}{% endfor %}&limit={{ limit }}{% if page > 1 %}&page={{ page }}{% endif %}' \
+  -H 'Accept: application/json'</code></pre>
+        </div>
+    </div>
+
+    <div class="code-tab-content" :class="{ active: activeTab === 'python' }" x-cloak>
+        <div class="code-block">
+            <button class="copy-btn" onclick="copyToClipboard(this.nextElementSibling.textContent)" aria-label="Copy to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+<pre><code>import requests
+
+response = requests.get(
+    '{{ request.url.scheme }}://{{ request.url.netloc }}/graphs',
+    params={
+        {% for key, value in query_params.items() %}{% if value is not string and value is iterable %}'{{ key }}': {{ value | tojson }},
+        {% else %}'{{ key }}': {{ value | tojson }},
+        {% endif %}{% endfor %}'limit': {{ limit }},
+        {% if page > 1 %}'page': {{ page }},{% endif %}
+    }
+)
+graphs = response.json()</code></pre>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<p><em>No graphs found matching your criteria.</em></p>
+{% endif %}
+
+<script>
+function copyToClipboard(text) {
+    const btn = event.target.closest('.copy-btn');
+    navigator.clipboard.writeText(text).then(() => {
+        btn.classList.add('copied');
+        setTimeout(() => btn.classList.remove('copied'), 1500);
+    });
+}
+</script>
+
+{% endblock %}
