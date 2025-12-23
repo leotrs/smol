@@ -85,7 +85,7 @@ def compute_for_matrix(conn, matrix: str, n_filter: int | None = None):
             insert_cur = conn.cursor()
             execute_values(
                 insert_cur,
-                "INSERT INTO cospectral_mates (graph1_id, graph2_id, matrix_type) VALUES %s",
+                "INSERT INTO cospectral_mates (graph1_id, graph2_id, matrix_type) VALUES %s ON CONFLICT DO NOTHING",
                 mates_buffer,
             )
             mates_buffer.clear()
