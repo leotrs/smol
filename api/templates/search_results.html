@@ -43,26 +43,84 @@ window.searchData = {{ all_graphs | tojson }};
     sortOrder: '{{ sort_order }}',
     currentPage: 1,
     perPage: {{ limit }},
+    columnPickerOpen: false,
+    allColumns: [
+        { key: 'graph6', label: 'graph6', sortable: true, fixed: true },
+        { key: 'n', label: 'n', sortable: true, default: true },
+        { key: 'm', label: 'm', sortable: true, default: true },
+        { key: 'tags', label: 'Tags', sortable: false, default: true },
+        { key: 'diameter', label: 'Diameter', sortable: true, default: true },
+        { key: 'girth', label: 'Girth', sortable: true, default: true },
+        { key: 'radius', label: 'Radius', sortable: true, default: false },
+        { key: 'min_degree', label: 'Min Degree', sortable: true, default: false },
+        { key: 'max_degree', label: 'Max Degree', sortable: true, default: false },
+        { key: 'triangle_count', label: 'Triangles', sortable: true, default: false },
+        { key: 'clique_number', label: 'Clique #', sortable: true, default: false },
+        { key: 'chromatic_number', label: 'Chromatic #', sortable: true, default: false },
+    ],
+    get availableColumns() {
+        return this.allColumns;
+    },
+    get toggleableColumns() {
+        return this.allColumns.filter(c => !c.fixed);
+    },
+    get visibleColumnCount() {
+        return this.allColumns.filter(c => this.isColumnVisible(c.key)).length;
+    },
+    visibleColumns: [],
+    init() {
+        const stored = localStorage.getItem('smol_visible_columns');
+        if (stored) {
+            this.visibleColumns = JSON.parse(stored);
+        } else {
+            this.visibleColumns = this.allColumns.filter(c => c.default).map(c => c.key);
+        }
+        // Always ensure graph6 is visible
+        if (!this.visibleColumns.includes('graph6')) {
+            this.visibleColumns.unshift('graph6');
+        }
+    },
+    isColumnVisible(key) {
+        const col = this.allColumns.find(c => c.key === key);
+        return col?.fixed || this.visibleColumns.includes(key);
+    },
+    toggleColumn(key) {
+        if (this.visibleColumns.includes(key)) {
+            this.visibleColumns = this.visibleColumns.filter(k => k !== key);
+        } else {
+            this.visibleColumns.push(key);
+        }
+        localStorage.setItem('smol_visible_columns', JSON.stringify(this.visibleColumns));
+    },
+    getValue(graph, key) {
+        if (key === 'graph6') return graph.graph6;
+        if (key === 'n') return graph.n;
+        if (key === 'm') return graph.m;
+        if (key === 'tags') return graph.tags?.join(',') || '';
+        return graph.properties?.[key];
+    },
+    getAllTags(graph) {
+        const tags = graph.tags ? [...graph.tags] : [];
+        // Add boolean properties as tags
+        if (graph.properties?.is_bipartite) tags.push('bipartite');
+        if (graph.properties?.is_planar) tags.push('planar');
+        if (graph.properties?.is_regular) tags.push('regular');
+        return tags.sort();
+    },
     get sortedGraphs() {
         let sorted = [...this.allGraphs];
         const reverse = this.sortOrder === 'desc';
 
-        if (this.sortBy === 'graph6') {
-            sorted.sort((a, b) => reverse ? b.graph6.localeCompare(a.graph6) : a.graph6.localeCompare(b.graph6));
-        } else if (this.sortBy === 'n') {
-            sorted.sort((a, b) => reverse ? b.n - a.n : a.n - b.n);
-        } else if (this.sortBy === 'm') {
-            sorted.sort((a, b) => reverse ? b.m - a.m : a.m - b.m);
-        } else if (this.sortBy === 'diameter') {
+        if (this.sortBy === 'graph6' || this.sortBy === 'tags') {
             sorted.sort((a, b) => {
-                const aVal = a.properties.diameter ?? Infinity;
-                const bVal = b.properties.diameter ?? Infinity;
-                return reverse ? bVal - aVal : aVal - bVal;
+                const aVal = this.getValue(a, this.sortBy) || '';
+                const bVal = this.getValue(b, this.sortBy) || '';
+                return reverse ? bVal.localeCompare(aVal) : aVal.localeCompare(bVal);
             });
-        } else if (this.sortBy === 'girth') {
+        } else {
             sorted.sort((a, b) => {
-                const aVal = a.properties.girth ?? Infinity;
-                const bVal = b.properties.girth ?? Infinity;
+                const aVal = this.getValue(a, this.sortBy) ?? Infinity;
+                const bVal = this.getValue(b, this.sortBy) ?? Infinity;
                 return reverse ? bVal - aVal : aVal - bVal;
             });
         }
@@ -88,6 +146,30 @@ window.searchData = {{ all_graphs | tojson }};
     }
 }">
 
+<!-- Column Picker -->
+<div class="column-picker" style="margin-bottom: 1rem;">
+    <div style="position: relative; display: inline-block;">
+        <button @click="columnPickerOpen = !columnPickerOpen" class="secondary" style="font-size: 0.9rem;">
+            ⚙️ Columns (<span x-text="visibleColumnCount"></span>)
+        </button>
+        <div x-show="columnPickerOpen"
+             @click.outside="columnPickerOpen = false"
+             x-transition
+             style="position: absolute; top: 100%; left: 0; background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); padding: 1rem; min-width: 200px; z-index: 1000; box-shadow: var(--pico-card-box-shadow); margin-top: 0.25rem;">
+            <div style="font-weight: bold; margin-bottom: 0.5rem; font-size: 0.9rem;">Select Columns:</div>
+            <template x-for="col in toggleableColumns" :key="col.key">
+                <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; cursor: pointer; font-size: 0.85rem;">
+                    <input type="checkbox"
+                           :checked="isColumnVisible(col.key)"
+                           @change="toggleColumn(col.key)"
+                           style="margin: 0; width: auto;">
+                    <span x-text="col.label"></span>
+                </label>
+            </template>
+        </div>
+    </div>
+</div>
+
 <p class="results-range">
     Showing <span x-text="((currentPage - 1) * perPage + 1).toLocaleString()"></span>-<span x-text="Math.min(currentPage * perPage, sortedGraphs.length).toLocaleString()"></span> of <span x-text="sortedGraphs.length.toLocaleString()"></span>
 </p>
@@ -97,59 +179,55 @@ window.searchData = {{ all_graphs | tojson }};
 <table>
     <thead>
         <tr>
-            <th>
-                <span @click="toggleSort('graph6')" style="cursor: pointer;">
-                    graph6
-                    <span x-show="sortBy === 'graph6'" class="sort-indicator" x-text="sortOrder === 'asc' ? '↑' : '↓'"></span>
-                </span>
-            </th>
-            <th>
-                <span @click="toggleSort('n')" style="cursor: pointer;">
-                    n
-                    <span x-show="sortBy === 'n'" class="sort-indicator" x-text="sortOrder === 'asc' ? '↑' : '↓'"></span>
-                </span>
-            </th>
-            <th>
-                <span @click="toggleSort('m')" style="cursor: pointer;">
-                    m
-                    <span x-show="sortBy === 'm'" class="sort-indicator" x-text="sortOrder === 'asc' ? '↑' : '↓'"></span>
-                </span>
-            </th>
-            <th>Tags</th>
-            <th>
-                <span @click="toggleSort('diameter')" style="cursor: pointer;">
-                    Diameter
-                    <span x-show="sortBy === 'diameter'" class="sort-indicator" x-text="sortOrder === 'asc' ? '↑' : '↓'"></span>
-                </span>
-            </th>
-            <th>
-                <span @click="toggleSort('girth')" style="cursor: pointer;">
-                    Girth
-                    <span x-show="sortBy === 'girth'" class="sort-indicator" x-text="sortOrder === 'asc' ? '↑' : '↓'"></span>
-                </span>
-            </th>
+            <template x-for="col in availableColumns" :key="col.key">
+                <th x-show="isColumnVisible(col.key)">
+                    <template x-if="col.sortable">
+                        <span @click="toggleSort(col.key)" style="cursor: pointer;">
+                            <span x-text="col.label"></span>
+                            <span x-show="sortBy === col.key" class="sort-indicator" x-text="sortOrder === 'asc' ? '↑' : '↓'"></span>
+                        </span>
+                    </template>
+                    <template x-if="!col.sortable">
+                        <span x-text="col.label"></span>
+                    </template>
+                </th>
+            </template>
         </tr>
     </thead>
     <tbody>
         <template x-for="g in paginatedGraphs" :key="g.graph6">
         <tr>
-            <td><a :href="'/graph/' + encodeURIComponent(g.graph6)"><code x-text="g.graph6"></code></a></td>
-            <td x-text="g.n"></td>
-            <td x-text="g.m"></td>
-            <td>
-                <template x-if="g.tags && g.tags.length > 0">
-                    <span>
-                        <template x-for="tag in g.tags.sort()" :key="tag">
-                            <span class="tag tag-sm" x-text="tag"></span>
-                        </template>
-                    </span>
-                </template>
-                <template x-if="!g.tags || g.tags.length === 0">
-                    <span>-</span>
-                </template>
-            </td>
-            <td x-text="g.properties.diameter ?? '-'"></td>
-            <td x-text="g.properties.girth ?? '-'"></td>
+            <template x-for="col in availableColumns" :key="col.key">
+                <td x-show="isColumnVisible(col.key)">
+                    <!-- graph6 column: link with code -->
+                    <template x-if="col.key === 'graph6'">
+                        <a :href="'/graph/' + encodeURIComponent(g.graph6)"><code x-text="g.graph6"></code></a>
+                    </template>
+                    <!-- tags column: array of badges (includes boolean properties) -->
+                    <template x-if="col.key === 'tags'">
+                        <span>
+                            <template x-if="getAllTags(g).length > 0">
+                                <span>
+                                    <template x-for="tag in getAllTags(g)" :key="tag">
+                                        <span class="tag tag-sm" x-text="tag"></span>
+                                    </template>
+                                </span>
+                            </template>
+                            <template x-if="getAllTags(g).length === 0">
+                                <span>-</span>
+                            </template>
+                        </span>
+                    </template>
+                    <!-- Numeric columns from properties -->
+                    <template x-if="col.key !== 'graph6' && col.key !== 'tags' && col.key !== 'n' && col.key !== 'm'">
+                        <span x-text="getValue(g, col.key) ?? '-'"></span>
+                    </template>
+                    <!-- n and m columns: direct values -->
+                    <template x-if="col.key === 'n' || col.key === 'm'">
+                        <span x-text="getValue(g, col.key)"></span>
+                    </template>
+                </td>
+            </template>
         </tr>
         </template>
     </tbody>
@@ -181,68 +259,160 @@ window.searchData = {{ all_graphs | tojson }};
 
 {% else %}
 <!-- Server-side sorting and pagination for small result sets -->
+<div x-data="{
+    columnPickerOpen: false,
+    allColumns: [
+        { key: 'graph6', label: 'graph6', sortable: true, fixed: true },
+        { key: 'n', label: 'n', sortable: true, default: true },
+        { key: 'm', label: 'm', sortable: true, default: true },
+        { key: 'tags', label: 'Tags', sortable: false, default: true },
+        { key: 'diameter', label: 'Diameter', sortable: true, default: true },
+        { key: 'girth', label: 'Girth', sortable: true, default: true },
+        { key: 'radius', label: 'Radius', sortable: true, default: false },
+        { key: 'min_degree', label: 'Min Degree', sortable: true, default: false },
+        { key: 'max_degree', label: 'Max Degree', sortable: true, default: false },
+        { key: 'triangle_count', label: 'Triangles', sortable: true, default: false },
+        { key: 'clique_number', label: 'Clique #', sortable: true, default: false },
+        { key: 'chromatic_number', label: 'Chromatic #', sortable: true, default: false },
+    ],
+    get availableColumns() {
+        return this.allColumns;
+    },
+    get toggleableColumns() {
+        return this.allColumns.filter(c => !c.fixed);
+    },
+    get visibleColumnCount() {
+        return this.allColumns.filter(c => this.isColumnVisible(c.key)).length;
+    },
+    visibleColumns: [],
+    init() {
+        const stored = localStorage.getItem('smol_visible_columns');
+        if (stored) {
+            this.visibleColumns = JSON.parse(stored);
+        } else {
+            this.visibleColumns = this.allColumns.filter(c => c.default).map(c => c.key);
+        }
+        // Always ensure graph6 is visible
+        if (!this.visibleColumns.includes('graph6')) {
+            this.visibleColumns.unshift('graph6');
+        }
+    },
+    isColumnVisible(key) {
+        const col = this.allColumns.find(c => c.key === key);
+        return col?.fixed || this.visibleColumns.includes(key);
+    },
+    toggleColumn(key) {
+        if (this.visibleColumns.includes(key)) {
+            this.visibleColumns = this.visibleColumns.filter(k => k !== key);
+        } else {
+            this.visibleColumns.push(key);
+        }
+        localStorage.setItem('smol_visible_columns', JSON.stringify(this.visibleColumns));
+    },
+    getValue(graph, key) {
+        if (key === 'graph6') return graph.graph6;
+        if (key === 'n') return graph.n;
+        if (key === 'm') return graph.m;
+        if (key === 'tags') return graph.tags?.join(',') || '';
+        return graph.properties?.[key];
+    },
+    getAllTags(graph) {
+        const tags = graph.tags ? [...graph.tags] : [];
+        // Add boolean properties as tags
+        if (graph.properties?.is_bipartite) tags.push('bipartite');
+        if (graph.properties?.is_planar) tags.push('planar');
+        if (graph.properties?.is_regular) tags.push('regular');
+        return tags.sort();
+    }
+}">
+
+<!-- Column Picker -->
+<div class="column-picker" style="margin-bottom: 1rem;">
+    <div style="position: relative; display: inline-block;">
+        <button @click="columnPickerOpen = !columnPickerOpen" class="secondary" style="font-size: 0.9rem;">
+            ⚙️ Columns (<span x-text="visibleColumnCount"></span>)
+        </button>
+        <div x-show="columnPickerOpen"
+             @click.outside="columnPickerOpen = false"
+             x-transition
+             style="position: absolute; top: 100%; left: 0; background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); padding: 1rem; min-width: 200px; z-index: 1000; box-shadow: var(--pico-card-box-shadow); margin-top: 0.25rem;">
+            <div style="font-weight: bold; margin-bottom: 0.5rem; font-size: 0.9rem;">Select Columns:</div>
+            <template x-for="col in toggleableColumns" :key="col.key">
+                <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; cursor: pointer; font-size: 0.85rem;">
+                    <input type="checkbox"
+                           :checked="isColumnVisible(col.key)"
+                           @change="toggleColumn(col.key)"
+                           style="margin: 0; width: auto;">
+                    <span x-text="col.label"></span>
+                </label>
+            </template>
+        </div>
+    </div>
+</div>
 
 <p class="results-range">
     Showing {{ "{:,}".format(start_idx) }}-{{ "{:,}".format(end_idx) }} of {{ "{:,}".format(total_count) }}
 </p>
 
 <!-- Results Table -->
+<script>
+window.serverGraphs = {{ graphs | tojson }};
+</script>
 <div class="table-wrapper">
 <table>
     <thead>
         <tr>
-            <th>
-                <a href="/search?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page }}&limit={{ limit }}&sort_by=graph6&sort_order={% if sort_by == 'graph6' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">
-                    graph6
-                    {% if sort_by == 'graph6' %}<span class="sort-indicator">{{ '↑' if sort_order == 'asc' else '↓' }}</span>{% endif %}
-                </a>
-            </th>
-            <th>
-                <a href="/search?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page }}&limit={{ limit }}&sort_by=n&sort_order={% if sort_by == 'n' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">
-                    n
-                    {% if sort_by == 'n' %}<span class="sort-indicator">{{ '↑' if sort_order == 'asc' else '↓' }}</span>{% endif %}
-                </a>
-            </th>
-            <th>
-                <a href="/search?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page }}&limit={{ limit }}&sort_by=m&sort_order={% if sort_by == 'm' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">
-                    m
-                    {% if sort_by == 'm' %}<span class="sort-indicator">{{ '↑' if sort_order == 'asc' else '↓' }}</span>{% endif %}
-                </a>
-            </th>
-            <th>Tags</th>
-            <th>
-                <a href="/search?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page }}&limit={{ limit }}&sort_by=diameter&sort_order={% if sort_by == 'diameter' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">
-                    Diameter
-                    {% if sort_by == 'diameter' %}<span class="sort-indicator">{{ '↑' if sort_order == 'asc' else '↓' }}</span>{% endif %}
-                </a>
-            </th>
-            <th>
-                <a href="/search?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page }}&limit={{ limit }}&sort_by=girth&sort_order={% if sort_by == 'girth' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">
-                    Girth
-                    {% if sort_by == 'girth' %}<span class="sort-indicator">{{ '↑' if sort_order == 'asc' else '↓' }}</span>{% endif %}
-                </a>
-            </th>
+            <template x-for="col in availableColumns" :key="col.key">
+                <th x-show="isColumnVisible(col.key)">
+                    <template x-if="col.sortable">
+                        <a :href="`/search?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page }}&limit={{ limit }}&sort_by=${col.key}&sort_order={% if sort_by == '${col.key}' and sort_order == 'asc' %}desc{% else %}asc{% endif %}`">
+                            <span x-text="col.label"></span>
+                            <span x-show="'{{ sort_by }}' === col.key" class="sort-indicator">{{ '↑' if sort_order == 'asc' else '↓' }}</span>
+                        </a>
+                    </template>
+                    <template x-if="!col.sortable">
+                        <span x-text="col.label"></span>
+                    </template>
+                </th>
+            </template>
         </tr>
     </thead>
     <tbody>
-        {% for g in graphs %}
+        <template x-for="g in window.serverGraphs" :key="g.graph6">
         <tr>
-            <td><a href="/graph/{{ g.graph6 }}"><code>{{ g.graph6 }}</code></a></td>
-            <td>{{ g.n }}</td>
-            <td>{{ g.m }}</td>
-            <td>
-                {% if g.tags %}
-                    {% for tag in g.tags|sort %}
-                    <span class="tag tag-sm">{{ tag }}</span>
-                    {% endfor %}
-                {% else %}
-                    -
-                {% endif %}
-            </td>
-            <td>{{ g.properties.diameter if g.properties.diameter is not none else '-' }}</td>
-            <td>{{ g.properties.girth if g.properties.girth is not none else '-' }}</td>
+            <template x-for="col in availableColumns" :key="col.key">
+                <td x-show="isColumnVisible(col.key)">
+                    <!-- graph6 column: link with code -->
+                    <template x-if="col.key === 'graph6'">
+                        <a :href="'/graph/' + encodeURIComponent(g.graph6)"><code x-text="g.graph6"></code></a>
+                    </template>
+                    <!-- tags column: array of badges (includes boolean properties) -->
+                    <template x-if="col.key === 'tags'">
+                        <span>
+                            <template x-if="getAllTags(g).length > 0">
+                                <span>
+                                    <template x-for="tag in getAllTags(g)" :key="tag">
+                                        <span class="tag tag-sm" x-text="tag"></span>
+                                    </template>
+                                </span>
+                            </template>
+                            <template x-if="getAllTags(g).length === 0">
+                                <span>-</span>
+                            </template>
+                        </span>
+                    </template>
+                    <!-- Numeric columns from properties -->
+                    <template x-if="col.key !== 'graph6' && col.key !== 'tags' && col.key !== 'n' && col.key !== 'm'">
+                        <span x-text="getValue(g, col.key) ?? '-'"></span>
+                    </template>
+                    <!-- n and m columns: direct values -->
+                    <template x-if="col.key === 'n' || col.key === 'm'">
+                        <span x-text="getValue(g, col.key)"></span>
+                    </template>
+                </td>
+            </template>
         </tr>
-        {% endfor %}
+        </template>
     </tbody>
 </table>
 </div>
@@ -271,6 +441,8 @@ window.searchData = {{ all_graphs | tojson }};
     {% endif %}
 </div>
 {% endif %}
+
+</div> <!-- Close Alpine.js x-data div for server-side -->
 
 {% endif %} <!-- Close results_capped if -->
 

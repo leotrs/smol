@@ -37,7 +37,7 @@
 
     <div class="tab-content" role="tabpanel" id="search-panel" aria-labelledby="search-tab" x-show="tab === 'search'">
         <p class="tab-hint">Find graphs by structural properties and tags</p>
-        <form hx-get="/graphs" hx-target="#results" hx-trigger="submit" hx-indicator="#loading-indicator" class="search-form">
+        <form action="/search" method="get" class="search-form">
             <div class="search-columns">
                 <div class="search-column">
                     <label>

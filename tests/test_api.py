@@ -612,12 +612,15 @@ class TestSearchEndpoint:
         assert "Found 0 graphs" in response.text or "No graphs found" in response.text
 
     def test_search_table_headers_sortable(self):
-        """Table headers should be links for sorting."""
+        """Table headers should be sortable (either via links or Alpine.js)."""
         response = client.get("/search?n=5")
         assert response.status_code == 200
-        assert "sort_by=n" in response.text
-        assert "sort_by=m" in response.text
-        assert "sort_by=diameter" in response.text
+        # Check for sorting capability (either href links or Alpine.js columns)
+        assert "sort_by=" in response.text or "sortable: true" in response.text
+        # Should have column definitions for sorting
+        assert "key: 'n'" in response.text
+        assert "key: 'm'" in response.text
+        assert "key: 'diameter'" in response.text
 
     def test_search_preserves_params_in_pagination(self):
         """Pagination links should preserve search params."""
@@ -705,11 +708,9 @@ class TestSearchEndpoint:
         response = client.get("/search?n=5&m=4")
         assert response.status_code == 200
 
-        # Should have traditional pagination links (server-side)
-        assert 'href="/search?' in response.text
-
-        # Should NOT have Alpine.js for pagination (client-side)
-        # Instead uses traditional pagination
+        # Should use server-side rendering (window.serverGraphs, not window.searchData)
+        assert 'window.serverGraphs' in response.text
+        assert 'window.searchData' not in response.text
 
     def test_search_client_side_pagination_markup(self):
         """Large result sets should have Alpine.js pagination controls."""
@@ -749,29 +750,26 @@ class TestSearchClientSideRegression:
         response = client.get("/search?n=5&m=4")
         assert response.status_code == 200
 
-        # Should have traditional table headers with href links
-        assert 'href="/search?' in response.text
-        assert 'sort_by=' in response.text
+        # Should use server-side data (window.serverGraphs)
+        assert 'window.serverGraphs' in response.text
 
-        # Should NOT have Alpine.js sorting component
+        # Should NOT have client-side data (window.searchData)
         assert 'window.searchData' not in response.text
-        assert '@click="toggleSort' not in response.text
-
-        # Should use Jinja2 for loop
-        assert '{% for' not in response.text  # Template is rendered
 
     def test_client_side_sorting_all_columns(self):
         """Client-side sorting should handle all sortable columns."""
         response = client.get("/search?n=8")
         assert response.status_code == 200
 
-        # Should have click handlers for all sortable columns
-        assert 'toggleSort(\'graph6\')' in response.text
-        assert 'toggleSort(\'n\')' in response.text
-        assert 'toggleSort(\'m\')' in response.text
-        assert 'toggleSort(\'diameter\')' in response.text
-        assert 'toggleSort(\'girth\')' in response.text
+        # Should have sortable column definitions
+        assert "key: 'graph6', label: 'graph6', sortable: true" in response.text
+        assert "key: 'n', label: 'n', sortable: true" in response.text
+        assert "key: 'm', label: 'm', sortable: true" in response.text
+        assert "key: 'diameter', label: 'Diameter', sortable: true" in response.text
+        assert "key: 'girth', label: 'Girth', sortable: true" in response.text
 
+        # Should have toggleSort function
+        assert 'toggleSort' in response.text
         # Should have sort indicators
         assert 'sort-indicator' in response.text
 
@@ -838,13 +836,80 @@ class TestSearchClientSideRegression:
         response = client.get("/search?n=8")
         assert response.status_code == 200
 
-        # Should use x-for template
+        # Should use x-for template for rows
         assert 'x-for="g in paginatedGraphs"' in response.text
         assert ':key="g.graph6"' in response.text
 
-        # Should use x-text for values
-        assert 'x-text="g.n"' in response.text
-        assert 'x-text="g.m"' in response.text
+        # Should use x-for template for dynamic columns
+        assert 'x-for="col in availableColumns"' in response.text
+        # Should use getValue function for accessing column data
+        assert 'getValue(g, col.key)' in response.text or "getValue(g, 'n')" in response.text
+
+
+@needs_db
+class TestSearchColumnPicker:
+    """Tests for interactive column selection."""
+
+    def test_search_has_column_picker_ui(self):
+        """Search page should have column picker button/dropdown."""
+        response = client.get("/search?n=5")
+        assert response.status_code == 200
+
+        # Should have column picker UI element
+        assert 'Columns' in response.text or 'columns' in response.text
+        # Should have Alpine.js data for column management
+        assert 'availableColumns' in response.text or 'visibleColumns' in response.text
+
+    def test_column_picker_has_all_properties(self):
+        """Column picker should list all available numeric properties."""
+        response = client.get("/search?n=5")
+        assert response.status_code == 200
+
+        # Should have options for numeric properties
+        assert 'radius' in response.text.lower()
+        assert 'min_degree' in response.text.lower() or 'min degree' in response.text.lower()
+        assert 'max_degree' in response.text.lower() or 'max degree' in response.text.lower()
+        assert 'triangle' in response.text.lower()
+
+        # Boolean properties should NOT be columns (they're shown as tags)
+        assert "key: 'is_bipartite'" not in response.text
+        assert "key: 'is_planar'" not in response.text
+        assert "key: 'is_regular'" not in response.text
+
+        # Should have getAllTags function that includes boolean properties
+        assert 'getAllTags' in response.text
+        assert 'is_bipartite' in response.text
+        assert "tags.push('bipartite')" in response.text
+        assert "tags.push('planar')" in response.text
+        assert "tags.push('regular')" in response.text
+
+    def test_default_columns_shown(self):
+        """Default columns should be graph6, n, m, tags, diameter, girth."""
+        response = client.get("/search?n=5")
+        assert response.status_code == 200
+
+        # Should have column definitions in JavaScript
+        assert "key: 'graph6'" in response.text
+        assert "key: 'n'" in response.text
+        assert "key: 'm'" in response.text
+        assert "key: 'tags'" in response.text
+        assert "key: 'diameter'" in response.text
+        assert "key: 'girth'" in response.text
+
+        # Default columns should be marked as default: true
+        assert "default: true" in response.text
+
+    def test_boolean_properties_shown_as_tags(self):
+        """Boolean properties should appear as tags in the Tags column, not as separate columns."""
+        # Get a graph that we know is bipartite, planar, and regular (cycle graph)
+        response = client.get("/search?n=5&m=5")
+        assert response.status_code == 200
+
+        # The getAllTags function should include these properties
+        assert 'getAllTags' in response.text
+        assert "tags.push('bipartite')" in response.text
+        assert "tags.push('planar')" in response.text
+        assert "tags.push('regular')" in response.text
 
 
 @needs_db

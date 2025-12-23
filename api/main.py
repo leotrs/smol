@@ -445,7 +445,8 @@ async def search_graphs(
             sort_order=sort_order,
             max_count=MAX_RESULTS,
         )
-        graphs = [row_to_graph_summary(row) for row in rows]
+        graph_objects = [row_to_graph_summary(row) for row in rows]
+        graphs = [g.model_dump() for g in graph_objects]  # Convert to dicts for JSON
         all_graphs = None  # Not needed for server-side pagination
 
     display_count = min(total_count, MAX_RESULTS)

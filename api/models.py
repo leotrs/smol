@@ -72,6 +72,7 @@ class GraphSummary(BaseModel):
     n: int
     m: int
     properties: GraphProperties
+    tags: list[str] = []
 
 
 class CompareResult(BaseModel):

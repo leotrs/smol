@@ -1549,6 +1549,166 @@
             min-width: 600px;
         }
 
+        /* Search results page */
+        .search-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .search-header h1 {
+            margin-bottom: 0.5rem;
+        }
+
+        .search-header > div:first-child {
+            flex: 1;
+        }
+
+        .results-range {
+            color: var(--pico-muted-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .results-cap-warning {
+            background: #FFF3CD;
+            border: 1px solid #FFE69C;
+            border-radius: var(--pico-border-radius);
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            color: #856404;
+        }
+
+        [data-theme="dark"] .results-cap-warning {
+            background: #332701;
+            border-color: #664D03;
+            color: #FFDA6A;
+        }
+
+        .results-cap-warning a {
+            color: inherit;
+            text-decoration: underline;
+            font-weight: 600;
+        }
+
+        .results-cap-warning a:hover {
+            color: inherit;
+            opacity: 0.8;
+        }
+
+        .export-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            align-items: flex-start;
+        }
+
+        .export-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.5rem 1rem;
+            background: var(--pico-primary);
+            color: white;
+            border-radius: var(--pico-border-radius);
+            text-decoration: none;
+            transition: background 0.2s;
+            font-weight: 500;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        .export-btn:hover {
+            background: var(--pico-primary-hover);
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .search-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+
+        /* Alpine.js x-cloak */
+        [x-cloak] {
+            display: none !important;
+        }
+
+        .api-equivalent {
+            background: var(--pico-card-background-color);
+            border: 1px solid var(--pico-muted-border-color);
+            border-radius: var(--pico-border-radius);
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .api-equivalent h3 {
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+        }
+
+        .api-equivalent > p {
+            color: var(--pico-muted-color);
+            margin-bottom: 1rem;
+        }
+
+        /* Sortable table headers */
+        table th a {
+            color: inherit;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        table th a:hover {
+            text-decoration: underline;
+        }
+
+        .sort-indicator {
+            font-size: 0.875em;
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            align-items: center;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+
+        .page-link {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--pico-muted-border-color);
+            border-radius: var(--pico-border-radius);
+            text-decoration: none;
+            color: var(--pico-color);
+            transition: all 0.2s;
+        }
+
+        .page-link:hover {
+            background: var(--pico-primary);
+            color: white;
+            border-color: var(--pico-primary);
+        }
+
+        .page-current {
+            padding: 0.5rem 0.75rem;
+            background: var(--pico-primary);
+            color: white;
+            border-radius: var(--pico-border-radius);
+            font-weight: 600;
+        }
+
+        .page-ellipsis {
+            padding: 0.5rem;
+            color: var(--pico-muted-color);
+        }
+
         /* Responsive mobile styles */
         @media (max-width: 768px) {
             .container {

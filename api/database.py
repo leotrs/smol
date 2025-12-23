@@ -233,14 +233,27 @@ async def query_graphs(
     m: int | None = None,
     m_min: int | None = None,
     m_max: int | None = None,
+    min_degree: int | None = None,
+    max_degree: int | None = None,
+    diameter: int | None = None,
+    radius: int | None = None,
+    girth: int | None = None,
+    triangle_count: int | None = None,
     bipartite: bool | None = None,
     planar: bool | None = None,
     regular: bool | None = None,
+    tags: list[str] | None = None,
     connected: bool = True,
     limit: int = 100,
     offset: int = 0,
-) -> list[dict[str, Any]]:
-    """Query graphs with filters."""
+    sort_by: str = "n",
+    sort_order: str = "asc",
+    max_count: int | None = None,
+) -> tuple[list[dict[str, Any]], int]:
+    """Query graphs with filters. Returns (results, total_count).
+
+    If max_count is set, counting stops at max_count + 1 for performance.
+    """
     ph = _placeholder()
     has_tags = await _check_tags_column()
     tags_col = _tags_col(has_tags)
@@ -268,6 +281,24 @@ async def query_graphs(
     if m_max is not None:
         conditions.append(f"m <= {ph}")
         params.append(m_max)
+    if min_degree is not None:
+        conditions.append(f"min_degree = {ph}")
+        params.append(min_degree)
+    if max_degree is not None:
+        conditions.append(f"max_degree = {ph}")
+        params.append(max_degree)
+    if diameter is not None:
+        conditions.append(f"diameter = {ph}")
+        params.append(diameter)
+    if radius is not None:
+        conditions.append(f"radius = {ph}")
+        params.append(radius)
+    if girth is not None:
+        conditions.append(f"girth = {ph}")
+        params.append(girth)
+    if triangle_count is not None:
+        conditions.append(f"triangle_count = {ph}")
+        params.append(triangle_count)
     if bipartite is not None:
         conditions.append(f"is_bipartite = {ph}")
         params.append((1 if bipartite else 0) if IS_SQLITE else bipartite)
@@ -277,12 +308,45 @@ async def query_graphs(
     if regular is not None:
         conditions.append(f"is_regular = {ph}")
         params.append((1 if regular else 0) if IS_SQLITE else regular)
+    if tags and has_tags:
+        for tag in tags:
+            if IS_SQLITE:
+                conditions.append(f"EXISTS (SELECT 1 FROM json_each(tags) WHERE value = {ph})")
+            else:
+                conditions.append(f"{ph} = ANY(tags)")
+            params.append(tag)
 
     where = " AND ".join(conditions) if conditions else "1=1"
-    params.extend([limit, offset])
+
+    # Validate sort column
+    valid_sort_columns = ["graph6", "n", "m", "diameter", "girth", "radius", "min_degree", "max_degree", "triangle_count"]
+    if sort_by not in valid_sort_columns:
+        sort_by = "n"
+    sort_direction = "DESC" if sort_order.lower() == "desc" else "ASC"
+    order_clause = f"ORDER BY {sort_by} {sort_direction}, n, m, graph6"
+
+    # Get total count first
+    count_params = params.copy()
 
     async with get_db() as conn:
         if IS_SQLITE:
+            # Get count (with optional limit for performance)
+            if max_count is not None:
+                count_params.append(max_count + 1)
+                cursor = await conn.execute(
+                    f"SELECT COUNT(*) FROM (SELECT 1 FROM graphs WHERE {where} LIMIT {ph}) AS subq",
+                    count_params,
+                )
+            else:
+                cursor = await conn.execute(
+                    f"SELECT COUNT(*) FROM graphs WHERE {where}",
+                    count_params,
+                )
+            row = await cursor.fetchone()
+            total_count = row[0] if row else 0
+
+            # Get results
+            params.extend([limit, offset])
             cursor = await conn.execute(
                 f"""
                 SELECT graph6, n, m,
@@ -295,15 +359,33 @@ async def query_graphs(
                        {tags_col}
                 FROM graphs
                 WHERE {where}
-                ORDER BY n, m, graph6
+                {order_clause}
                 LIMIT {ph} OFFSET {ph}
                 """,
                 params,
             )
             rows = await cursor.fetchall()
-            return _parse_rows(rows)
+            return _parse_rows(rows), total_count
         else:
             from psycopg2.extras import RealDictCursor
+            # Get count (with optional limit for performance)
+            cur = conn.cursor()
+            if max_count is not None:
+                count_params.append(max_count + 1)
+                cur.execute(
+                    f"SELECT COUNT(*) FROM (SELECT 1 FROM graphs WHERE {where} LIMIT {ph}) AS subq",
+                    count_params,
+                )
+            else:
+                cur.execute(
+                    f"SELECT COUNT(*) FROM graphs WHERE {where}",
+                    count_params,
+                )
+            row = cur.fetchone()
+            total_count = row[0] if row else 0
+
+            # Get results
+            params.extend([limit, offset])
             cur = conn.cursor(cursor_factory=RealDictCursor)
             cur.execute(
                 f"""
@@ -317,12 +399,12 @@ async def query_graphs(
                        {tags_col}
                 FROM graphs
                 WHERE {where}
-                ORDER BY n, m, graph6
+                {order_clause}
                 LIMIT {ph} OFFSET {ph}
                 """,
                 params,
             )
-            return _parse_rows(cur.fetchall())
+            return _parse_rows(cur.fetchall()), total_count
 
 
 async def fetch_random_graph() -> dict[str, Any] | None:
