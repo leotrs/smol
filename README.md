@@ -80,7 +80,20 @@ curl -L https://smol-graphs-db.fly.dev/random/cospectral
 
 # Database statistics
 curl https://smol-graphs-db.fly.dev/stats
+
+# Switching mechanisms for a graph
+curl "https://smol-graphs-db.fly.dev/api/graph/GCQvBk/mechanisms"
+
+# Mechanism coverage statistics
+curl "https://smol-graphs-db.fly.dev/api/stats/mechanisms?n=8&matrix_type=adj"
 ```
+
+**Switching Mechanisms:**
+
+SMOL detects and stores switching mechanisms that explain why graphs are cospectral. Currently includes:
+- **GM switching** (Godsil-McKay): Covers ~43% of adjacency-cospectral graphs at n=9
+
+Graph detail pages show mechanism badges in a dedicated column for cospectral mates.
 
 ## Local Development
 

@@ -643,6 +643,7 @@ function copyEigenvalues(btn) {
         <tr>
             <th>Matrix</th>
             <th>Mates</th>
+            <th>Mechanism</th>
             <th></th>
         </tr>
     </thead>
@@ -654,6 +655,26 @@ function copyEigenvalues(btn) {
                 {% for mate in graph.cospectral_mates.adj %}
                     <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
                 {% endfor %}
+            </td>
+            <td>
+                {% if mechanisms and mechanisms.mechanisms and 'adj' in mechanisms.mechanisms %}
+                    {% for mate in graph.cospectral_mates.adj %}
+                        {% set found_mech = namespace(value='') %}
+                        {% for mech in mechanisms.mechanisms.adj %}
+                            {% if mech.mate == mate %}
+                                {% set found_mech.value = mech.mechanism | upper %}
+                            {% endif %}
+                        {% endfor %}
+                        {% if found_mech.value %}
+                            <span class="badge badge-{{ found_mech.value | lower }}" title="{{ found_mech.value }} switching">{{ found_mech.value }}</span>
+                        {% else %}
+                            <span style="color: var(--pico-muted-color);">—</span>
+                        {% endif %}
+                        {% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <span style="color: var(--pico-muted-color);">—</span>
+                {% endif %}
             </td>
             <td>
                 {% if graph.cospectral_mates.adj | length < 10 %}
@@ -672,6 +693,7 @@ function copyEigenvalues(btn) {
                     <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
                 {% endfor %}
             </td>
+            <td><span style="color: var(--pico-muted-color);">—</span></td>
             <td>
                 {% if graph.cospectral_mates.kirchhoff | length < 10 %}
                 <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.kirchhoff | join(',') | urlencode }}" role="button" class="outline">Compare</a>
@@ -689,6 +711,7 @@ function copyEigenvalues(btn) {
                     <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
                 {% endfor %}
             </td>
+            <td><span style="color: var(--pico-muted-color);">—</span></td>
             <td>
                 {% if graph.cospectral_mates.signless | length < 10 %}
                 <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.signless | join(',') | urlencode }}" role="button" class="outline">Compare</a>
@@ -706,6 +729,7 @@ function copyEigenvalues(btn) {
                     <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
                 {% endfor %}
             </td>
+            <td><span style="color: var(--pico-muted-color);">—</span></td>
             <td>
                 {% if graph.cospectral_mates.lap | length < 10 %}
                 <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.lap | join(',') | urlencode }}" role="button" class="outline">Compare</a>
@@ -723,6 +747,7 @@ function copyEigenvalues(btn) {
                     <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
                 {% endfor %}
             </td>
+            <td><span style="color: var(--pico-muted-color);">—</span></td>
             <td>
                 {% if graph.cospectral_mates.nb | length < 10 %}
                 <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.nb | join(',') | urlencode }}" role="button" class="outline">Compare</a>
@@ -740,6 +765,7 @@ function copyEigenvalues(btn) {
                     <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
                 {% endfor %}
             </td>
+            <td><span style="color: var(--pico-muted-color);">—</span></td>
             <td>
                 {% if graph.cospectral_mates.nbl | length < 10 %}
                 <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.nbl | join(',') | urlencode }}" role="button" class="outline">Compare</a>

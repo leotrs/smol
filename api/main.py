@@ -15,6 +15,8 @@ from fastapi.templating import Jinja2Templates
 from .database import (
     fetch_cospectral_mates,
     fetch_graph,
+    fetch_graph_mechanisms,
+    fetch_mechanism_stats,
     fetch_random_cospectral_class,
     fetch_random_graph,
     fetch_similar_graphs,
@@ -43,6 +45,10 @@ app = FastAPI(
     description="Spectra and Matrices Of Little graphs",
     version="0.1.0",
 )
+
+# Include routers
+from .routes import mechanisms
+app.include_router(mechanisms.router)
 
 
 @app.middleware("http")
@@ -205,13 +211,17 @@ async def get_graph_by_id(graph6: str, request: Request):
     t2 = time.perf_counter()
     logger.info(f"  fetch_cospectral_mates: {(t2-t1)*1000:.0f}ms")
 
+    mechanisms_data = await fetch_graph_mechanisms(graph6)
+    t2_5 = time.perf_counter()
+    logger.info(f"  fetch_graph_mechanisms: {(t2_5-t2)*1000:.0f}ms")
+
     graph = row_to_graph_full(row, mates)
     t3 = time.perf_counter()
-    logger.info(f"  row_to_graph_full: {(t3-t2)*1000:.0f}ms")
+    logger.info(f"  row_to_graph_full: {(t3-t2_5)*1000:.0f}ms")
 
     if wants_html(request):
         resp = templates.TemplateResponse(
-            request, "graph_detail.html", {"graph": graph}
+            request, "graph_detail.html", {"graph": graph, "mechanisms": mechanisms_data}
         )
         t4 = time.perf_counter()
         logger.info(f"  template render: {(t4-t3)*1000:.0f}ms")

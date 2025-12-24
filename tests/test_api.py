@@ -1258,3 +1258,85 @@ class TestAccessibility:
         assert response.status_code == 200
         assert ":focus-visible" in response.text
         assert "outline: 2px solid" in response.text
+
+
+@needs_db
+class TestMechanismsEndpoints:
+    def test_graph_mechanisms_returns_data(self):
+        """Test GET /api/graph/{graph6}/mechanisms returns mechanism data."""
+        response = client.get("/api/graph/GCQvBk/mechanisms")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["graph6"] == "GCQvBk"
+        assert data["n"] == 8
+        assert data["m"] == 13
+        assert "mechanisms" in data
+
+    def test_graph_mechanisms_with_gm(self):
+        """Test graph with GM mechanism returns correct data."""
+        response = client.get("/api/graph/GCQvBk/mechanisms")
+        assert response.status_code == 200
+        data = response.json()
+        if "adj" in data["mechanisms"]:
+            mechs = data["mechanisms"]["adj"]
+            assert isinstance(mechs, list)
+            for mech in mechs:
+                assert "mate" in mech
+                assert "mechanism" in mech
+                assert "config" in mech
+                if mech["mechanism"] == "gm":
+                    assert "switching_set" in mech["config"]
+                    assert "partition" in mech["config"]
+
+    def test_graph_mechanisms_filter_by_matrix_type(self):
+        """Test filtering mechanisms by matrix type."""
+        response = client.get("/api/graph/GCQvBk/mechanisms?matrix_type=adj")
+        assert response.status_code == 200
+        data = response.json()
+        if data["mechanisms"]:
+            assert all(mt == "adj" for mt in data["mechanisms"].keys())
+
+    def test_mechanism_stats_returns_data(self):
+        """Test GET /api/stats/mechanisms returns statistics."""
+        response = client.get("/api/stats/mechanisms?n=8&matrix_type=adj")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["n"] == 8
+        assert data["matrix_type"] == "adj"
+        assert "total_graphs" in data
+        assert "mechanisms" in data
+        assert isinstance(data["mechanisms"], dict)
+
+    def test_mechanism_stats_includes_gm_coverage(self):
+        """Test mechanism stats includes GM coverage for n=8."""
+        response = client.get("/api/stats/mechanisms?n=8&matrix_type=adj")
+        assert response.status_code == 200
+        data = response.json()
+        if "gm" in data["mechanisms"]:
+            gm_data = data["mechanisms"]["gm"]
+            assert "pairs" in gm_data
+            assert "coverage" in gm_data
+            assert isinstance(gm_data["pairs"], int)
+            assert isinstance(gm_data["coverage"], float)
+            assert 0 <= gm_data["coverage"] <= 1
+
+    def test_graph_detail_includes_mechanism_column(self):
+        """Test that graph detail page includes mechanism column."""
+        response = client.get("/graph/GCQvBk", headers={"Accept": "text/html"})
+        assert response.status_code == 200
+        assert "<th>Mechanism</th>" in response.text
+
+    def test_graph_detail_shows_gm_badge(self):
+        """Test that GM badge appears for graphs with GM mechanisms."""
+        response = client.get("/graph/GCQvBk", headers={"Accept": "text/html"})
+        assert response.status_code == 200
+        if "GCQvD[" in response.text:
+            assert 'badge badge-gm' in response.text
+            assert 'GM' in response.text
+
+    def test_mechanism_badge_styles_defined(self):
+        """Test that mechanism badge CSS styles are defined."""
+        response = client.get("/", headers={"Accept": "text/html"})
+        assert response.status_code == 200
+        assert ".badge-gm" in response.text
+        assert "[data-theme=\"dark\"] .badge-gm" in response.text

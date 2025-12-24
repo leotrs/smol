@@ -866,3 +866,223 @@ async def get_stats() -> dict[str, Any]:
             "counts_by_n": counts_by_n,
             "cospectral_counts": cospectral,
         }
+
+
+async def fetch_graph_mechanisms(
+    graph6: str, matrix_type: str | None = None
+) -> dict[str, Any]:
+    """Fetch all mechanisms for a specific graph."""
+    ph = _placeholder()
+
+    async with get_db() as conn:
+        if IS_SQLITE:
+            # Get graph info
+            cursor = await conn.execute(
+                f"SELECT id, n, m FROM graphs WHERE graph6 = {ph}", (graph6,)
+            )
+            graph_row = await cursor.fetchone()
+            if not graph_row:
+                return {"error": "Graph not found"}
+
+            graph_id, n, m = graph_row
+
+            # Get mechanisms
+            query = f"""
+                SELECT
+                    CASE
+                        WHEN sm.graph1_id = {ph} THEN g2.graph6
+                        ELSE g1.graph6
+                    END as mate_graph6,
+                    sm.matrix_type,
+                    sm.mechanism_type,
+                    sm.config
+                FROM switching_mechanisms sm
+                JOIN graphs g1 ON sm.graph1_id = g1.id
+                JOIN graphs g2 ON sm.graph2_id = g2.id
+                WHERE (sm.graph1_id = {ph} OR sm.graph2_id = {ph})
+            """
+            params = [graph_id, graph_id, graph_id]
+
+            if matrix_type:
+                query += f" AND sm.matrix_type = {ph}"
+                params.append(matrix_type)
+
+            query += " ORDER BY sm.matrix_type, sm.mechanism_type"
+
+            cursor = await conn.execute(query, params)
+            rows = await cursor.fetchall()
+
+        else:
+            from psycopg2.extras import RealDictCursor
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+
+            cur.execute("SELECT id, n, m FROM graphs WHERE graph6 = %s", (graph6,))
+            graph_row = cur.fetchone()
+            if not graph_row:
+                return {"error": "Graph not found"}
+
+            graph_id, n, m = graph_row["id"], graph_row["n"], graph_row["m"]
+
+            query = """
+                SELECT
+                    CASE
+                        WHEN sm.graph1_id = %s THEN g2.graph6
+                        ELSE g1.graph6
+                    END as mate_graph6,
+                    sm.matrix_type,
+                    sm.mechanism_type,
+                    sm.config
+                FROM switching_mechanisms sm
+                JOIN graphs g1 ON sm.graph1_id = g1.id
+                JOIN graphs g2 ON sm.graph2_id = g2.id
+                WHERE (sm.graph1_id = %s OR sm.graph2_id = %s)
+            """
+            params = [graph_id, graph_id, graph_id]
+
+            if matrix_type:
+                query += " AND sm.matrix_type = %s"
+                params.append(matrix_type)
+
+            query += " ORDER BY sm.matrix_type, sm.mechanism_type"
+
+            cur.execute(query, params)
+            rows = cur.fetchall()
+
+        # Organize by matrix type
+        mechanisms = {}
+        for row in rows:
+            if IS_SQLITE:
+                mate_g6, mat_type, mech_type, config_str = row
+                config = json.loads(config_str) if isinstance(config_str, str) else config_str
+            else:
+                mate_g6 = row["mate_graph6"]
+                mat_type = row["matrix_type"]
+                mech_type = row["mechanism_type"]
+                config = row["config"]
+
+            if mat_type not in mechanisms:
+                mechanisms[mat_type] = []
+
+            mechanisms[mat_type].append({
+                "mate": mate_g6,
+                "mechanism": mech_type,
+                "config": config
+            })
+
+        return {
+            "graph6": graph6,
+            "n": n,
+            "m": m,
+            "mechanisms": mechanisms
+        }
+
+
+async def fetch_mechanism_stats(
+    n: int | None = None, matrix_type: str = "adj"
+) -> dict[str, Any]:
+    """Get statistics about mechanism coverage."""
+    ph = _placeholder()
+
+    async with get_db() as conn:
+        if IS_SQLITE:
+            # Total graphs with mates
+            query_total = f"""
+                WITH all_graphs AS (
+                    SELECT graph1_id as gid FROM cospectral_mates WHERE matrix_type = {ph}
+                    UNION
+                    SELECT graph2_id FROM cospectral_mates WHERE matrix_type = {ph}
+                )
+                SELECT COUNT(DISTINCT a.gid)
+                FROM all_graphs a
+                JOIN graphs g ON a.gid = g.id
+            """
+            params_total = [matrix_type, matrix_type]
+
+            if n is not None:
+                query_total += f" WHERE g.n = {ph}"
+                params_total.append(n)
+
+            cursor = await conn.execute(query_total, params_total)
+            row = await cursor.fetchone()
+            total_graphs = row[0] if row else 0
+
+            # Mechanism breakdown - simplified query for SQLite
+            query_mechs = f"""
+                SELECT sm.mechanism_type, COUNT(DISTINCT sm.graph1_id || ',' || sm.graph2_id) as pair_count
+                FROM switching_mechanisms sm
+                JOIN graphs g1 ON sm.graph1_id = g1.id
+                WHERE sm.matrix_type = {ph}
+            """
+            params_mechs = [matrix_type]
+
+            if n is not None:
+                query_mechs += f" AND g1.n = {ph}"
+                params_mechs.append(n)
+
+            query_mechs += " GROUP BY sm.mechanism_type"
+
+            cursor = await conn.execute(query_mechs, params_mechs)
+            mech_rows = await cursor.fetchall()
+
+        else:
+            from psycopg2.extras import RealDictCursor
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+
+            query_total = """
+                WITH all_graphs AS (
+                    SELECT graph1_id as gid FROM cospectral_mates WHERE matrix_type = %s
+                    UNION
+                    SELECT graph2_id FROM cospectral_mates WHERE matrix_type = %s
+                )
+                SELECT COUNT(DISTINCT a.gid)
+                FROM all_graphs a
+                JOIN graphs g ON a.gid = g.id
+            """
+            params_total = [matrix_type, matrix_type]
+
+            if n is not None:
+                query_total += " WHERE g.n = %s"
+                params_total.append(n)
+
+            cur.execute(query_total, params_total)
+            result = cur.fetchone()
+            total_graphs = result["count"] if result else 0
+
+            query_mechs = """
+                SELECT sm.mechanism_type, COUNT(DISTINCT sm.graph1_id || ',' || sm.graph2_id) as pair_count
+                FROM switching_mechanisms sm
+                JOIN graphs g1 ON sm.graph1_id = g1.id
+                WHERE sm.matrix_type = %s
+            """
+            params_mechs = [matrix_type]
+
+            if n is not None:
+                query_mechs += " AND g1.n = %s"
+                params_mechs.append(n)
+
+            query_mechs += " GROUP BY sm.mechanism_type"
+
+            cur.execute(query_mechs, params_mechs)
+            mech_rows = cur.fetchall()
+
+        mechanisms = {}
+        for row in mech_rows:
+            if IS_SQLITE:
+                mech_type, pair_count = row
+            else:
+                mech_type = row["mechanism_type"]
+                pair_count = row["pair_count"]
+
+            # Estimate graph count (each pair contributes 2 graphs, but with overlap)
+            # This is a rough estimate
+            mechanisms[mech_type] = {
+                "pairs": pair_count,
+                "coverage": pair_count / (total_graphs / 2) if total_graphs > 0 else 0
+            }
+
+        return {
+            "n": n,
+            "matrix_type": matrix_type,
+            "total_graphs": total_graphs,
+            "mechanisms": mechanisms
+        }
