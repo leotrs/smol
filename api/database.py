@@ -243,6 +243,7 @@ async def query_graphs(
     planar: bool | None = None,
     regular: bool | None = None,
     tags: list[str] | None = None,
+    has_mechanism: str | None = None,
     connected: bool = True,
     limit: int = 100,
     offset: int = 0,
@@ -315,6 +316,19 @@ async def query_graphs(
             else:
                 conditions.append(f"{ph} = ANY(tags)")
             params.append(tag)
+
+    # Mechanism filter
+    if has_mechanism:
+        if has_mechanism == "any":
+            # Has any mechanism
+            conditions.append("graphs.id IN (SELECT DISTINCT graph1_id FROM switching_mechanisms UNION SELECT DISTINCT graph2_id FROM switching_mechanisms)")
+        elif has_mechanism == "none":
+            # No known mechanism
+            conditions.append("graphs.id NOT IN (SELECT DISTINCT graph1_id FROM switching_mechanisms UNION SELECT DISTINCT graph2_id FROM switching_mechanisms)")
+        else:
+            # Specific mechanism type (e.g., "gm")
+            conditions.append(f"graphs.id IN (SELECT DISTINCT graph1_id FROM switching_mechanisms WHERE mechanism_type = {ph} UNION SELECT DISTINCT graph2_id FROM switching_mechanisms WHERE mechanism_type = {ph})")
+            params.extend([has_mechanism, has_mechanism])
 
     where = " AND ".join(conditions) if conditions else "1=1"
 

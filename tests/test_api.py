@@ -1357,3 +1357,46 @@ class TestMechanismsEndpoints:
         if "1,722" in response.text:  # n=8 total with mates
             assert "272" in response.text  # n=8 GM count
             assert "15.8%" in response.text  # n=8 GM coverage
+
+
+@needs_db
+class TestMechanismFiltering:
+    """Test filtering graphs by mechanism type."""
+
+    def test_search_with_has_gm_mechanism_filter(self):
+        """Test searching for graphs with GM mechanism."""
+        response = client.get("/search?has_mechanism=gm", headers={"Accept": "text/html"})
+        assert response.status_code == 200
+        # Should return graphs that have GM switching mechanisms
+        assert "graph" in response.text.lower()
+
+    def test_search_with_has_any_mechanism_filter(self):
+        """Test searching for graphs with any mechanism."""
+        response = client.get("/search?has_mechanism=any", headers={"Accept": "text/html"})
+        assert response.status_code == 200
+
+    def test_search_with_no_mechanism_filter(self):
+        """Test searching for graphs without known mechanisms."""
+        response = client.get("/search?has_mechanism=none", headers={"Accept": "text/html"})
+        assert response.status_code == 200
+
+    def test_search_mechanism_filter_with_other_filters(self):
+        """Test combining mechanism filter with other property filters."""
+        response = client.get("/search?n=8&has_mechanism=gm", headers={"Accept": "text/html"})
+        assert response.status_code == 200
+        # Should filter to n=8 graphs with GM mechanism
+
+    def test_search_mechanism_filter_json_response(self):
+        """Test mechanism filter returns HTML correctly with results."""
+        response = client.get("/search?has_mechanism=gm&limit=5", headers={"Accept": "text/html"})
+        assert response.status_code == 200
+        assert "text/html" in response.headers["content-type"]
+        # Check that results are present
+        assert "graph" in response.text.lower() or "search" in response.text.lower()
+
+    def test_home_page_has_mechanism_filter(self):
+        """Test that home page includes mechanism filter in search form."""
+        response = client.get("/")
+        assert response.status_code == 200
+        # Should have mechanism filter options
+        assert "mechanism" in response.text.lower() or "switching" in response.text.lower()

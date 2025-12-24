@@ -354,6 +354,7 @@ async def search_graphs(
     planar: str | None = None,
     regular: str | None = None,
     tags: list[str] = Query(default=[]),
+    has_mechanism: str | None = None,
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=100, le=1000),
     sort_by: str = Query(default="n"),
@@ -398,6 +399,7 @@ async def search_graphs(
         planar=planar_val,
         regular=regular_val,
         tags=tags if tags else None,
+        has_mechanism=has_mechanism,
         connected=True,
         limit=0,
         offset=0,
@@ -422,6 +424,7 @@ async def search_graphs(
             planar=planar_val,
             regular=regular_val,
             tags=tags if tags else None,
+            has_mechanism=has_mechanism,
             connected=True,
             limit=MAX_RESULTS,
             offset=0,
@@ -449,6 +452,7 @@ async def search_graphs(
             planar=planar_val,
             regular=regular_val,
             tags=tags if tags else None,
+            has_mechanism=has_mechanism,
             connected=True,
             limit=limit,
             offset=offset,
@@ -488,6 +492,8 @@ async def search_graphs(
         query_params["regular"] = regular
     for tag in tags:
         query_params.setdefault("tags", []).append(tag) if isinstance(query_params.get("tags"), list) else query_params.update({"tags": [tag]})
+    if has_mechanism:
+        query_params["has_mechanism"] = has_mechanism
 
     # Pagination info - use capped count for pagination
     total_pages = (display_count + limit - 1) // limit
@@ -533,6 +539,7 @@ async def search_count(
     planar: str | None = None,
     regular: str | None = None,
     tags: list[str] = Query(default=[]),
+    has_mechanism: str | None = None,
 ):
     """Get exact count of search results (async endpoint for updating UI)."""
     # Parse params
@@ -562,6 +569,7 @@ async def search_count(
         planar=planar_val,
         regular=regular_val,
         tags=tags if tags else None,
+        has_mechanism=has_mechanism,
         connected=True,
         limit=0,
         offset=0,

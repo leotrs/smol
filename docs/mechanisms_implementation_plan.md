@@ -86,17 +86,20 @@ n=8:  15.8% GM (272/1,722 graphs)
 n=9:  43.1% GM (22,021/51,039 graphs)
 ```
 
-## Phase 5: Frontend - Search/Filter
+## Phase 5: Frontend - Search/Filter ✓
 
 **Location:** `api/templates/home.html`
 
-**Add filters:**
-- ☐ Has GM cospectral mate
-- ☐ Has NBL switching mate
-- ☐ Has mechanism (any)
-- ☐ No known mechanism
+**Implementation:** Added mechanism filter dropdown to search form with options:
+- ✓ GM switching
+- ✓ Has any mechanism
+- ✓ No known mechanism
 
-**Backend:** Update query in `api/main.py` `/graphs` endpoint
+**Backend changes:**
+- Added `has_mechanism` parameter to `query_graphs()` in `api/database.py`
+- Filtering logic using subqueries on `switching_mechanisms` table
+- Updated `/search` and `/search/count` endpoints in `api/main.py`
+- Added 6 passing tests in `TestMechanismFiltering` class
 
 ## Phase 6: Frontend - Mechanism Explorer Page (NEW)
 
@@ -193,14 +196,15 @@ n=9:  43.1% GM (22,021/51,039 graphs)
 - [x] Data populated (n=8: 136 pairs, n=9: 11,630 pairs)
 - [x] API endpoints implemented (graph mechanisms, stats)
 - [x] Frontend updates implemented (mechanism column with badges)
-- [x] Testing (10 tests added to test_api.py - all passing)
+- [x] Testing (16 tests added to test_api.py - all passing)
 - [x] Stats page performance optimized (cached, <15ms load time)
 - [x] Glossary updated with mechanism definitions and references
 - [x] About page updated with mechanisms documentation
+- [x] Search/filter by mechanism implemented (Phase 5)
 - [ ] Deployment to production
 - [ ] Expanded detector results (paused)
 
-**Completed MVP (Phases 1-4):**
+**Completed MVP (Phases 1-5):**
 - ✓ Database schema with switching_mechanisms table
 - ✓ GM switching detection for n=8,9
 - ✓ API endpoints: `/api/graph/{g6}/mechanisms`, `/api/stats/mechanisms`
@@ -212,11 +216,11 @@ n=9:  43.1% GM (22,021/51,039 graphs)
 - ✓ Glossary: GM switching definition with equitable partitions
 - ✓ Glossary: References section with key papers
 - ✓ About page: Updated with 12.3M graphs count, complete API docs
-- ✓ Tests for all new functionality (10 mechanism tests, 143 total passing)
+- ✓ Search/filter by mechanism: dropdown in search form with GM/any/none options
+- ✓ Tests for all new functionality (16 mechanism tests, 149 total passing)
 
 **Next steps:**
 1. Deploy to production (Fly.io)
 2. Complete expanded GM detector run (if needed)
 3. Add NBL 2-edge switching detection
-4. Implement search/filter by mechanism (Phase 5)
-5. Implement mechanism explorer page (Phase 6)
+4. Implement mechanism explorer page (Phase 6)
