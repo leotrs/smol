@@ -193,22 +193,30 @@ n=9:  43.1% GM (22,021/51,039 graphs)
 - [x] Data populated (n=8: 136 pairs, n=9: 11,630 pairs)
 - [x] API endpoints implemented (graph mechanisms, stats)
 - [x] Frontend updates implemented (mechanism column with badges)
-- [x] Testing (8 new tests added to test_api.py)
+- [x] Testing (10 tests added to test_api.py - all passing)
+- [x] Stats page performance optimized (cached, <15ms load time)
+- [x] Glossary updated with mechanism definitions and references
+- [x] About page updated with mechanisms documentation
 - [ ] Deployment to production
-- [ ] Expanded detector results (running: 54% complete)
+- [ ] Expanded detector results (paused)
 
-**Completed MVP:**
+**Completed MVP (Phases 1-4):**
 - ✓ Database schema with switching_mechanisms table
 - ✓ GM switching detection for n=8,9
 - ✓ API endpoints: `/api/graph/{g6}/mechanisms`, `/api/stats/mechanisms`
 - ✓ Frontend: Mechanism column in cospectral mates table
 - ✓ Teal badges for GM switching (light/dark mode)
-- ✓ Stats page: Mechanism coverage table by vertex count
-- ✓ Tests for all new functionality (10 tests)
+- ✓ Stats page: Mechanism coverage table by vertex count (cached for performance)
+- ✓ Property distributions (diameter, girth) with visual bar charts
+- ✓ Tag counts display (20 graph types)
+- ✓ Glossary: GM switching definition with equitable partitions
+- ✓ Glossary: References section with key papers
+- ✓ About page: Updated with 12.3M graphs count, complete API docs
+- ✓ Tests for all new functionality (10 mechanism tests, 143 total passing)
 
 **Next steps:**
-1. Complete expanded GM detector run
-2. Deploy to production (Fly.io)
+1. Deploy to production (Fly.io)
+2. Complete expanded GM detector run (if needed)
 3. Add NBL 2-edge switching detection
 4. Implement search/filter by mechanism (Phase 5)
 5. Implement mechanism explorer page (Phase 6)

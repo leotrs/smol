@@ -75,16 +75,19 @@ just deploy-db --skip-export                   # Skip export, use existing smol.
 ## API Endpoints
 
 ```
-GET /                    Home page (search interface)
-GET /graph/{graph6}      Graph detail + cospectral mates + tags
-GET /graphs              Query/filter graphs (HTMX partial or JSON)
-GET /compare?graphs=...  Compare multiple graphs
-GET /similar/{graph6}    Find spectrally similar graphs (Earth Mover's Distance)
-GET /random              Redirect to random graph
-GET /random/cospectral   Redirect to random cospectral family
-GET /glossary            Terminology with MathJax
-GET /about               Stats, API docs, citation
-GET /stats               Database statistics (JSON)
+GET /                              Home page (search interface)
+GET /graph/{graph6}                Graph detail + cospectral mates + tags + mechanisms
+GET /graphs                        Query/filter graphs (HTMX partial or JSON)
+GET /search                        Advanced search with filters
+GET /compare?graphs=...            Compare multiple graphs
+GET /similar/{graph6}              Find spectrally similar graphs (Earth Mover's Distance)
+GET /random                        Redirect to random graph
+GET /random/cospectral             Redirect to random cospectral family
+GET /glossary                      Terminology with MathJax, references
+GET /about                         Stats, API docs, citation
+GET /stats                         Database statistics with distributions
+GET /api/graph/{g6}/mechanisms     Switching mechanisms for a graph
+GET /api/stats/mechanisms          Mechanism coverage statistics
 ```
 
 Content negotiation: Returns JSON by default, HTML for browser/HTMX requests.
@@ -92,31 +95,38 @@ Content negotiation: Returns JSON by default, HTML for browser/HTMX requests.
 ## Website Structure
 
 ```
-/              Search with tabs (Lookup / Compare / Search), results via HTMX
-/graph/{g6}    Graph detail: viz, properties, cospectral mates, spectra
-/compare       Side-by-side comparison with D3 visualizations
-/glossary      Terms and matrix definitions (uses MathJax)
-/about         Database stats, API reference, citation, references
+/              Search with tabs (Lookup / Search), results via HTMX
+/graph/{g6}    Graph detail: viz, properties, cospectral mates, spectra, mechanisms
+/compare       Side-by-side comparison with D3 visualizations, spectral distances
+/search        Advanced search with property filters, client-side sorting for large results
+/glossary      Terms, matrix definitions (MathJax), switching mechanisms, references
+/about         Database stats (12.3M graphs), complete API docs, citation
+/stats         Cospectral counts, mechanism coverage, property distributions, tag counts
 ```
 
 Footer on all pages has "Random graph" and "Random cospectral family" links.
 
 ## Templates
 
-- `base.html` - Layout, Pico CSS, custom styles, header nav, footer
-- `home.html` - Alpine.js tabs for Lookup/Compare/Search, HTMX form submission
-- `graph_detail.html` - D3 force-directed graph, drag-enabled
+- `base.html` - Layout, Pico CSS, custom styles (teal theme), header nav, footer, mechanism badge styles
+- `home.html` - Alpine.js tabs for Lookup/Search, HTMX form submission
+- `graph_detail.html` - D3 force-directed graph, drag-enabled, mechanism column with badges
 - `graph_list.html` - HTMX partial for search results
-- `compare.html` - Grid of D3 visualizations, properties table
-- `glossary.html` - Definition lists with MathJax
-- `about.html` - Stats from cache, API docs
+- `compare.html` - Grid of D3 visualizations, properties table, spectral distance matrices
+- `search_results.html` - Advanced search with pagination, client-side sorting for capped results
+- `glossary.html` - Definition lists with MathJax, switching mechanisms section, references
+- `about.html` - Complete API docs, 12.3M graphs count, references
+- `stats.html` - Cospectral counts, mechanism coverage, property distributions (bar charts), tag counts
 
 ## Database
 
 - Connection: `DATABASE_URL` env var or `dbname=smol` (local)
 - Schema: `sql/schema.sql`
 - Stats cached in `stats_cache` table (refresh with `scripts/refresh_stats.py`)
+  - Includes: cospectral counts, property distributions, tag counts, mechanism stats
+  - Cache ensures stats page loads in <15ms
 - Cospectral pairs pre-computed in `cospectral_mates` table for fast lookup
+- Switching mechanisms stored in `switching_mechanisms` table (GM switching for n=8,9)
 - Database contains ALL graphs (connected and disconnected)
 
 ## Known discrepancy with reference paper
@@ -140,4 +150,4 @@ The source of divergence is unidentified. Possibilities: precision differences (
   - `generate.py` - Parallel graph generation (multiprocessing, resumable)
   - `compute_tags.py` - Backfill tags for existing graphs
 - `sql/` - Database schema (PostgreSQL and SQLite versions)
-- `tests/` - Pytest tests (239 tests)
+- `tests/` - Pytest tests (143 tests, all passing)
