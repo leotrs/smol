@@ -48,6 +48,52 @@
 </table>
 </div>
 
+{% if mechanism_stats %}
+<h3 style="margin-top: 2rem;">Switching Mechanisms (Adjacency)</h3>
+
+<p>
+    SMOL detects switching mechanisms that explain why graphs are adjacency-cospectral.
+    The table below shows the number and percentage of graphs with cospectral mates that
+    can be explained by each known mechanism type.
+</p>
+
+<div style="overflow-x: auto;">
+<table>
+    <caption>Mechanism coverage by vertex count</caption>
+    <thead>
+        <tr>
+            <th>n</th>
+            <th>Graphs with mates</th>
+            <th>GM switching</th>
+            <th>Coverage</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for n in range(1, 11) %}
+            {% if n in mechanism_stats %}
+            <tr>
+                <td>{{ n }}</td>
+                <td>{{ "{:,}".format(mechanism_stats[n].total_graphs) }}</td>
+                {% if 'gm' in mechanism_stats[n].mechanisms %}
+                    <td>{{ "{:,}".format(mechanism_stats[n].mechanisms.gm.graphs) }}</td>
+                    <td>{{ "{:.1f}%".format(mechanism_stats[n].mechanisms.gm.coverage * 100) }}</td>
+                {% else %}
+                    <td>—</td>
+                    <td>—</td>
+                {% endif %}
+            </tr>
+            {% endif %}
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<p style="margin-top: 1rem; color: var(--pico-muted-color); font-size: 0.9rem;">
+    <strong>GM switching</strong> (Godsil-McKay) is a graph operation that preserves the adjacency spectrum
+    using an equitable partition and a switching set. See graph detail pages for specific mechanism configurations.
+</p>
+{% endif %}
+
 {% if stats.tag_counts %}
 <h3 style="margin-top: 2rem;">Graphs by named type</h3>
 

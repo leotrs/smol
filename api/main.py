@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from .database import (
+    fetch_all_mechanism_stats,
     fetch_cospectral_mates,
     fetch_graph,
     fetch_graph_mechanisms,
@@ -910,8 +911,11 @@ async def stats(request: Request):
     result = Stats(**data)
 
     if wants_html(request):
+        t1 = time.perf_counter()
+        mechanism_stats = await fetch_all_mechanism_stats(matrix_type="adj")
+        logger.info(f"  fetch_all_mechanism_stats: {(time.perf_counter()-t1)*1000:.0f}ms")
         return templates.TemplateResponse(
-            request, "stats.html", {"stats": result}
+            request, "stats.html", {"stats": result, "mechanism_stats": mechanism_stats}
         )
     return result
 

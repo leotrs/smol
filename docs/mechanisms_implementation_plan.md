@@ -68,20 +68,22 @@ psql smol -c "SELECT refresh_mechanism_stats();"
 </div>
 ```
 
-## Phase 4: Frontend - Stats Page
+## Phase 4: Frontend - Stats Page ✓
 
-**Location:** `api/templates/stats.html` or new `api/templates/mechanisms.html`
+**Location:** `api/templates/stats.html`
 
-**New section:**
+**Implementation:** New "Switching Mechanisms (Adjacency)" section added with table showing:
+- n (vertex count)
+- Graphs with mates (total)
+- GM switching count
+- Coverage percentage
+
+**Backend:** `fetch_all_mechanism_stats()` in `api/database.py` fetches aggregated data by n
+
+**Example output:**
 ```
-==== Switching Mechanisms (Adjacency) ====
-
-Coverage by Mechanism Type:
-
 n=8:  15.8% GM (272/1,722 graphs)
 n=9:  43.1% GM (22,021/51,039 graphs)
-
-[View detailed breakdown →] (links to mechanisms page)
 ```
 
 ## Phase 5: Frontend - Search/Filter
@@ -201,10 +203,12 @@ n=9:  43.1% GM (22,021/51,039 graphs)
 - ✓ API endpoints: `/api/graph/{g6}/mechanisms`, `/api/stats/mechanisms`
 - ✓ Frontend: Mechanism column in cospectral mates table
 - ✓ Teal badges for GM switching (light/dark mode)
-- ✓ Tests for all new functionality
+- ✓ Stats page: Mechanism coverage table by vertex count
+- ✓ Tests for all new functionality (10 tests)
 
 **Next steps:**
 1. Complete expanded GM detector run
 2. Deploy to production (Fly.io)
 3. Add NBL 2-edge switching detection
-4. Implement stats page section
+4. Implement search/filter by mechanism (Phase 5)
+5. Implement mechanism explorer page (Phase 6)

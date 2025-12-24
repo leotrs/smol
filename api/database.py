@@ -1086,3 +1086,108 @@ async def fetch_mechanism_stats(
             "total_graphs": total_graphs,
             "mechanisms": mechanisms
         }
+
+
+async def fetch_all_mechanism_stats(matrix_type: str = "adj") -> dict[int, dict[str, Any]]:
+    """Get mechanism statistics grouped by n."""
+    ph = _placeholder()
+
+    async with get_db() as conn:
+        if IS_SQLITE:
+            # Get all mechanism data grouped by n
+            query = f"""
+                SELECT
+                    g.n,
+                    sm.mechanism_type,
+                    COUNT(DISTINCT sm.graph1_id || ',' || sm.graph2_id) as pair_count,
+                    COUNT(DISTINCT g.id) as graph_count
+                FROM switching_mechanisms sm
+                JOIN graphs g ON (sm.graph1_id = g.id OR sm.graph2_id = g.id)
+                WHERE sm.matrix_type = {ph}
+                GROUP BY g.n, sm.mechanism_type
+            """
+            cursor = await conn.execute(query, [matrix_type])
+            rows = await cursor.fetchall()
+
+            # Get total graphs with mates for each n
+            query_totals = f"""
+                WITH all_graphs AS (
+                    SELECT graph1_id as gid FROM cospectral_mates WHERE matrix_type = {ph}
+                    UNION
+                    SELECT graph2_id FROM cospectral_mates WHERE matrix_type = {ph}
+                )
+                SELECT g.n, COUNT(DISTINCT a.gid) as total
+                FROM all_graphs a
+                JOIN graphs g ON a.gid = g.id
+                GROUP BY g.n
+            """
+            cursor = await conn.execute(query_totals, [matrix_type, matrix_type])
+            totals_rows = await cursor.fetchall()
+
+        else:
+            from psycopg2.extras import RealDictCursor
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+
+            query = """
+                SELECT
+                    g.n,
+                    sm.mechanism_type,
+                    COUNT(DISTINCT sm.graph1_id || ',' || sm.graph2_id) as pair_count,
+                    COUNT(DISTINCT g.id) as graph_count
+                FROM switching_mechanisms sm
+                JOIN graphs g ON (sm.graph1_id = g.id OR sm.graph2_id = g.id)
+                WHERE sm.matrix_type = %s
+                GROUP BY g.n, sm.mechanism_type
+            """
+            cur.execute(query, [matrix_type])
+            rows = cur.fetchall()
+
+            query_totals = """
+                WITH all_graphs AS (
+                    SELECT graph1_id as gid FROM cospectral_mates WHERE matrix_type = %s
+                    UNION
+                    SELECT graph2_id FROM cospectral_mates WHERE matrix_type = %s
+                )
+                SELECT g.n, COUNT(DISTINCT a.gid) as total
+                FROM all_graphs a
+                JOIN graphs g ON a.gid = g.id
+                GROUP BY g.n
+            """
+            cur.execute(query_totals, [matrix_type, matrix_type])
+            totals_rows = cur.fetchall()
+
+        # Build totals map
+        totals = {}
+        for row in totals_rows:
+            if IS_SQLITE:
+                n, total = row
+            else:
+                n = row["n"]
+                total = row["total"]
+            totals[n] = total
+
+        # Build result grouped by n
+        result = {}
+        for row in rows:
+            if IS_SQLITE:
+                n, mech_type, pair_count, graph_count = row
+            else:
+                n = row["n"]
+                mech_type = row["mechanism_type"]
+                pair_count = row["pair_count"]
+                graph_count = row["graph_count"]
+
+            if n not in result:
+                result[n] = {
+                    "total_graphs": totals.get(n, 0),
+                    "mechanisms": {}
+                }
+
+            total = totals.get(n, 0)
+            result[n]["mechanisms"][mech_type] = {
+                "graphs": graph_count,
+                "pairs": pair_count,
+                "coverage": graph_count / total if total > 0 else 0
+            }
+
+        return result

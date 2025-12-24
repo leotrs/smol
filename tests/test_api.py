@@ -1340,3 +1340,20 @@ class TestMechanismsEndpoints:
         assert response.status_code == 200
         assert ".badge-gm" in response.text
         assert "[data-theme=\"dark\"] .badge-gm" in response.text
+
+    def test_stats_page_includes_mechanism_section(self):
+        """Test that stats page includes switching mechanisms section."""
+        response = client.get("/stats", headers={"Accept": "text/html"})
+        assert response.status_code == 200
+        assert "Switching Mechanisms" in response.text
+        assert "GM switching" in response.text
+        assert "Mechanism coverage by vertex count" in response.text
+
+    def test_stats_page_shows_gm_coverage(self):
+        """Test that stats page shows GM coverage percentages."""
+        response = client.get("/stats", headers={"Accept": "text/html"})
+        assert response.status_code == 200
+        # Should show coverage for n=8 if data exists
+        if "1,722" in response.text:  # n=8 total with mates
+            assert "272" in response.text  # n=8 GM count
+            assert "15.8%" in response.text  # n=8 GM coverage
