@@ -48,7 +48,7 @@
 </table>
 </div>
 
-{% if mechanism_stats %}
+{% if stats.mechanism_stats %}
 <h3 style="margin-top: 2rem;">Switching Mechanisms (Adjacency)</h3>
 
 <p>
@@ -70,13 +70,13 @@
     </thead>
     <tbody>
         {% for n in range(1, 11) %}
-            {% if n in mechanism_stats %}
+            {% if n in stats.mechanism_stats %}
             <tr>
                 <td>{{ n }}</td>
-                <td>{{ "{:,}".format(mechanism_stats[n].total_graphs) }}</td>
-                {% if 'gm' in mechanism_stats[n].mechanisms %}
-                    <td>{{ "{:,}".format(mechanism_stats[n].mechanisms.gm.graphs) }}</td>
-                    <td>{{ "{:.1f}%".format(mechanism_stats[n].mechanisms.gm.coverage * 100) }}</td>
+                <td>{{ "{:,}".format(stats.mechanism_stats[n].total_graphs) }}</td>
+                {% if 'gm' in stats.mechanism_stats[n].mechanisms %}
+                    <td>{{ "{:,}".format(stats.mechanism_stats[n].mechanisms.gm.graphs) }}</td>
+                    <td>{{ "{:.1f}%".format(stats.mechanism_stats[n].mechanisms.gm.coverage * 100) }}</td>
                 {% else %}
                     <td>—</td>
                     <td>—</td>
@@ -92,6 +92,43 @@
     See the <a href="/glossary#gm-switching">glossary</a> for an explanation of GM switching.
     Graph detail pages show specific mechanism configurations for each cospectral pair.
 </p>
+{% endif %}
+
+{% if stats.property_distributions %}
+<h3 style="margin-top: 2rem;">Property Distributions</h3>
+
+<p>
+    Distribution of graph properties across the entire database.
+</p>
+
+{% for prop_name, distribution in stats.property_distributions.items() %}
+<h4 style="margin-top: 1.5rem; text-transform: capitalize;">{{ prop_name.replace('_', ' ') }}</h4>
+<div style="overflow-x: auto;">
+<table>
+    <thead>
+        <tr>
+            <th style="text-align: right;">Value</th>
+            <th>Count</th>
+            <th style="width: 60%;">Distribution</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% set max_count = distribution.values() | max %}
+        {% for value, count in distribution.items() | sort %}
+        <tr>
+            <td style="text-align: right;"><code>{{ value }}</code></td>
+            <td>{{ "{:,}".format(count) }}</td>
+            <td>
+                <div style="background: linear-gradient(90deg, var(--pico-primary) {{ (count / max_count * 100) | round(1) }}%, transparent {{ (count / max_count * 100) | round(1) }}%); padding: 0.25rem 0.5rem; border-radius: 4px;">
+                    {{ "{:.1f}".format(count / stats.connected_graphs * 100) }}%
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endfor %}
 {% endif %}
 
 {% if stats.tag_counts %}

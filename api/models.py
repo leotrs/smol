@@ -100,6 +100,8 @@ class Stats(BaseModel):
     cospectral_counts: dict[str, dict[int, int]]  # matrix -> n -> count
     property_stats: PropertyStats | None = None
     property_ranges: dict[str, PropertyRange] | None = None
+    property_distributions: dict[str, dict[int, int]] | None = None  # property -> value -> count
     counts_by_n_mindeg2: dict[int, int] | None = None
     cospectral_counts_mindeg2: dict[str, dict[int, int]] | None = None  # matrix -> n -> count
     tag_counts: dict[str, int] | None = None
+    mechanism_stats: dict[int, dict] | None = None

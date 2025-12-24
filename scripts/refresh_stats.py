@@ -94,6 +94,53 @@ def compute_stats(conn) -> dict:
     )
     tag_counts = {r[0]: r[1] for r in cur.fetchall()}
 
+    # Mechanism stats (adjacency only for now)
+    mechanism_stats = {}
+    cur.execute(
+        """
+        SELECT
+            g.n,
+            sm.mechanism_type,
+            COUNT(DISTINCT sm.graph1_id || ',' || sm.graph2_id) as pair_count,
+            COUNT(DISTINCT g.id) as graph_count
+        FROM switching_mechanisms sm
+        JOIN graphs g ON (sm.graph1_id = g.id OR sm.graph2_id = g.id)
+        WHERE sm.matrix_type = 'adj'
+        GROUP BY g.n, sm.mechanism_type
+        """
+    )
+    mech_rows = cur.fetchall()
+
+    # Get totals for coverage calculation
+    cur.execute(
+        """
+        WITH all_graphs AS (
+            SELECT graph1_id as gid FROM cospectral_mates WHERE matrix_type = 'adj'
+            UNION
+            SELECT graph2_id FROM cospectral_mates WHERE matrix_type = 'adj'
+        )
+        SELECT g.n, COUNT(DISTINCT a.gid) as total
+        FROM all_graphs a
+        JOIN graphs g ON a.gid = g.id
+        GROUP BY g.n
+        """
+    )
+    totals = {r[0]: r[1] for r in cur.fetchall()}
+
+    # Build mechanism stats structure
+    for n, mech_type, pair_count, graph_count in mech_rows:
+        if str(n) not in mechanism_stats:
+            mechanism_stats[str(n)] = {
+                "total_graphs": totals.get(n, 0),
+                "mechanisms": {}
+            }
+        total = totals.get(n, 0)
+        mechanism_stats[str(n)]["mechanisms"][mech_type] = {
+            "graphs": graph_count,
+            "pairs": pair_count,
+            "coverage": graph_count / total if total > 0 else 0
+        }
+
     # Network property computation progress
     cur.execute(
         """
@@ -137,6 +184,31 @@ def compute_stats(conn) -> dict:
                     "avg": round(r[2], 4),
                 }
 
+    # Property distributions (histograms for integer properties)
+    property_distributions = {}
+    for prop, col in [
+        ("diameter", "diameter"),
+        ("girth", "girth"),
+        ("radius", "radius"),
+        ("min_degree", "min_degree"),
+        ("max_degree", "max_degree"),
+        ("triangle_count", "triangle_count"),
+        ("clique_number", "clique_number"),
+        ("chromatic_number", "chromatic_number"),
+    ]:
+        cur.execute(
+            f"""
+            SELECT {col}, COUNT(*) as count
+            FROM graphs
+            WHERE {col} IS NOT NULL
+            GROUP BY {col}
+            ORDER BY {col}
+            """
+        )
+        dist = {str(r[0]): r[1] for r in cur.fetchall()}
+        if dist:
+            property_distributions[prop] = dist
+
     return {
         "total_graphs": total,
         "connected_graphs": connected,
@@ -144,9 +216,11 @@ def compute_stats(conn) -> dict:
         "cospectral_counts": cospectral,
         "property_stats": property_stats,
         "property_ranges": property_ranges,
+        "property_distributions": property_distributions,
         "counts_by_n_mindeg2": counts_by_n_mindeg2,
         "cospectral_counts_mindeg2": cospectral_mindeg2,
         "tag_counts": tag_counts,
+        "mechanism_stats": mechanism_stats,
     }
 
 

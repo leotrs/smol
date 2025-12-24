@@ -791,6 +791,10 @@ async def get_stats() -> dict[str, Any]:
                         int(k): v
                         for k, v in stats["cospectral_counts"][matrix].items()
                     }
+            if isinstance(stats.get("mechanism_stats"), dict):
+                stats["mechanism_stats"] = {
+                    int(k): v for k, v in stats["mechanism_stats"].items()
+                }
             return stats
 
         # Fallback: compute on the fly (slow)

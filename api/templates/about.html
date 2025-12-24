@@ -9,23 +9,36 @@
 </hgroup>
 
 <p>
-    SMOL is a comprehensive database of all simple graphs up to 10 vertices with precomputed
-    spectral properties for six matrix types: adjacency, Kirchhoff Laplacian, signless Laplacian,
+    SMOL is a comprehensive database of <strong>12.3 million graphs</strong> (all simple graphs up to 10 vertices)
+    with precomputed spectral properties for six matrix types: adjacency, Kirchhoff Laplacian, signless Laplacian,
     normalized Laplacian, non-backtracking (Hashimoto), and non-backtracking Laplacian.
 </p>
 
 <p>
-    Use it to find examples, explore cospectral pairs, and discover which matrix types can
-    distinguish which graphs.
+    Use it to find examples, explore cospectral pairs, discover switching mechanisms that explain cospectrality,
+    and understand which matrix types can distinguish which graphs.
 </p>
 
 <h3>API</h3>
 <p>All endpoints return JSON by default. Use <code>Accept: text/html</code> header or access via browser for HTML.</p>
 
-    <pre><code>GET /graph/{graph6}            # Look up a single graph
-GET /graphs?n=7&amp;regular=true   # Query graphs by properties
-GET /compare?graphs=D?{,DEo    # Compare multiple graphs
-GET /stats                     # Database statistics</code></pre>
+<h4>Core Endpoints</h4>
+<pre><code># Graph lookup and details
+GET /graph/{graph6}                    # Graph details with cospectral mates
+GET /graphs?n=7&amp;regular=true           # Query by properties
+GET /search?diameter=3&amp;girth=5         # Advanced search
+GET /random                            # Random graph
+GET /random/cospectral?matrix=adj      # Random cospectral family
+
+# Comparison and similarity
+GET /compare?graphs=D?{,DEo            # Side-by-side comparison
+GET /similar/{graph6}?matrix=adj       # Spectrally similar graphs
+
+# Mechanisms and statistics
+GET /api/graph/{graph6}/mechanisms     # Switching mechanisms for a graph
+GET /api/stats/mechanisms?n=9          # Mechanism coverage statistics
+GET /stats                             # Database statistics
+GET /glossary                          # Terminology reference</code></pre>
 
 <h3>References</h3>
 <dl>
@@ -70,9 +83,9 @@ GET /stats                     # Database statistics</code></pre>
 <h3>Citation</h3>
 <pre><code>@misc{smol2025,
   title  = {SMOL: Spectra and Matrices Of Little graphs},
-  author = {...},
+  author = {Leo Torres},
   year   = {2025},
-  url    = {...}
+  url    = {https://smol-graphs-db.fly.dev}
 }</code></pre>
 
 <h3>Source Code</h3>
