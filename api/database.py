@@ -995,6 +995,93 @@ async def fetch_graph_mechanisms(
         }
 
 
+async def fetch_pairwise_mechanisms(
+    graph6_1: str, graph6_2: str
+) -> dict[str, Any]:
+    """Fetch mechanisms between two specific graphs (bidirectional)."""
+    ph = _placeholder()
+
+    async with get_db() as conn:
+        if IS_SQLITE:
+            # Get both graph IDs
+            cursor = await conn.execute(
+                f"SELECT id FROM graphs WHERE graph6 IN ({ph}, {ph})",
+                (graph6_1, graph6_2)
+            )
+            rows = await cursor.fetchall()
+            if len(rows) != 2:
+                return {}
+
+            id1, id2 = rows[0][0], rows[1][0]
+            min_id, max_id = min(id1, id2), max(id1, id2)
+
+            # Fetch mechanisms (graph1_id < graph2_id by constraint)
+            cursor = await conn.execute(
+                f"""
+                SELECT matrix_type, mechanism_type, config
+                FROM switching_mechanisms
+                WHERE graph1_id = {ph} AND graph2_id = {ph}
+                """,
+                (min_id, max_id)
+            )
+            rows = await cursor.fetchall()
+
+            mechanisms = {}
+            for row in rows:
+                mat_type, mech_type, config_str = row
+                config = json.loads(config_str) if isinstance(config_str, str) else config_str
+
+                if mat_type not in mechanisms:
+                    mechanisms[mat_type] = []
+
+                mechanisms[mat_type].append({
+                    "mechanism": mech_type,
+                    "config": config
+                })
+        else:
+            from psycopg2.extras import RealDictCursor
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+
+            # Get both graph IDs
+            cur.execute(
+                "SELECT id FROM graphs WHERE graph6 IN (%s, %s)",
+                (graph6_1, graph6_2)
+            )
+            rows = cur.fetchall()
+            if len(rows) != 2:
+                return {}
+
+            id1, id2 = rows[0]["id"], rows[1]["id"]
+            min_id, max_id = min(id1, id2), max(id1, id2)
+
+            # Fetch mechanisms
+            cur.execute(
+                """
+                SELECT matrix_type, mechanism_type, config
+                FROM switching_mechanisms
+                WHERE graph1_id = %s AND graph2_id = %s
+                """,
+                (min_id, max_id)
+            )
+            rows = cur.fetchall()
+
+            mechanisms = {}
+            for row in rows:
+                mat_type = row["matrix_type"]
+                mech_type = row["mechanism_type"]
+                config = row["config"]
+
+                if mat_type not in mechanisms:
+                    mechanisms[mat_type] = []
+
+                mechanisms[mat_type].append({
+                    "mechanism": mech_type,
+                    "config": config
+                })
+
+        return mechanisms
+
+
 async def fetch_mechanism_stats(
     n: int | None = None, matrix_type: str = "adj"
 ) -> dict[str, Any]:

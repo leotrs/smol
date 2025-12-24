@@ -855,6 +855,14 @@ async def compare_graphs(
             for matrix, hashes in all_hashes.items()
         }
 
+    # Fetch mechanisms only for 2-graph comparisons (that's all we display)
+    mechanisms_by_pair = {}
+    if len(graph6_list) == 2:
+        from api.database import fetch_pairwise_mechanisms
+        mechs = await fetch_pairwise_mechanisms(graph6_list[0], graph6_list[1])
+        if mechs:
+            mechanisms_by_pair["0_1"] = mechs
+
     result = CompareResult(graphs=full_graphs, spectral_comparison=comparison, distance_matrix=distance_matrix_data)
 
     if wants_html(request):
@@ -889,7 +897,7 @@ async def compare_graphs(
             "assortativity": len(set(g.properties.assortativity for g in full_graphs)) > 1,
         }
         return templates.TemplateResponse(
-            request, "compare.html", {"result": result.model_dump(), "prop_diffs": prop_diffs}
+            request, "compare.html", {"result": result.model_dump(), "prop_diffs": prop_diffs, "mechanisms": mechanisms_by_pair}
         )
     return result
 

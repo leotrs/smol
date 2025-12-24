@@ -1286,4 +1286,232 @@ function resetCompareSpectrumComplexPlot() {
         font-weight: 500;
     }
 </style>
+
+{% if result.graphs|length == 2 and mechanisms and mechanisms.get('0_1') %}
+{% set matrix_labels = {'adj': 'Adjacency', 'kirchhoff': 'Kirchhoff Laplacian', 'signless': 'Signless Laplacian', 'lap': 'Normalized Laplacian', 'nb': 'Non-Backtracking', 'nbl': 'Non-Backtracking Laplacian'} %}
+{% set mech_names = {'gm': 'GM Switching'} %}
+
+{% for matrix_type, mechanism_list in mechanisms['0_1'].items() %}
+{% if mechanism_list|length > 0 %}
+<h3 style="margin-top: 3rem;">Known Mechanisms for {{ matrix_labels[matrix_type] }}</h3>
+
+{% for mech in mechanism_list %}
+<div style="background: var(--pico-card-background-color); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--pico-muted-border-color); margin-bottom: 1.5rem;">
+    <h4 style="margin: 0 0 1.5rem 0; font-size: 1.1rem;">{{ mech_names.get(mech.mechanism, mech.mechanism) }}</h4>
+
+    <div style="display: grid; grid-template-columns: 280px 280px 1fr; gap: 2rem; align-items: start;">
+        <!-- Graph 1 visualization -->
+        <div>
+            <div style="text-align: center; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">
+                <a href="/graph/{{ result.graphs[0].graph6 | urlencode }}"><code>{{ result.graphs[0].graph6 }}</code></a>
+            </div>
+            <div class="viz-container" style="position: relative;">
+                <div id="mech-viz-{{ matrix_type }}-{{ loop.index0 }}-0" style="width: 280px; height: 280px; background: white; border-radius: 8px;"></div>
+                <button class="viz-reset-btn" onclick="resetMechViz('{{ matrix_type }}', {{ loop.index0 }}, 0)" title="Reset view">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Graph 2 visualization -->
+        <div>
+            <div style="text-align: center; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">
+                <a href="/graph/{{ result.graphs[1].graph6 | urlencode }}"><code>{{ result.graphs[1].graph6 }}</code></a>
+            </div>
+            <div class="viz-container" style="position: relative;">
+                <div id="mech-viz-{{ matrix_type }}-{{ loop.index0 }}-1" style="width: 280px; height: 280px; background: white; border-radius: 8px;"></div>
+                <button class="viz-reset-btn" onclick="resetMechViz('{{ matrix_type }}', {{ loop.index0 }}, 1)" title="Reset view">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Config info -->
+        <div>
+            {% if mech.mechanism == 'gm' %}
+            <div style="margin-bottom: 1rem;">
+                <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--pico-muted-color);">Switch set</div>
+                <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+                    {% for v in mech.config.switching_set %}
+                    <span style="background: #f97316; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.9rem; font-weight: 500;">{{ v }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            <div>
+                <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--pico-muted-color);">Partition</div>
+                {% set colors = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b'] %}
+                {% for part_class in mech.config.partition %}
+                {% set color = colors[loop.index0 % colors|length] %}
+                <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
+                    {% for v in part_class %}
+                    <span style="background: {{ color }}; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.9rem; font-weight: 500;">{{ v }}</span>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Render mechanism visualizations for {{ matrix_type }} mechanism {{ loop.index0 }}
+(function() {
+    const graphs = {{ result.graphs | tojson }};
+    const mech = {{ mech | tojson }};
+    const matrixType = '{{ matrix_type }}';
+    const mechIdx = {{ loop.index0 }};
+
+    if (!window.mechVizStates) window.mechVizStates = {};
+
+    window.resetMechViz = function(mt, mi, gi) {
+        const key = `${mt}-${mi}-${gi}`;
+        if (window.mechVizStates[key]) {
+            window.mechVizStates[key].transform.x = 0;
+            window.mechVizStates[key].transform.y = 0;
+            window.mechVizStates[key].transform.k = 1;
+            window.mechVizStates[key].update();
+        }
+    };
+
+    // Get node colors based on mechanism
+    function getNodeColors() {
+        const nodeColors = {};
+        const partitionColors = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b'];
+
+        if (mech.mechanism === 'gm') {
+            mech.config.partition.forEach((partClass, classIdx) => {
+                partClass.forEach(v => {
+                    nodeColors[v] = {fill: partitionColors[classIdx % partitionColors.length], stroke: null, strokeWidth: 0};
+                });
+            });
+
+            mech.config.switching_set.forEach(v => {
+                nodeColors[v] = {fill: '#f97316', stroke: '#ea580c', strokeWidth: 3};
+            });
+        }
+
+        return nodeColors;
+    }
+
+    const nodeColors = getNodeColors();
+
+    // Render both graphs
+    [0, 1].forEach(graphIdx => {
+        const g = graphs[graphIdx];
+        const width = 280, height = 280;
+        const nodes = Array.from({length: g.n}, (_, i) => ({id: i}));
+        const links = g.edges.map(([s, t]) => ({source: s, target: t}));
+
+        const svg = d3.select(`#mech-viz-${matrixType}-${mechIdx}-${graphIdx}`)
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .style("cursor", "grab");
+
+        const container = svg.append("g");
+
+        let transform = {x: 0, y: 0, k: 1};
+
+        function updateTransform() {
+            container.attr("transform", `translate(${transform.x},${transform.y}) scale(${transform.k})`);
+        }
+
+        window.mechVizStates[`${matrixType}-${mechIdx}-${graphIdx}`] = { transform, update: updateTransform };
+
+        svg.call(d3.drag()
+            .on("start", () => svg.style("cursor", "grabbing"))
+            .on("drag", (event) => {
+                transform.x += event.dx;
+                transform.y += event.dy;
+                updateTransform();
+            })
+            .on("end", () => svg.style("cursor", "grab")));
+
+        svg.on("wheel", (event) => {
+            event.preventDefault();
+            const scaleFactor = event.deltaY > 0 ? 0.9 : 1.1;
+            const newK = Math.max(0.2, Math.min(5, transform.k * scaleFactor));
+            const [mx, my] = d3.pointer(event, svg.node());
+            const dx = (mx - transform.x) * (newK / transform.k - 1);
+            const dy = (my - transform.y) * (newK / transform.k - 1);
+            transform.x -= dx;
+            transform.y -= dy;
+            transform.k = newK;
+            updateTransform();
+        });
+
+        const style = getComputedStyle(document.documentElement);
+        const edgeColor = style.getPropertyValue('--graph-edge-color').trim();
+
+        const link = container.append("g")
+            .selectAll("line")
+            .data(links)
+            .join("line")
+            .attr("stroke", edgeColor)
+            .attr("stroke-width", 1.5);
+
+        const node = container.append("g")
+            .selectAll("circle")
+            .data(nodes)
+            .join("circle")
+            .attr("r", 8)
+            .attr("fill", d => nodeColors[d.id] ? nodeColors[d.id].fill : '#888')
+            .attr("stroke", d => nodeColors[d.id] && nodeColors[d.id].stroke ? nodeColors[d.id].stroke : null)
+            .attr("stroke-width", d => nodeColors[d.id] ? nodeColors[d.id].strokeWidth : 0)
+            .style("cursor", "pointer")
+            .call(d3.drag()
+                .on("start", (event, d) => {
+                    if (!event.active) simulation.alphaTarget(0.3).restart();
+                    d.fx = d.x;
+                    d.fy = d.y;
+                })
+                .on("drag", (event, d) => {
+                    d.fx = event.x;
+                    d.fy = event.y;
+                })
+                .on("end", (event, d) => {
+                    if (!event.active) simulation.alphaTarget(0);
+                    d.fx = null;
+                    d.fy = null;
+                }));
+
+        const label = container.append("g")
+            .selectAll("text")
+            .data(nodes)
+            .join("text")
+            .text(d => d.id)
+            .attr("font-size", "10px")
+            .attr("font-weight", "bold")
+            .attr("text-anchor", "middle")
+            .attr("dy", "0.35em")
+            .attr("fill", "#fff")
+            .style("pointer-events", "none");
+
+        const simulation = d3.forceSimulation(nodes)
+            .force("link", d3.forceLink(links).id(d => d.id).distance(50))
+            .force("charge", d3.forceManyBody().strength(-200))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .on("tick", () => {
+                link
+                    .attr("x1", d => d.source.x)
+                    .attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x)
+                    .attr("y2", d => d.target.y);
+                node
+                    .attr("cx", d => d.x)
+                    .attr("cy", d => d.y);
+                label
+                    .attr("x", d => d.x)
+                    .attr("y", d => d.y);
+            });
+    });
+})();
+</script>
+{% endfor %}
+
+{% endif %}
+{% endfor %}
+{% endif %}
+
 {% endblock %}

@@ -97,7 +97,7 @@ Content negotiation: Returns JSON by default, HTML for browser/HTMX requests.
 ```
 /              Search with tabs (Lookup / Search), results via HTMX
 /graph/{g6}    Graph detail: viz, properties, cospectral mates, spectra, mechanisms
-/compare       Side-by-side comparison with D3 visualizations, spectral distances
+/compare       Side-by-side comparison with D3 visualizations, spectral distances, mechanism visualizations
 /search        Advanced search with property filters, client-side sorting for large results
 /glossary      Terms, matrix definitions (MathJax), switching mechanisms, references
 /about         Database stats (12.3M graphs), complete API docs, citation
@@ -112,7 +112,7 @@ Footer on all pages has "Random graph" and "Random cospectral family" links.
 - `home.html` - Alpine.js tabs for Lookup/Search, HTMX form submission
 - `graph_detail.html` - D3 force-directed graph, drag-enabled, mechanism column with badges
 - `graph_list.html` - HTMX partial for search results
-- `compare.html` - Grid of D3 visualizations, properties table, spectral distance matrices
+- `compare.html` - Grid of D3 visualizations, properties table, spectral distance matrices, mechanism visualizations with colored vertices
 - `search_results.html` - Advanced search with pagination, client-side sorting for capped results
 - `glossary.html` - Definition lists with MathJax, switching mechanisms section, references
 - `about.html` - Complete API docs, 12.3M graphs count, references

@@ -1400,3 +1400,34 @@ class TestMechanismFiltering:
         assert response.status_code == 200
         # Should have mechanism filter options
         assert "mechanism" in response.text.lower() or "switching" in response.text.lower()
+
+
+@needs_db
+class TestMechanismVisualization:
+    """Test mechanism visualization on compare page."""
+
+    def test_compare_page_shows_gm_mechanism_info(self):
+        """Test that compare page shows GM mechanism config for cospectral pairs."""
+        # These two graphs have a known GM switching mechanism
+        response = client.get("/compare?graphs=G?Bedg,G?BeeW", headers={"Accept": "text/html"})
+        assert response.status_code == 200
+        # Should show GM mechanism section
+        assert "GM Switching" in response.text
+        assert "Switch set" in response.text
+        assert "Partition" in response.text
+
+    def test_compare_page_has_mechanism_viz(self):
+        """Test that compare page includes mechanism visualization."""
+        response = client.get("/compare?graphs=G?Bedg,G?BeeW", headers={"Accept": "text/html"})
+        assert response.status_code == 200
+        # Should have mechanism viz section
+        assert "mech-viz-" in response.text
+        assert "Known Mechanisms for" in response.text
+
+    def test_compare_page_without_mechanism_no_legend(self):
+        """Test that compare page doesn't show legend for non-GM pairs."""
+        # Two graphs without known mechanism
+        response = client.get("/compare?graphs=D??,D?_", headers={"Accept": "text/html"})
+        assert response.status_code == 200
+        # Should not show GM mechanism section
+        assert "GM Switching" not in response.text
