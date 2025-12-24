@@ -97,6 +97,42 @@
         </dd>
     </dl>
 
+<h3>Switching Mechanisms</h3>
+<dl>
+        <dt id="gm-switching"><strong>GM switching</strong> (Godsil-McKay)</dt>
+        <dd>
+            A graph operation that preserves the adjacency spectrum using an <em>equitable partition</em>
+            and a <em>switching set</em>. Given a graph $G$ with an equitable partition $V = D \cup C_1 \cup \cdots \cup C_k$,
+            where $D$ is a switching set, GM switching produces a cospectral mate $H$ by changing which vertices
+            in $D$ connect to which vertices in each partition class.
+            <br><br>
+            <strong>Requirements:</strong>
+            <ul style="margin-top: 0.5rem; margin-bottom: 0.5rem;">
+                <li>The partition must be <em>equitable</em>: all vertices in the same class have the same number of neighbors in each other class</li>
+                <li>Each vertex in the switching set $D$ must connect to all, none, or exactly half of each partition class $C_i$</li>
+                <li>The switching operation swaps which half of each class the vertex connects to</li>
+            </ul>
+            GM switching is one of the most common explanations for adjacency cospectrality, covering approximately
+            43% of adjacency-cospectral graphs at $n=9$.
+            <br><br>
+            <strong>Reference:</strong> Godsil and McKay (1982), "Constructing cospectral graphs"
+        </dd>
+
+        <dt id="switching-mechanism"><strong>Switching mechanism</strong></dt>
+        <dd>
+            A systematic graph operation that preserves the spectrum for some matrix type. Known mechanisms include
+            GM switching (adjacency), Seidel switching (adjacency), and various edge-switching operations.
+            Understanding which mechanisms explain observed cospectrality is an active area of research.
+        </dd>
+
+        <dt id="equitable-partition"><strong>Equitable partition</strong></dt>
+        <dd>
+            A partition of vertices $V = C_1 \cup C_2 \cup \cdots \cup C_k$ where all vertices in the same class $C_i$
+            have the same number of neighbors in each class $C_j$ (including $C_i$ itself). Equitable partitions
+            are central to GM switching and other spectral graph theory results.
+        </dd>
+    </dl>
+
 <h3>Graph Properties</h3>
 <dl>
         <dt id="bipartite"><strong>Bipartite</strong></dt>
