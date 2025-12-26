@@ -10,7 +10,7 @@
     {% endif %}
 {% endfor %}
 
-{% set matrix_labels = {'adj': 'adj', 'kirchhoff': 'kir', 'signless': 'sgl', 'lap': 'lap', 'nb': 'nb', 'nbl': 'nbl'} %}
+{% set matrix_labels = {'adj': 'adj', 'kirchhoff': 'kir', 'signless': 'sgl', 'lap': 'lap', 'nb': 'nb', 'nbl': 'nbl', 'dist': 'dist'} %}
 
 <hgroup>
     <h1 style="display: flex; justify-content: space-between; align-items: baseline; gap: 1rem;">
@@ -73,7 +73,7 @@
 
 <h3>{% if result.graphs|length == 2 %}Spectral Distance{% else %}Spectral Comparison{% endif %}</h3>
 {% if result.distance_matrix %}
-{% set matrix_labels = {'adj': 'adj', 'kirchhoff': 'kir', 'signless': 'sgl', 'lap': 'lap', 'nb': 'nb', 'nbl': 'nbl'} %}
+{% set matrix_labels = {'adj': 'adj', 'kirchhoff': 'kir', 'signless': 'sgl', 'lap': 'lap', 'nb': 'nb', 'nbl': 'nbl', 'dist': 'dist'} %}
 {% set graph_labels = result.graphs | map(attribute='graph6') | list %}
 {% set n = graph_labels|length %}
 
@@ -339,7 +339,8 @@ function renderCompareSpectrumRealPlot() {
             adj: g.spectra.adj_eigenvalues.map(re => ({re, im: 0})),
             kirchhoff: (g.spectra.kirchhoff_eigenvalues || []).map(re => ({re, im: 0})),
             signless: (g.spectra.signless_eigenvalues || []).map(re => ({re, im: 0})),
-            lap: g.spectra.lap_eigenvalues.map(re => ({re, im: 0}))
+            lap: g.spectra.lap_eigenvalues.map(re => ({re, im: 0})),
+            dist: (g.spectra.dist_eigenvalues || []).map(re => ({re, im: 0}))
         }
     }));
 
@@ -349,7 +350,7 @@ function renderCompareSpectrumRealPlot() {
     const plotWidth = width - margin.left - margin.right;
     const plotHeight = height - margin.top - margin.bottom;
 
-    const matrices = ['adj', 'kirchhoff', 'signless', 'lap'];
+    const matrices = ['adj', 'kirchhoff', 'signless', 'lap', 'dist'];
     const laneHeight = plotHeight / matrices.length;
 
     // Collect all real eigenvalues to determine x-axis domain
@@ -450,10 +451,11 @@ function renderCompareSpectrumRealPlot() {
         adj: style.getPropertyValue('--spectrum-adj').trim(),
         kirchhoff: style.getPropertyValue('--spectrum-kirchhoff').trim() || '#8B4513',
         signless: style.getPropertyValue('--spectrum-signless').trim() || '#F97316',
-        lap: style.getPropertyValue('--spectrum-lap').trim()
+        lap: style.getPropertyValue('--spectrum-lap').trim(),
+        dist: style.getPropertyValue('--spectrum-dist').trim() || '#9333EA'
     };
 
-    const labels = {adj: 'adj', kirchhoff: 'kir', signless: 'sgl', lap: 'lap'};
+    const labels = {adj: 'adj', kirchhoff: 'kir', signless: 'sgl', lap: 'lap', dist: 'dist'};
 
     const markerShapes = [
         { name: 'circle', type: null },

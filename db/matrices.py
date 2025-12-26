@@ -130,3 +130,32 @@ def nonbacktracking_laplacian(G: nx.Graph) -> np.ndarray:
         D_inv = np.diag(1.0 / out_degrees)
 
     return np.eye(B.shape[0]) - D_inv @ B
+
+
+def distance_matrix(G: nx.Graph) -> np.ndarray | None:
+    """
+    Return the distance matrix D where D[i,j] is the shortest path length
+    between vertices i and j.
+
+    Only defined for connected graphs. Returns None for disconnected graphs.
+
+    Note: This matrix is typically not stored directly; we only compute and
+    store its spectrum for cospectral analysis.
+    """
+    if not nx.is_connected(G):
+        return None
+
+    n = G.number_of_nodes()
+    if n == 0:
+        return np.array([]).reshape(0, 0)
+
+    D = np.zeros((n, n), dtype=np.float64)
+    node_list = list(G.nodes())
+
+    lengths = dict(nx.all_pairs_shortest_path_length(G))
+
+    for i, u in enumerate(node_list):
+        for j, v in enumerate(node_list):
+            D[i, j] = lengths[u][v]
+
+    return D

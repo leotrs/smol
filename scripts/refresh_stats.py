@@ -43,7 +43,7 @@ def compute_stats(conn) -> dict:
 
     # Cospectral counts from pre-computed pairs table
     cospectral = {}
-    for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl"]:
+    for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"]:
         cur.execute(
             """
             WITH all_graphs AS (
@@ -63,7 +63,7 @@ def compute_stats(conn) -> dict:
 
     # Cospectral counts for min_degree >= 2
     cospectral_mindeg2 = {}
-    for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl"]:
+    for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"]:
         cur.execute(
             """
             WITH all_graphs AS (

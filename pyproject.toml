@@ -97,4 +97,16 @@ exclude = [
     "scripts/test_*.py",
     "scripts/trace_decomposition.py",
     "scripts/verify_*.py",
+    # Root-level research scripts (temporary, not part of production codebase)
+    "analyze_*.py",
+    "check_*.py",
+    "compare_*.py",
+    "deep_*.py",
+    "examine_*.py",
+    "find_*.py",
+    "full_*.py",
+    "pattern_*.py",
+    "search_*.py",
+    "test_*.py",
+    "verify_*.py",
 ]

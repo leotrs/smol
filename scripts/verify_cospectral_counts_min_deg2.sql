@@ -16,7 +16,8 @@
 --   nb:  ✓ Perfect match (0, 0, 2, 6, 10130)
 --   nbl: ✓ Perfect match (0, 0, 0, 0, 156)
 --
--- ALL FOUR MATRICES MATCH PERFECTLY FOR min_degree >= 2!
+-- ALL FOUR MATRICES FROM THE REFERENCE MATCH PERFECTLY FOR min_degree >= 2!
+-- Note: SMOL also includes kirchhoff, signless, and distance matrices (not in reference)
 
 --------------------------------------------------------------------------------
 -- Adjacency cospectral counts (min_degree >= 2)

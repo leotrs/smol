@@ -172,6 +172,7 @@
         <button type="button" role="tab" :aria-selected="tab === 'laplacian'" aria-controls="laplacian-panel" id="laplacian-tab" :class="{ active: tab === 'laplacian' }" @click="tab = 'laplacian'">Laplacian</button>
         <button type="button" role="tab" :aria-selected="tab === 'nb'" aria-controls="nb-panel" id="nb-tab" :class="{ active: tab === 'nb' }" @click="tab = 'nb'">NB</button>
         <button type="button" role="tab" :aria-selected="tab === 'nbl'" aria-controls="nbl-panel" id="nbl-tab" :class="{ active: tab === 'nbl' }" @click="tab = 'nbl'">NBL</button>
+        <button type="button" role="tab" :aria-selected="tab === 'distance'" aria-controls="distance-panel" id="distance-tab" :class="{ active: tab === 'distance' }" @click="tab = 'distance'">Distance</button>
     </div>
 
     <div class="tab-content" role="tabpanel" id="examples-panel" aria-labelledby="examples-tab" x-show="tab === 'examples'">
@@ -399,6 +400,40 @@
         </a>
         </div>
     </div>
+
+    <div class="tab-content" role="tabpanel" id="distance-panel" aria-labelledby="distance-tab" x-show="tab === 'distance'">
+        <p class="examples-subtitle">Graphs with identical distance matrix spectra but different structure</p>
+        <div class="cospectral-families">
+        <a href="/compare?graphs=F%3FzPw,FCRfo" class="family-card">
+            <div class="family-graphs">
+                <div class="family-graph">
+                    <div id="ex-dist1a" class="example-viz"></div>
+                    <code>F?zPw</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-dist1b" class="example-viz"></div>
+                    <code>FCRfo</code>
+                </div>
+            </div>
+        </a>
+        <a href="/compare?graphs=GCZj%7D%7B,GEit%5E%7B,GQjdn%7B" class="family-card">
+            <div class="family-graphs">
+                <div class="family-graph">
+                    <div id="ex-dist2a" class="example-viz"></div>
+                    <code>GCZj}{</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-dist2b" class="example-viz"></div>
+                    <code>GEit^{</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-dist2c" class="example-viz"></div>
+                    <code>GQjdn{</code>
+                </div>
+            </div>
+        </a>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -458,7 +493,13 @@ const exampleGraphs = {
     'ex-nbl1a': {n: 10, edges: [[0,4],[0,5],[0,9],[1,4],[1,6],[1,8],[2,5],[2,7],[2,8],[3,6],[3,7],[3,9],[4,8],[5,7],[5,9],[6,8],[6,9],[8,9]]},
     'ex-nbl1b': {n: 10, edges: [[0,4],[0,5],[0,8],[1,4],[1,6],[1,9],[2,5],[2,7],[2,9],[3,6],[3,7],[3,8],[4,8],[5,7],[5,9],[6,8],[6,9],[8,9]]},
     'ex-nbl2a': {n: 10, edges: [[0,4],[0,5],[0,8],[0,9],[1,4],[1,6],[1,8],[2,5],[2,7],[2,8],[2,9],[3,6],[3,7],[3,9],[4,8],[5,7],[6,7],[6,9]]},
-    'ex-nbl2b': {n: 10, edges: [[0,4],[0,5],[0,7],[0,9],[1,4],[1,6],[1,8],[2,5],[2,7],[2,8],[2,9],[3,6],[3,7],[3,9],[4,8],[5,7],[6,8],[6,9]]}
+    'ex-nbl2b': {n: 10, edges: [[0,4],[0,5],[0,7],[0,9],[1,4],[1,6],[1,8],[2,5],[2,7],[2,8],[2,9],[3,6],[3,7],[3,9],[4,8],[5,7],[6,8],[6,9]]},
+    // Distance cospectral (connected graphs only)
+    'ex-dist1a': {n: 7, edges: [[0,4],[0,5],[1,4],[1,5],[2,4],[2,6],[3,5],[3,6],[4,6],[5,6]]},
+    'ex-dist1b': {n: 7, edges: [[0,3],[0,5],[0,6],[1,4],[1,5],[1,6],[2,5],[2,6],[3,6],[4,6]]},
+    'ex-dist2a': {n: 8, edges: [[0,3],[0,5],[0,7],[1,4],[1,5],[1,6],[1,7],[2,4],[2,5],[2,6],[3,6],[3,7],[4,5],[4,6],[4,7],[5,6],[5,7],[6,7]]},
+    'ex-dist2b': {n: 8, edges: [[0,3],[0,4],[0,5],[0,6],[0,7],[1,3],[1,7],[2,4],[2,5],[2,6],[2,7],[3,5],[3,7],[4,6],[4,7],[5,6],[5,7],[6,7]]},
+    'ex-dist2c': {n: 8, edges: [[0,2],[0,4],[0,5],[0,6],[0,7],[1,3],[1,5],[1,7],[2,4],[2,5],[2,6],[2,7],[3,6],[3,7],[4,7],[5,6],[5,7],[6,7]]}
 };
 
 function renderExamples() {

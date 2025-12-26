@@ -45,6 +45,8 @@ class Spectra(BaseModel):
     nbl_eigenvalues_re: list[float]
     nbl_eigenvalues_im: list[float]
     nbl_hash: str
+    dist_eigenvalues: list[float] | None
+    dist_hash: str | None
 
 
 class CospectralMates(BaseModel):
@@ -54,6 +56,7 @@ class CospectralMates(BaseModel):
     lap: list[str]
     nb: list[str]
     nbl: list[str]
+    dist: list[str]
 
 
 class GraphFull(BaseModel):

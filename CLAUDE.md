@@ -12,6 +12,7 @@ SMOL (Spectra and Matrices Of Little graphs) is a database of all small simple u
 - **Normalized Laplacian**: I - D⁻¹/²AD⁻¹/², eigenvalues in [0,2]
 - **Non-backtracking matrix**: The Hashimoto matrix B, indexed by directed edges
 - **Non-backtracking Laplacian**: I - D⁻¹B, random walk on directed edges
+- **Distance matrix**: D[i,j] = shortest path length between vertices i and j, only defined for connected graphs
 - **Spectral hash**: A 16-character hash of sorted eigenvalues for cospectral detection
 - **Cospectral family**: Graphs sharing the same spectrum for a given matrix type
 - **Tags**: Named graph detection (complete, cycle, path, star, wheel, etc.)

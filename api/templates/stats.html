@@ -11,7 +11,7 @@
 <p><strong>{{ "{:,}".format(stats.total_graphs) }}</strong> total graphs ({{ "{:,}".format(stats.connected_graphs) }} connected)</p>
 
 <p>
-    SMOL precomputes spectral properties for six matrix types. The table below shows
+    SMOL precomputes spectral properties for seven matrix types. The table below shows
     the number of graphs at each vertex count that have at least one cospectral mate
     (another non-isomorphic graph with the same spectrum).
 </p>
@@ -29,6 +29,7 @@
             <th>Lap</th>
             <th>NB</th>
             <th>NBL</th>
+            <th>Distance</th>
         </tr>
     </thead>
     <tbody>
@@ -42,6 +43,7 @@
             <td>{{ "{:,}".format(stats.cospectral_counts.lap.get(n, 0)) if stats.cospectral_counts.lap.get(n, 0) else "-" }}</td>
             <td>{{ "{:,}".format(stats.cospectral_counts.nb.get(n, 0)) if stats.cospectral_counts.nb.get(n, 0) else "-" }}</td>
             <td>{{ "{:,}".format(stats.cospectral_counts.nbl.get(n, 0)) if stats.cospectral_counts.nbl.get(n, 0) else "-" }}</td>
+            <td>{{ "{:,}".format(stats.cospectral_counts.dist.get(n, 0)) if stats.cospectral_counts.dist.get(n, 0) else "-" }}</td>
         </tr>
         {% endfor %}
     </tbody>
@@ -181,6 +183,7 @@
             <th>Lap</th>
             <th>NB</th>
             <th>NBL</th>
+            <th>Distance</th>
         </tr>
     </thead>
     <tbody>
@@ -194,6 +197,7 @@
             <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.lap.get(n, 0)) if stats.cospectral_counts_mindeg2.lap.get(n, 0) else "-" }}</td>
             <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.nb.get(n, 0)) if stats.cospectral_counts_mindeg2.nb.get(n, 0) else "-" }}</td>
             <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.nbl.get(n, 0)) if stats.cospectral_counts_mindeg2.nbl.get(n, 0) else "-" }}</td>
+            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.dist.get(n, 0)) if stats.cospectral_counts_mindeg2.dist.get(n, 0) else "-" }}</td>
         </tr>
         {% endfor %}
     </tbody>

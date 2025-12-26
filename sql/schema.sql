@@ -1,6 +1,6 @@
 -- SMOL Graph Database Schema
 -- Stores all connected non-isomorphic simple undirected graphs up to n vertices
--- with their spectral properties for four matrix types.
+-- with their spectral properties for seven matrix types.
 
 CREATE TABLE IF NOT EXISTS graphs (
     id              BIGSERIAL PRIMARY KEY,

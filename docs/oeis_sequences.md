@@ -266,12 +266,15 @@ Based on extensive searching, **these sequences do not appear to exist in OEIS**
 | Normalized Laplacian| 288,266      | 2,395           | 0.8%       |
 | Non-Backtracking    | 288,266      | 73,589          | 25.5%      |
 | NBL                 | 288,266      | 5,334           | 1.8%       |
+| Distance            | 273,353*     | TBD             | TBD        |
+
+*Connected graphs only (distance matrix undefined for disconnected graphs)
 
 **Key observations:**
 - Non-backtracking matrix has the MOST cospectral graphs (25.5%)
 - Normalized Laplacian has the FEWEST cospectral graphs (0.8%) - best discriminator
 - Adjacency matrix is middle-of-the-pack (18.3%)
-- All six matrices together still fail to uniquely determine many graphs
+- All seven matrices together still fail to uniquely determine many graphs
 
 ## References
 

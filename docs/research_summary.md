@@ -1,89 +1,90 @@
-# Research Summary: Generalized NBL-Cospectral Switch Theorem
+# Research Summary: NBL-Cospectral Switch Theorem
 
-**Date:** December 2024  
+**Date:** December 2024 (updated December 21, 2024)  
 **Status:** Completed
 
 ## Executive Summary
 
-This research successfully generalized the Mechanism A proof for NBL-cospectral 2-edge switches. The key finding is that the original Mechanism A conditions were **sufficient but not necessary**. All 11 known NBL-cospectral 2-edge switches (in the n=10, min-degree≥2 dataset) are explained by a single unified theorem with simpler conditions.
+This research established conditions under which a 2-edge switch preserves the NBL (non-backtracking Laplacian) spectrum. At n=10 with min_degree ≥ 2:
 
-## Original vs Generalized Conditions
+| Category | Count |
+|----------|-------|
+| Total NBL-cospectral pairs | 78 |
+| Explained by (C1)+(C2) switch theorem | **62** (79%) |
+| Unexplained (different mechanism) | **16** (21%) |
 
-### Original Mechanism A Conditions (Overly Restrictive)
-1. Degree equality: $\deg(v_1) = \deg(v_2)$, $\deg(w_1) = \deg(w_2)$
-2. Both parallel edges exist: $v_1v_2 \in E$ and $w_1w_2 \in E$
-3. Shared size: $|\text{shared}| = 2$
-4. Uniform cross-intersection: $|ext(v_i) \cap ext(w_j)| = c$ for all $i,j$
-5. Unique size: $|\text{unique}_1| = |\text{unique}_2| = 2$
-6. Uniform unique degrees: all vertices in unique$_1 \cup$ unique$_2$ have same degree
+## The Theorem
 
-**Satisfied by:** 4 of 11 switches (indices 3, 4, 8, 10)
+**Theorem (NBL-Cospectral 2-Edge Switch):** Let G be a graph with vertices v₁, v₂, w₁, w₂ such that v₁w₁, v₂w₂ ∈ E(G) and v₁w₂, v₂w₁ ∉ E(G). Define G' by removing {v₁w₁, v₂w₂} and adding {v₁w₂, v₂w₁}.
 
-### Generalized Conditions (Minimal and Sufficient)
-**(C1)** Degree equality: $\deg(v_1) = \deg(v_2)$ and $\deg(w_1) = \deg(w_2)$
+Then G and G' have the same NBL spectrum if:
 
-**(C2)** Uniform cross-intersection: $|ext(v_i) \cap ext(w_j)| = c$ for all $i,j \in \{1,2\}$
+**(C1)** deg(v₁) = deg(v₂) and deg(w₁) = deg(w₂)
 
-**Satisfied by:** All 11 of 11 switches
+**(C2)** |ext(v₁) ∩ ext(wⱼ)| = |ext(v₂) ∩ ext(wⱼ)| for j = 1, 2
 
-## Key Theoretical Insights
+where S = {v₁, v₂, w₁, w₂} and ext(x) = N(x) \ S.
 
-### Lemma: Derived Conditions
-From (C1) and (C2), we automatically get:
-- $|\text{unique}_1| = |\text{unique}_2|$ (follows from degree equality)
-- $|\text{ext}(v_i) \cap \text{unique}_1| = |\text{ext}(v_i) \cap \text{unique}_2|$ (follows from uniform cross)
+## Key Findings
 
-### Proof Technique: Aggregate Weight Matching
-The proof uses **aggregate weight matching** via lumped boundary types:
-1. Partition boundary edges by type (v₁, v₂, w₁-shared, w₂-shared, w₁-unique, w₂-unique)
-2. Define swap σ: w₁ ↔ w₂ on boundary types
-3. Show that total transition weights between type classes are preserved under σ
-4. Conclude trace equality: $\text{tr}(T_G^k) = \text{tr}(T_{G'}^k)$ for all $k$
+### Conditions are Minimal
+From (C1) and (C2), we automatically derive:
+- |unique₁| = |unique₂| (follows from degree equality)
+- |ext(vᵢ) ∩ unique₁| = |ext(vᵢ) ∩ unique₂| (follows from pairwise cross equality)
+
+### Proof Technique
+The proof uses **aggregate weight matching**:
+1. Partition boundary edges by type
+2. Define swap σ: w₁ ↔ w₂ 
+3. Show transition weights between type classes are σ-invariant
+4. Conclude tr(T_G^k) = tr(T_{G'}^k) for all k
 
 ### What is NOT Required
-- Parallel edges (v₁-v₂ or w₁-w₂) - NOT necessary
-- $|\text{shared}| = 2$ - NOT necessary (any value works)
-- Uniform unique degrees - NOT necessary
-- Specific edge structure within S - NOT necessary
+- Parallel edges (v₁-v₂ or w₁-w₂)
+- Specific shared/unique sizes
+- Uniform degrees within unique sets
 
-## Experimental Verification
+## The 16 Unexplained Pairs
 
-| Switch | $|\text{shared}|$ | Parallel | Orig. Mech A | Gen. Conds |
-|--------|-------------------|----------|--------------|------------|
-| 0 | 1 | Both | ✗ | ✓ |
-| 1 | 1 | None | ✗ | ✓ |
-| 2 | 1 | None | ✗ | ✓ |
-| 3 | 2 | Both | ✓ | ✓ |
-| 4 | 2 | Both | ✓ | ✓ |
-| 5 | 1 | One | ✗ | ✓ |
-| 6 | 1 | None | ✗ | ✓ |
-| 7 | 2 | One | ✗ | ✓ |
-| 8 | 2 | Both | ✓ | ✓ |
-| 9 | 1 | None | ✗ | ✓ |
-| 10 | 2 | Both | ✓ | ✓ |
+These pairs are NBL-cospectral but NOT related by any single (C1)+(C2) switch:
 
-## Conclusion: No Separate "Mechanism B"
+```
+I?qa`hidg,I?qa`iYXg
+I?qa`xjfg,I?qa`yZZg
+ICQbfZk{_,ICp`fjk{_
+ICQrV`lmg,ICQrVaj^G
+ICQvfZk^_,ICRdvY{^_
+ICR`v_zzG,ICR`v`lmg
+ICRbcz[[o,ICpberiho
+ICRcrOxtO,ICdebQsrO
+ICRcvZ[jg,ICXefTy\o
+ICXevNw~?,ICpfbvk~?
+ICZNLzyn_,IEhvFrylo
+ICdbFHY^?,ICp`eqey_
+ICdbFHY{_,ICp`eqet_
+ICpbRd{mO,ICpbUrUho
+ICpdbhZnG,ICpdbi\]g
+ICrbTs}|_,ICrbfi]}_
+```
 
-The original investigation hypothesized that switches not satisfying Mechanism A might require a different "Mechanism B". This is **not the case**.
+## Cospectrality Overlap
 
-All 11 switches are explained by the single unified theorem with conditions (C1) + (C2). The 7 switches that don't satisfy original Mechanism A simply have:
-- $|\text{shared}| = 1$ instead of 2, or
-- Missing parallel edges, or
-- Non-uniform unique degrees
+All 78 NBL-cospectral pairs (min_deg ≥ 2) are also cospectral w.r.t.:
+- Adjacency matrix
+- Normalized Laplacian
+- Non-backtracking (Hashimoto) matrix
 
-But these differences don't affect NBL-cospectrality - only (C1) and (C2) matter.
+This overlap does NOT hold for general NBL-cospectral pairs.
 
-## Files Created
+## Key Files
 
-1. `docs/generalized_switch_theorem.md` - Full formal proof
-2. `scripts/check_mechanism_a.py` - Tests original conditions
-3. `scripts/find_necessary_conditions.py` - Identifies universal conditions
-4. `scripts/comprehensive_conditions.py` - Detailed boundary analysis
-5. `scripts/lumped_trace_proof.py` - Verifies aggregate matching
-6. `scripts/final_verification.py` - Confirms all switches satisfy (C1)+(C2)
+- `docs/complete_self_contained_proof.md` - Full formal proof of (C1)+(C2) theorem
+- `docs/nbl_switching_theorem_verification.md` - Computational verification
+- `docs/78_pairs.txt` - All 78 pairs (graph6 format)
+- `scripts/check_c1c2.py` - Script to verify (C1)+(C2) conditions
 
-## Future Work
+## Open Questions
 
-1. **Necessity proof:** Show that (C1) and (C2) are not just sufficient but necessary
-2. **Higher-order switches:** Extend to 3-edge, 4-edge switches
-3. **Non-switch pairs:** Analyze the 67 non-switch pairs (different mechanism entirely)
+1. What mechanism explains the 16 unexplained pairs?
+2. Are (C1)+(C2) necessary as well as sufficient?
+3. Why does NBL-cospectrality imply adjacency-cospectrality for min_deg ≥ 2?

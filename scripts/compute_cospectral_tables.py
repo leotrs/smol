@@ -49,17 +49,19 @@ def compute_for_matrix(conn, matrix: str, n_filter: int | None = None):
     print(f"{label}: Streaming graphs ordered by hash...")
 
     # Stream through graphs ordered by (n, hash) to group cospectral graphs
+    # Skip NULL hashes (disconnected graphs for dist, or missing data)
     if n_filter is not None:
         cur.execute(f"""
             SELECT id, n, {hash_col}
             FROM graphs
-            WHERE n = %s
+            WHERE n = %s AND {hash_col} IS NOT NULL
             ORDER BY {hash_col}, id
         """, (n_filter,))
     else:
         cur.execute(f"""
             SELECT id, n, {hash_col}
             FROM graphs
+            WHERE {hash_col} IS NOT NULL
             ORDER BY n, {hash_col}, id
         """)
 
@@ -118,7 +120,7 @@ def main():
     parser = argparse.ArgumentParser(description="Compute cospectral tables")
     parser.add_argument(
         "--matrix",
-        choices=["adj", "kirchhoff", "signless", "lap", "nb", "nbl"],
+        choices=["adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"],
         help="Compute only this matrix type (default: all)",
     )
     parser.add_argument(
@@ -133,7 +135,7 @@ def main():
     if args.matrix:
         compute_for_matrix(conn, args.matrix, args.n)
     else:
-        for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl"]:
+        for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"]:
             compute_for_matrix(conn, matrix, args.n)
 
     conn.close()

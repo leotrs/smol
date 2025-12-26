@@ -33,7 +33,7 @@ def table1(conn, max_n: int) -> dict:
 
     # Cospectral counts by matrix type
     results = {}
-    for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl"]:
+    for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"]:
         cur.execute(
             """
             WITH all_graphs AS (
@@ -70,7 +70,7 @@ def table2(conn, max_n: int) -> dict:
 
     # Cospectral counts by matrix type (both graphs in pair must have min_degree >= 2)
     results = {}
-    for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl"]:
+    for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"]:
         cur.execute(
             """
             WITH valid_pairs AS (
@@ -103,17 +103,17 @@ def table2(conn, max_n: int) -> dict:
 def print_table(title: str, data: dict, max_n: int):
     """Print a formatted table."""
     print()
-    print("=" * 90)
+    print("=" * 98)
     print(title)
-    print("=" * 90)
-    print(f"{'N':>3} {'#graphs':>12} {'A':>8} {'K':>8} {'Q':>8} {'L':>8} {'Ã':>8} {'L̃':>8}")
-    print("-" * 90)
+    print("=" * 98)
+    print(f"{'N':>3} {'#graphs':>12} {'A':>8} {'K':>8} {'Q':>8} {'L':>8} {'Ã':>8} {'L̃':>8} {'D':>8}")
+    print("-" * 98)
 
     totals = data["totals"]
     cospectral = data["cospectral"]
 
     grand_total = 0
-    grand_cospec = {"adj": 0, "kirchhoff": 0, "signless": 0, "lap": 0, "nb": 0, "nbl": 0}
+    grand_cospec = {"adj": 0, "kirchhoff": 0, "signless": 0, "lap": 0, "nb": 0, "nbl": 0, "dist": 0}
 
     for n in range(1, max_n + 1):
         if n not in totals:
@@ -126,8 +126,9 @@ def print_table(title: str, data: dict, max_n: int):
         lap = cospectral["lap"].get(n, 0)
         nb = cospectral["nb"].get(n, 0)
         nbl = cospectral["nbl"].get(n, 0)
+        dist = cospectral["dist"].get(n, 0)
 
-        print(f"{n:>3} {total:>12,} {adj:>8,} {kirchhoff:>8,} {signless:>8,} {lap:>8,} {nb:>8,} {nbl:>8,}")
+        print(f"{n:>3} {total:>12,} {adj:>8,} {kirchhoff:>8,} {signless:>8,} {lap:>8,} {nb:>8,} {nbl:>8,} {dist:>8,}")
 
         grand_total += total
         grand_cospec["adj"] += adj
@@ -136,12 +137,14 @@ def print_table(title: str, data: dict, max_n: int):
         grand_cospec["lap"] += lap
         grand_cospec["nb"] += nb
         grand_cospec["nbl"] += nbl
+        grand_cospec["dist"] += dist
 
-    print("-" * 90)
+    print("-" * 98)
     print(
         f"{'tot':>3} {grand_total:>12,} {grand_cospec['adj']:>8,} "
         f"{grand_cospec['kirchhoff']:>8,} {grand_cospec['signless']:>8,} "
-        f"{grand_cospec['lap']:>8,} {grand_cospec['nb']:>8,} {grand_cospec['nbl']:>8,}"
+        f"{grand_cospec['lap']:>8,} {grand_cospec['nb']:>8,} {grand_cospec['nbl']:>8,} "
+        f"{grand_cospec['dist']:>8,}"
     )
 
 

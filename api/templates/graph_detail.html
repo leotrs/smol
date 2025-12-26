@@ -66,6 +66,7 @@ const spectraData = {
     kirchhoff: {{ graph.spectra.kirchhoff_eigenvalues | tojson }}.map(x => ({re: x, im: 0})),
     signless: {{ graph.spectra.signless_eigenvalues | tojson }}.map(x => ({re: x, im: 0})),
     lap: {{ graph.spectra.lap_eigenvalues | tojson }}.map(x => ({re: x, im: 0})),
+    dist: ({{ graph.spectra.dist_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
     nb: {{ graph.spectra.nb_eigenvalues_re | tojson }}.map((re, i) => ({
         re: re,
         im: {{ graph.spectra.nb_eigenvalues_im | tojson }}[i]
@@ -81,12 +82,13 @@ function renderGraphDetailRealPlot() {
     if (!container) return;
     container.innerHTML = '';
 
-    const matrices = ['adj', 'kirchhoff', 'signless', 'lap'];
+    const matrices = ['adj', 'kirchhoff', 'signless', 'lap', 'dist'];
     const graphSpectra = {
         adj: spectraData.adj,
         kirchhoff: spectraData.kirchhoff,
         signless: spectraData.signless,
-        lap: spectraData.lap
+        lap: spectraData.lap,
+        dist: spectraData.dist
     };
 
     const width = container.clientWidth || 500;
@@ -162,10 +164,11 @@ function renderGraphDetailRealPlot() {
         adj: style.getPropertyValue('--spectrum-adj').trim(),
         kirchhoff: style.getPropertyValue('--spectrum-kirchhoff').trim() || '#8B4513',
         signless: style.getPropertyValue('--spectrum-signless').trim() || '#F97316',
-        lap: style.getPropertyValue('--spectrum-lap').trim()
+        lap: style.getPropertyValue('--spectrum-lap').trim(),
+        dist: style.getPropertyValue('--spectrum-dist').trim() || '#9333EA'
     };
 
-    const labels = {adj: 'adj', kirchhoff: 'kir', signless: 'sgl', lap: 'lap'};
+    const labels = {adj: 'adj', kirchhoff: 'kir', signless: 'sgl', lap: 'lap', dist: 'dist'};
 
     matrices.forEach((matrix, i) => {
         const laneY = i * laneHeight;
@@ -636,7 +639,7 @@ function copyEigenvalues(btn) {
         Find similar spectra
     </a>
 </div>
-{% if graph.cospectral_mates.adj or graph.cospectral_mates.kirchhoff or graph.cospectral_mates.signless or graph.cospectral_mates.lap or graph.cospectral_mates.nb or graph.cospectral_mates.nbl %}
+{% if graph.cospectral_mates.adj or graph.cospectral_mates.kirchhoff or graph.cospectral_mates.signless or graph.cospectral_mates.lap or graph.cospectral_mates.nb or graph.cospectral_mates.nbl or graph.cospectral_mates.dist %}
 <p>Graphs that share the same spectrum for a given matrix type.</p>
 <table>
     <thead>
@@ -775,6 +778,24 @@ function copyEigenvalues(btn) {
             </td>
         </tr>
         {% endif %}
+        {% if graph.cospectral_mates.dist %}
+        <tr>
+            <td>Distance</td>
+            <td>
+                {% for mate in graph.cospectral_mates.dist %}
+                    <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
+                {% endfor %}
+            </td>
+            <td><span style="color: var(--pico-muted-color);">—</span></td>
+            <td>
+                {% if graph.cospectral_mates.dist | length < 10 %}
+                <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.dist | join(',') | urlencode }}" role="button" class="outline">Compare</a>
+                {% else %}
+                <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endif %}
     </tbody>
 </table>
 {% else %}
@@ -788,8 +809,11 @@ function copyEigenvalues(btn) {
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'kirchhoff')">Kirchhoff</button>
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'signless')">Signless</button>
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'lap')">Laplacian</button>
-        <button class="code-tab-btn" onclick="switchCodeTab(event, 'nb')">NB (Ã)</button>
-        <button class="code-tab-btn" onclick="switchCodeTab(event, 'nbl')">NBL (L̃)</button>
+        <button class="code-tab-btn" onclick="switchCodeTab(event, 'nb')">NB</button>
+        <button class="code-tab-btn" onclick="switchCodeTab(event, 'nbl')">NBL</button>
+        {% if graph.properties.diameter is not none %}
+        <button class="code-tab-btn" onclick="switchCodeTab(event, 'dist')">Distance</button>
+        {% endif %}
     </div>
 
     <div id="code-adj" class="code-tab-content active">
@@ -916,6 +940,25 @@ eigenvalues = np.linalg.eigvals(L_nb)
 print(eigenvalues)</code></pre>
         </div>
     </div>
+
+    {% if graph.properties.diameter is not none %}
+    <div id="code-dist" class="code-tab-content">
+        <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+<pre><code class="language-python">import networkx as nx
+import numpy as np
+
+G = nx.from_graph6_bytes(b"{{ graph.graph6 }}")
+# Distance matrix: D[i,j] = shortest path length between i and j
+# Only defined for connected graphs
+D = nx.floyd_warshall_numpy(G)
+eigenvalues = np.linalg.eigvalsh(D)
+print(eigenvalues)</code></pre>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css" id="prism-light">
@@ -971,28 +1014,34 @@ function copyCode(btn) {
 <div class="export-buttons">
     <button class="outline" onclick="downloadEigenvaluesCSV('adj')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Adjacency (A)
+        Adjacency
     </button>
     <button class="outline" onclick="downloadEigenvaluesCSV('kirchhoff')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Kirchhoff (L)
+        Kirchhoff
     </button>
     <button class="outline" onclick="downloadEigenvaluesCSV('signless')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Signless (Q)
+        Signless
     </button>
     <button class="outline" onclick="downloadEigenvaluesCSV('lap')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Laplacian (L̃)
+        Laplacian
     </button>
     <button class="outline" onclick="downloadEigenvaluesCSV('nb')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        NB (Ã)
+        NB
     </button>
     <button class="outline" onclick="downloadEigenvaluesCSV('nbl')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        NBL (L̃_NB)
+        NBL
     </button>
+    {% if graph.properties.diameter is not none %}
+    <button class="outline" onclick="downloadEigenvaluesCSV('dist')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Distance
+    </button>
+    {% endif %}
 </div>
 
 <p style="font-size: 0.875rem; color: var(--pico-muted-color); margin-bottom: 0.5rem; margin-top: 1.5rem;">Graph structure</p>
@@ -1042,7 +1091,8 @@ const graphData = {
         nb_eigenvalues_re: {{ graph.spectra.nb_eigenvalues_re | tojson }},
         nb_eigenvalues_im: {{ graph.spectra.nb_eigenvalues_im | tojson }},
         nbl_eigenvalues_re: {{ graph.spectra.nbl_eigenvalues_re | tojson }},
-        nbl_eigenvalues_im: {{ graph.spectra.nbl_eigenvalues_im | tojson }}
+        nbl_eigenvalues_im: {{ graph.spectra.nbl_eigenvalues_im | tojson }},
+        dist_eigenvalues: {{ graph.spectra.dist_eigenvalues | tojson }}
     }
 };
 
@@ -1133,9 +1183,13 @@ function downloadEigenvaluesCSV(matrixType) {
         const content = `# Non-backtracking Laplacian eigenvalues\n# ${graphData.graph6}\n` + lines.join('\n');
         downloadFile(content, `${graphData.graph6}_nbl_eigenvalues.csv`, 'text/csv');
         return;
+    } else if (matrixType === 'dist') {
+        eigenvalues = graphData.spectra.dist_eigenvalues;
+        filename = `${graphData.graph6}_dist_eigenvalues.csv`;
+        header = '# Distance matrix eigenvalues';
     }
 
-    // For real eigenvalues (adj, lap)
+    // For real eigenvalues (adj, kirchhoff, signless, lap, dist)
     const lines = ['eigenvalue'];
     eigenvalues.forEach(e => lines.push(e.toString()));
     const content = `${header}\n# ${graphData.graph6}\n` + lines.join('\n');

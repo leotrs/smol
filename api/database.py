@@ -81,6 +81,7 @@ def _parse_row(row: Any) -> dict[str, Any] | None:
             "adj_eigenvalues", "kirchhoff_eigenvalues", "signless_eigenvalues", "lap_eigenvalues",
             "nb_eigenvalues_re", "nb_eigenvalues_im",
             "nbl_eigenvalues_re", "nbl_eigenvalues_im",
+            "dist_eigenvalues",
             "tags",
         ]
         for field in json_fields:
@@ -132,7 +133,8 @@ async def fetch_graph(graph6: str) -> dict[str, Any] | None:
                        signless_eigenvalues, signless_spectral_hash,
                        lap_eigenvalues, lap_spectral_hash,
                        nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
-                       nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash
+                       nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash,
+                       dist_eigenvalues, dist_spectral_hash
                        {tags_col}
                 FROM graphs
                 WHERE graph6 = {ph}
@@ -158,7 +160,8 @@ async def fetch_graph(graph6: str) -> dict[str, Any] | None:
                        signless_eigenvalues, signless_spectral_hash,
                        lap_eigenvalues, lap_spectral_hash,
                        nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
-                       nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash
+                       nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash,
+                       dist_eigenvalues, dist_spectral_hash
                        {tags_col}
                 FROM graphs
                 WHERE graph6 = {ph}
@@ -173,7 +176,8 @@ async def fetch_cospectral_mates(
 ) -> dict[str, list[str]]:
     """Fetch cospectral mates for each matrix type using pre-computed pairs."""
     ph = _placeholder()
-    mates = {m: [] for m in hashes}
+    # Always initialize with all matrix types (for Pydantic model compatibility)
+    mates = {"adj": [], "kirchhoff": [], "signless": [], "lap": [], "nb": [], "nbl": [], "dist": []}
 
     async with get_db() as conn:
         if IS_SQLITE:
@@ -454,7 +458,8 @@ async def fetch_random_graph() -> dict[str, Any] | None:
                            signless_eigenvalues, signless_spectral_hash,
                            lap_eigenvalues, lap_spectral_hash,
                            nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
-                           nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash
+                           nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash,
+                           dist_eigenvalues, dist_spectral_hash
                            {tags_col}
                     FROM graphs
                     WHERE id >= {ph} AND diameter IS NOT NULL
@@ -492,7 +497,8 @@ async def fetch_random_graph() -> dict[str, Any] | None:
                            signless_eigenvalues, signless_spectral_hash,
                            lap_eigenvalues, lap_spectral_hash,
                            nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
-                           nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash
+                           nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash,
+                           dist_eigenvalues, dist_spectral_hash
                            {tags_col}
                     FROM graphs
                     WHERE id >= {ph} AND diameter IS NOT NULL
