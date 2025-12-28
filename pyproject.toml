@@ -65,6 +65,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
+norecursedirs = ["research", ".git", ".venv", "__pycache__"]
 markers = [
     "needs_db: marks tests that require a populated database (skip in CI)",
 ]
