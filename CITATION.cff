@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use SMOL in your research, please cite it as below."
+type: software
+title: "SMOL: Spectra and Matrices Of Little graphs"
+abstract: "A comprehensive database of all simple undirected graphs up to 10 vertices with precomputed spectral properties for seven matrix types: adjacency, Kirchhoff Laplacian, signless Laplacian, normalized Laplacian, non-backtracking (Hashimoto), non-backtracking Laplacian, and distance matrix. SMOL enables spectral graph theory research by providing fast queries, cospectral pair enumeration, and switching mechanism detection."
+authors:
+  - family-names: "Torres"
+    given-names: "Leo"
+    email: leo@leotrs.com
+    orcid: "https://orcid.org/0000-0002-8843-9341"
+repository-code: "https://github.com/leotrs/smol"
+url: "https://smol-graphs-db.fly.dev"
+license: MIT
+keywords:
+  - spectral graph theory
+  - eigenvalues
+  - cospectral graphs
+  - graph database
+  - non-backtracking matrix
+  - Laplacian matrix
+  - switching mechanisms
+version: 0.1.0
+date-released: 2025-01-01
