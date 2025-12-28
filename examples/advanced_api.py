@@ -16,7 +16,7 @@ Usage:
 import requests
 from urllib.parse import quote
 
-BASE_URL = "http://127.0.0.1:8000"  # Change to production URL when deployed
+BASE_URL = "https://smol-graphs-db.fly.dev"  # Production API (or http://127.0.0.1:8000 for local)
 
 
 def compare_graphs(graph6_list: list[str]) -> dict:
@@ -170,3 +170,42 @@ if __name__ == "__main__":
     for (clique, chrom), count in sorted(pairs.items()):
         gap = chrom - clique
         print(f"  ω={clique}, χ={chrom} (gap={gap}): {count} graphs")
+
+    # Example 6: Exploring all 7 matrix types
+    print()
+    print("=" * 60)
+    print("Example 6: Compare cospectrality across all 7 matrix types")
+    print("=" * 60)
+
+    # Get a graph and check cospectral mates for each matrix type
+    sample = get_graph("H?`crjU")  # A graph with NB-cospectral mates
+    print(f"Graph: {sample['graph6']} ({sample['n']} vertices, {sample['m']} edges)")
+    print(f"Tags: {sample.get('tags', [])}")
+    print("\nCospectral mates by matrix type:")
+
+    matrix_types = ["adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"]
+    for matrix in matrix_types:
+        mates = sample.get("cospectral_mates", {}).get(matrix, [])
+        print(f"  {matrix:10s}: {len(mates)} mate(s)")
+
+    # Example 7: Switching mechanisms
+    print()
+    print("=" * 60)
+    print("Example 7: Switching mechanisms for cospectral pairs")
+    print("=" * 60)
+
+    # Get mechanisms for a graph with known GM switching
+    graph6 = "H?`crjU"
+    encoded = quote(graph6, safe="")
+    response = requests.get(f"{BASE_URL}/api/graph/{encoded}/mechanisms")
+    mechanisms = response.json()
+
+    print(f"Graph: {graph6}")
+    print(f"Mechanisms found: {len(mechanisms)}")
+    for mech in mechanisms[:3]:  # Show first 3
+        print(f"  Mate: {mech['mate_graph6']}")
+        print(f"    Matrix: {mech['matrix_type']}")
+        print(f"    Mechanism: {mech['mechanism_type']}")
+        if mech.get('config'):
+            print(f"    Config: {mech['config']}")
+        print()

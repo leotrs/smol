@@ -20,7 +20,7 @@ from urllib.parse import quote
 
 import requests
 
-BASE_URL = "http://127.0.0.1:8000"  # Change to production URL when deployed
+BASE_URL = "https://smol-graphs-db.fly.dev"  # Production API (or http://127.0.0.1:8000 for local)
 
 
 def lookup_graph(graph6: str) -> dict:
@@ -85,11 +85,13 @@ if __name__ == "__main__":
     k5 = lookup_graph("D~{")
     print(f"Graph: {k5['graph6']}")
     print(f"Vertices: {k5['n']}, Edges: {k5['m']}")
+    print(f"Tags: {k5.get('tags', [])}")
     print("Properties:")
     print(f"  - Regular: {k5['properties']['is_regular']}")
     print(f"  - Diameter: {k5['properties']['diameter']}")
     print(f"  - Clique number: {k5['properties']['clique_number']}")
     print(f"  - Chromatic number: {k5['properties']['chromatic_number']}")
+    print(f"  - Algebraic connectivity: {k5['properties'].get('algebraic_connectivity', 'N/A')}")
     print(f"Adjacency eigenvalues: {k5['spectra']['adj_eigenvalues']}")
     print()
 
