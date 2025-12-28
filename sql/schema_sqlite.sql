@@ -32,6 +32,10 @@ CREATE TABLE IF NOT EXISTS graphs (
     nbl_eigenvalues_im  TEXT NOT NULL,
     nbl_spectral_hash   TEXT NOT NULL,
 
+    -- Distance matrix spectrum (JSON array, NULL if disconnected)
+    dist_eigenvalues    TEXT,
+    dist_spectral_hash  TEXT,
+
     -- Structural properties
     is_bipartite        INTEGER NOT NULL,  -- 0/1 boolean
     is_planar           INTEGER NOT NULL,
@@ -47,10 +51,11 @@ CREATE TABLE IF NOT EXISTS graphs (
 
     -- Network science properties
     algebraic_connectivity  REAL,
+    clustering_coefficient  REAL,  -- Legacy column (duplicates global_clustering)
+    assortativity           REAL,
     global_clustering       REAL,
     avg_local_clustering    REAL,
     avg_path_length         REAL,
-    assortativity           REAL,
 
     -- Tags (JSON array, e.g., ["complete", "regular", "eulerian"])
     tags                    TEXT DEFAULT '[]',
@@ -72,6 +77,7 @@ CREATE INDEX IF NOT EXISTS idx_graphs_signless_hash ON graphs(signless_spectral_
 CREATE INDEX IF NOT EXISTS idx_graphs_lap_hash ON graphs(lap_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_graphs_nb_hash ON graphs(nb_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_graphs_nbl_hash ON graphs(nbl_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_graphs_dist_hash ON graphs(dist_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_graphs_bipartite ON graphs(is_bipartite);
 CREATE INDEX IF NOT EXISTS idx_graphs_planar ON graphs(is_planar);
 CREATE INDEX IF NOT EXISTS idx_graphs_regular ON graphs(is_regular);
@@ -85,6 +91,7 @@ CREATE INDEX IF NOT EXISTS idx_n_signless_hash ON graphs(n, signless_spectral_ha
 CREATE INDEX IF NOT EXISTS idx_n_lap_hash ON graphs(n, lap_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_nb_hash ON graphs(n, nb_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_nbl_hash ON graphs(n, nbl_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_n_dist_hash ON graphs(n, dist_spectral_hash);
 
 -- Pre-computed cospectral mates table
 -- Stores all pairs of graphs that share the same spectrum for a given matrix type.
@@ -97,7 +104,7 @@ CREATE TABLE IF NOT EXISTS cospectral_mates (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     graph1_id   INTEGER NOT NULL REFERENCES graphs(id),
     graph2_id   INTEGER NOT NULL REFERENCES graphs(id),
-    matrix_type TEXT NOT NULL CHECK (matrix_type IN ('adj', 'kirchhoff', 'signless', 'lap', 'nb', 'nbl')),
+    matrix_type TEXT NOT NULL CHECK (matrix_type IN ('adj', 'kirchhoff', 'signless', 'lap', 'nb', 'nbl', 'dist')),
     UNIQUE (graph1_id, graph2_id, matrix_type),
     CHECK (graph1_id < graph2_id)
 );
@@ -105,6 +112,27 @@ CREATE TABLE IF NOT EXISTS cospectral_mates (
 CREATE INDEX IF NOT EXISTS idx_mates_matrix ON cospectral_mates(matrix_type);
 CREATE INDEX IF NOT EXISTS idx_mates_graph1 ON cospectral_mates(graph1_id);
 CREATE INDEX IF NOT EXISTS idx_mates_graph2 ON cospectral_mates(graph2_id);
+
+-- Switching mechanisms table
+-- Stores detected switching mechanisms (like GM switching) that explain
+-- why two graphs are cospectral for a particular matrix type.
+-- Populated by scripts/populate_mechanisms.py
+CREATE TABLE IF NOT EXISTS switching_mechanisms (
+    graph1_id       INTEGER NOT NULL REFERENCES graphs(id) ON DELETE CASCADE,
+    graph2_id       INTEGER NOT NULL REFERENCES graphs(id) ON DELETE CASCADE,
+    matrix_type     TEXT NOT NULL,
+    mechanism_type  TEXT NOT NULL,
+    config          TEXT NOT NULL,  -- JSON
+    detected_at     TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (graph1_id, graph2_id, matrix_type, mechanism_type),
+    CHECK (graph1_id < graph2_id),
+    FOREIGN KEY (graph1_id, graph2_id, matrix_type) REFERENCES cospectral_mates(graph1_id, graph2_id, matrix_type) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_mechanisms_graph1 ON switching_mechanisms(graph1_id);
+CREATE INDEX IF NOT EXISTS idx_mechanisms_graph2 ON switching_mechanisms(graph2_id);
+CREATE INDEX IF NOT EXISTS idx_mechanisms_matrix ON switching_mechanisms(matrix_type);
+CREATE INDEX IF NOT EXISTS idx_mechanisms_type ON switching_mechanisms(mechanism_type);
 
 -- Stats cache table
 CREATE TABLE IF NOT EXISTS stats_cache (

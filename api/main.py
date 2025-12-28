@@ -243,12 +243,20 @@ async def random_graph():
 
 
 @app.get("/random/cospectral")
-async def random_cospectral(matrix: str = "adj"):
-    """Redirect to compare page with a random cospectral class."""
+async def random_cospectral(matrix: str | None = None):
+    """Redirect to compare page with a random cospectral class.
+
+    If no matrix is specified, uniformly samples a matrix type first,
+    then samples a random cospectral family for that matrix.
+    """
+    import random
     from fastapi.responses import RedirectResponse
     from urllib.parse import quote
 
-    if matrix not in ("adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"):
+    # If no matrix specified, choose one uniformly at random
+    if matrix is None:
+        matrix = random.choice(["adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"])
+    elif matrix not in ("adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"):
         raise HTTPException(status_code=400, detail="Invalid matrix type")
 
     graphs = await fetch_random_cospectral_class(matrix)

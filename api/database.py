@@ -426,94 +426,118 @@ async def query_graphs(
 
 
 async def fetch_random_graph() -> dict[str, Any] | None:
-    """Fetch a random connected graph."""
+    """Fetch a random connected graph.
+
+    First uniformly samples n from {1, 2, ..., 10}, then samples a random
+    graph with that n. This avoids bias toward larger n values.
+    """
     import random
     ph = _placeholder()
     has_tags = await _check_tags_column()
     tags_col = _tags_col(has_tags)
 
+    # First, uniformly sample n from available values
     async with get_db() as conn:
         if IS_SQLITE:
             cursor = await conn.execute(
-                "SELECT MIN(id), MAX(id) FROM graphs WHERE diameter IS NOT NULL"
+                "SELECT DISTINCT n FROM graphs WHERE diameter IS NOT NULL ORDER BY n"
+            )
+            rows = await cursor.fetchall()
+            if not rows:
+                return None
+            available_n = [row[0] for row in rows]
+            rand_n = random.choice(available_n)
+
+            # Now get a random graph with this n
+            cursor = await conn.execute(
+                f"SELECT COUNT(*) FROM graphs WHERE n = {ph} AND diameter IS NOT NULL",
+                (rand_n,)
+            )
+            count_row = await cursor.fetchone()
+            if not count_row or count_row[0] == 0:
+                return None
+
+            offset = random.randint(0, count_row[0] - 1)
+            cursor = await conn.execute(
+                f"""
+                SELECT graph6, n, m,
+                       is_bipartite, is_planar, is_regular,
+                       diameter, girth, radius,
+                       min_degree, max_degree, triangle_count,
+                       clique_number, chromatic_number,
+                       algebraic_connectivity, global_clustering, avg_local_clustering,
+                       avg_path_length, assortativity,
+                       adj_eigenvalues, adj_spectral_hash,
+                       kirchhoff_eigenvalues, kirchhoff_spectral_hash,
+                       signless_eigenvalues, signless_spectral_hash,
+                       lap_eigenvalues, lap_spectral_hash,
+                       nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
+                       nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash,
+                       dist_eigenvalues, dist_spectral_hash
+                       {tags_col}
+                FROM graphs
+                WHERE n = {ph} AND diameter IS NOT NULL
+                LIMIT 1 OFFSET {ph}
+                """,
+                (rand_n, offset),
             )
             row = await cursor.fetchone()
-            if not row or not row[0]:
-                return None
-            min_id, max_id = int(row[0]), int(row[1])
-
-            for _ in range(10):
-                rand_id = random.randint(min_id, max_id)
-                cursor = await conn.execute(
-                    f"""
-                    SELECT graph6, n, m,
-                           is_bipartite, is_planar, is_regular,
-                           diameter, girth, radius,
-                           min_degree, max_degree, triangle_count,
-                           clique_number, chromatic_number,
-                           algebraic_connectivity, global_clustering, avg_local_clustering,
-                           avg_path_length, assortativity,
-                           adj_eigenvalues, adj_spectral_hash,
-                           kirchhoff_eigenvalues, kirchhoff_spectral_hash,
-                           signless_eigenvalues, signless_spectral_hash,
-                           lap_eigenvalues, lap_spectral_hash,
-                           nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
-                           nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash,
-                           dist_eigenvalues, dist_spectral_hash
-                           {tags_col}
-                    FROM graphs
-                    WHERE id >= {ph} AND diameter IS NOT NULL
-                    LIMIT 1
-                    """,
-                    (rand_id,),
-                )
-                row = await cursor.fetchone()
-                if row:
-                    return _parse_row(row)
+            if row:
+                return _parse_row(row)
             return None
         else:
             cur = conn.cursor()
-            cur.execute("SELECT MIN(id), MAX(id) FROM graphs WHERE diameter IS NOT NULL")
-            row = cur.fetchone()
-            if not row or not row[0]:
+            cur.execute("SELECT DISTINCT n FROM graphs WHERE diameter IS NOT NULL ORDER BY n")
+            rows = cur.fetchall()
+            if not rows:
                 return None
-            min_id, max_id = int(row[0]), int(row[1])
+            available_n = [row[0] for row in rows]
+            rand_n = random.choice(available_n)
+
+            # Now get a random graph with this n
+            cur.execute(
+                f"SELECT COUNT(*) FROM graphs WHERE n = {ph} AND diameter IS NOT NULL",
+                (rand_n,)
+            )
+            count_row = cur.fetchone()
+            if not count_row or count_row[0] == 0:
+                return None
+
+            offset = random.randint(0, count_row[0] - 1)
 
             from psycopg2.extras import RealDictCursor
             cur = conn.cursor(cursor_factory=RealDictCursor)
-            for _ in range(10):
-                rand_id = random.randint(min_id, max_id)
-                cur.execute(
-                    f"""
-                    SELECT graph6, n, m,
-                           is_bipartite, is_planar, is_regular,
-                           diameter, girth, radius,
-                           min_degree, max_degree, triangle_count,
-                           clique_number, chromatic_number,
-                           algebraic_connectivity, global_clustering, avg_local_clustering,
-                           avg_path_length, assortativity,
-                           adj_eigenvalues, adj_spectral_hash,
-                           kirchhoff_eigenvalues, kirchhoff_spectral_hash,
-                           signless_eigenvalues, signless_spectral_hash,
-                           lap_eigenvalues, lap_spectral_hash,
-                           nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
-                           nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash,
-                           dist_eigenvalues, dist_spectral_hash
-                           {tags_col}
-                    FROM graphs
-                    WHERE id >= {ph} AND diameter IS NOT NULL
-                    LIMIT 1
-                    """,
-                    (rand_id,),
-                )
-                row = cur.fetchone()
-                if row:
-                    return _parse_row(row)
+            cur.execute(
+                f"""
+                SELECT graph6, n, m,
+                       is_bipartite, is_planar, is_regular,
+                       diameter, girth, radius,
+                       min_degree, max_degree, triangle_count,
+                       clique_number, chromatic_number,
+                       algebraic_connectivity, global_clustering, avg_local_clustering,
+                       avg_path_length, assortativity,
+                       adj_eigenvalues, adj_spectral_hash,
+                       kirchhoff_eigenvalues, kirchhoff_spectral_hash,
+                       signless_eigenvalues, signless_spectral_hash,
+                       lap_eigenvalues, lap_spectral_hash,
+                       nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
+                       nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash,
+                       dist_eigenvalues, dist_spectral_hash
+                       {tags_col}
+                FROM graphs
+                WHERE n = {ph} AND diameter IS NOT NULL
+                LIMIT 1 OFFSET {ph}
+                """,
+                (rand_n, offset),
+            )
+            row = cur.fetchone()
+            if row:
+                return _parse_row(row)
             return None
 
 
 async def fetch_random_cospectral_class(matrix: str = "adj") -> list[str]:
-    """Fetch a random cospectral class using pre-computed pairs."""
+    """Fetch a random cospectral class for the specified matrix type using pre-computed pairs."""
     ph = _placeholder()
 
     async with get_db() as conn:
