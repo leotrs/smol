@@ -7,3 +7,4 @@ __pycache__/
 smol.db
 .coverage
 .deploy_chunks/
+research/
