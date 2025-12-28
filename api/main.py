@@ -242,6 +242,22 @@ async def random_graph():
     return RedirectResponse(url=f"/graph/{quote(row['graph6'], safe='')}", status_code=302)
 
 
+@app.get("/cospectral-pairs")
+async def cospectral_pairs(
+    matrix: str = "adj",
+    n: int | None = None,
+    limit: int = Query(default=10, le=100),
+    offset: int = 0,
+):
+    """Get cospectral pairs for a given matrix type."""
+    if matrix not in ("adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"):
+        raise HTTPException(status_code=400, detail="Invalid matrix type")
+
+    from api.database import fetch_cospectral_pairs
+    pairs = await fetch_cospectral_pairs(matrix=matrix, n=n, limit=limit, offset=offset)
+    return pairs
+
+
 @app.get("/random/cospectral")
 async def random_cospectral(matrix: str | None = None):
     """Redirect to compare page with a random cospectral class.

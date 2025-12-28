@@ -1431,3 +1431,65 @@ class TestMechanismVisualization:
         assert response.status_code == 200
         # Should not show GM mechanism section
         assert "GM Switching" not in response.text
+
+
+@needs_db
+class TestCospectralPairsEndpoint:
+    def test_cospectral_pairs_returns_json(self):
+        """Test that /cospectral-pairs returns JSON."""
+        response = client.get("/cospectral-pairs?matrix=adj&n=8&limit=2")
+        assert response.status_code == 200
+        assert "application/json" in response.headers["content-type"]
+
+    def test_cospectral_pairs_structure(self):
+        """Test that pairs have correct structure."""
+        response = client.get("/cospectral-pairs?matrix=adj&n=8&limit=1")
+        data = response.json()
+        assert isinstance(data, list)
+        if len(data) > 0:
+            pair = data[0]
+            assert "graph1" in pair
+            assert "graph2" in pair
+            assert "matrix_type" in pair
+            assert "graph6" in pair["graph1"]
+            assert "n" in pair["graph1"]
+            assert "m" in pair["graph1"]
+            assert "graph6" in pair["graph2"]
+            assert "n" in pair["graph2"]
+            assert "m" in pair["graph2"]
+            assert pair["matrix_type"] == "adj"
+
+    def test_cospectral_pairs_filters_by_matrix(self):
+        """Test filtering by matrix type."""
+        response = client.get("/cospectral-pairs?matrix=nb&n=8&limit=1")
+        data = response.json()
+        assert response.status_code == 200
+        if len(data) > 0:
+            assert data[0]["matrix_type"] == "nb"
+
+    def test_cospectral_pairs_filters_by_n(self):
+        """Test filtering by n."""
+        response = client.get("/cospectral-pairs?matrix=adj&n=7&limit=5")
+        data = response.json()
+        assert response.status_code == 200
+        for pair in data:
+            assert pair["graph1"]["n"] == 7
+            assert pair["graph2"]["n"] == 7
+
+    def test_cospectral_pairs_respects_limit(self):
+        """Test that limit parameter works."""
+        response = client.get("/cospectral-pairs?matrix=adj&n=8&limit=3")
+        data = response.json()
+        assert response.status_code == 200
+        assert len(data) <= 3
+
+    def test_cospectral_pairs_invalid_matrix(self):
+        """Test that invalid matrix type returns 400."""
+        response = client.get("/cospectral-pairs?matrix=invalid")
+        assert response.status_code == 400
+
+    def test_cospectral_pairs_all_matrix_types(self):
+        """Test all valid matrix types."""
+        for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"]:
+            response = client.get(f"/cospectral-pairs?matrix={matrix}&limit=1")
+            assert response.status_code == 200, f"Failed for matrix={matrix}"

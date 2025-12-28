@@ -100,7 +100,7 @@ if __name__ == "__main__":
     print("Example 2: Find 3-regular graphs on 6 vertices")
     print("=" * 60)
 
-    regular_graphs = query_graphs({"n": 6, "regular": True, "min_degree": 3, "max_degree": 3})
+    regular_graphs = query_graphs({"n": 6, "regular": "true", "min_degree": 3, "max_degree": 3})
     print(f"Found {len(regular_graphs)} graphs:")
     for g in regular_graphs:
         print(f"  {g['graph6']}: {g['m']} edges, diameter={g['properties']['diameter']}")
@@ -111,7 +111,7 @@ if __name__ == "__main__":
     print("Example 3: Find bipartite graphs on 7 vertices (first 5)")
     print("=" * 60)
 
-    bipartite = query_graphs({"n": 7, "bipartite": True, "limit": 5})
+    bipartite = query_graphs({"n": 7, "bipartite": "true", "limit": 5})
     print(f"Found {len(bipartite)} graphs (showing first 5):")
     for g in bipartite:
         props = g['properties']

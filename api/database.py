@@ -536,6 +536,78 @@ async def fetch_random_graph() -> dict[str, Any] | None:
             return None
 
 
+async def fetch_cospectral_pairs(
+    matrix: str = "adj",
+    n: int | None = None,
+    limit: int = 10,
+    offset: int = 0,
+) -> list[dict[str, Any]]:
+    """Fetch cospectral pairs from the pre-computed table.
+
+    Returns list of dicts with keys: graph1, graph2 (each a dict with graph6, n, m).
+    """
+    ph = _placeholder()
+
+    async with get_db() as conn:
+        conditions = [f"cm.matrix_type = {ph}"]
+        params = [matrix]
+
+        if n is not None:
+            conditions.append(f"g1.n = {ph}")
+            params.append(n)
+
+        where = " AND ".join(conditions)
+        params.extend([limit, offset])
+
+        if IS_SQLITE:
+            cursor = await conn.execute(
+                f"""
+                SELECT g1.graph6 as g1_graph6, g1.n as g1_n, g1.m as g1_m,
+                       g2.graph6 as g2_graph6, g2.n as g2_n, g2.m as g2_m
+                FROM cospectral_mates cm
+                JOIN graphs g1 ON cm.graph1_id = g1.id
+                JOIN graphs g2 ON cm.graph2_id = g2.id
+                WHERE {where}
+                LIMIT {ph} OFFSET {ph}
+                """,
+                params,
+            )
+            rows = await cursor.fetchall()
+        else:
+            from psycopg2.extras import RealDictCursor
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute(
+                f"""
+                SELECT g1.graph6 as g1_graph6, g1.n as g1_n, g1.m as g1_m,
+                       g2.graph6 as g2_graph6, g2.n as g2_n, g2.m as g2_m
+                FROM cospectral_mates cm
+                JOIN graphs g1 ON cm.graph1_id = g1.id
+                JOIN graphs g2 ON cm.graph2_id = g2.id
+                WHERE {where}
+                LIMIT {ph} OFFSET {ph}
+                """,
+                params,
+            )
+            rows = cur.fetchall()
+
+        result = []
+        for row in rows:
+            result.append({
+                "graph1": {
+                    "graph6": row["g1_graph6" if IS_SQLITE else "g1_graph6"],
+                    "n": row["g1_n"],
+                    "m": row["g1_m"],
+                },
+                "graph2": {
+                    "graph6": row["g2_graph6" if IS_SQLITE else "g2_graph6"],
+                    "n": row["g2_n"],
+                    "m": row["g2_m"],
+                },
+                "matrix_type": matrix,
+            })
+        return result
+
+
 async def fetch_random_cospectral_class(matrix: str = "adj") -> list[str]:
     """Fetch a random cospectral class for the specified matrix type using pre-computed pairs."""
     ph = _placeholder()

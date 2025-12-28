@@ -136,13 +136,13 @@ if __name__ == "__main__":
     print("Example 4: Spectral properties of Petersen-like graphs")
     print("=" * 60)
 
-    # Find 3-regular graphs on 10 vertices (Petersen graph is one)
-    regular_10 = query_graphs({"n": 10, "regular": True, "min_degree": 3, "max_degree": 3, "limit": 10})
+    # Find 3-regular graphs on 8 vertices
+    regular_8 = query_graphs({"n": 8, "regular": "true", "limit": 10})
 
-    print(f"Found {len(regular_10)} 3-regular graphs on 10 vertices")
+    print(f"Found {len(regular_8)} 3-regular graphs on 8 vertices")
     print("\nComparing spectral radii (largest adjacency eigenvalue):")
 
-    for g in regular_10[:5]:
+    for g in regular_8[:5]:
         full = get_graph(g["graph6"])
         eigs = full["spectra"]["adj_eigenvalues"]
         spectral_radius = max(abs(e) for e in eigs)
@@ -198,14 +198,20 @@ if __name__ == "__main__":
     graph6 = "H?`crjU"
     encoded = quote(graph6, safe="")
     response = requests.get(f"{BASE_URL}/api/graph/{encoded}/mechanisms")
-    mechanisms = response.json()
+    data = response.json()
 
     print(f"Graph: {graph6}")
-    print(f"Mechanisms found: {len(mechanisms)}")
-    for mech in mechanisms[:3]:  # Show first 3
-        print(f"  Mate: {mech['mate_graph6']}")
-        print(f"    Matrix: {mech['matrix_type']}")
-        print(f"    Mechanism: {mech['mechanism_type']}")
-        if mech.get('config'):
-            print(f"    Config: {mech['config']}")
-        print()
+    mechanisms = data.get('mechanisms', {})
+    total_mechs = sum(len(mechs) for mechs in mechanisms.values())
+    print(f"Mechanisms found: {total_mechs}")
+
+    for matrix_type, mechs in mechanisms.items():
+        for mech in mechs[:2]:  # Show first 2 per matrix type
+            print(f"  Mate: {mech['mate']}")
+            print(f"    Matrix: {matrix_type}")
+            print(f"    Mechanism: {mech['mechanism']}")
+            if mech.get('config'):
+                partition = mech['config'].get('partition', [])
+                print(f"    Partition size: {len(partition)} classes")
+        if mechs:
+            break  # Just show one matrix type for brevity

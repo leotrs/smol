@@ -79,6 +79,7 @@ just deploy-db --skip-export                   # Skip export, use existing smol.
 GET /                              Home page (search interface)
 GET /graph/{graph6}                Graph detail + cospectral mates + tags + mechanisms
 GET /graphs                        Query/filter graphs (HTMX partial or JSON)
+GET /cospectral-pairs              Get cospectral pairs (matrix, n, limit, offset)
 GET /search                        Advanced search with filters
 GET /compare?graphs=...            Compare multiple graphs
 GET /similar/{graph6}              Find spectrally similar graphs (Earth Mover's Distance)
