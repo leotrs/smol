@@ -40,6 +40,7 @@ class TestPythonExamples:
             assert "SyntaxError" not in stderr, f"Syntax error: {stderr}"
 
 
+@needs_db
 class TestNotebooks:
     """Test that Jupyter notebooks execute without errors."""
 
