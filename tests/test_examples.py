@@ -6,6 +6,10 @@ These tests actually execute the examples to verify they work.
 import subprocess
 import sys
 
+import pytest
+
+needs_db = pytest.mark.needs_db
+
 
 class TestPythonExamples:
     """Test that Python example scripts execute without errors."""
