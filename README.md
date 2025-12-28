@@ -3,11 +3,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
-A database of all small connected graphs with their spectral properties.
+A database of all small simple undirected graphs (connected and disconnected) with their spectral properties.
 
 ## What's in the database
 
-For each connected graph on up to 10 vertices, SMOL stores:
+For each simple undirected graph on up to 10 vertices (connected and disconnected), SMOL stores:
 
 **Spectra for seven matrix types:**
 - Adjacency matrix
@@ -172,7 +172,7 @@ smol/
 ├── sql/
 │   ├── schema.sql           # PostgreSQL schema
 │   └── schema_sqlite.sql    # SQLite schema
-└── tests/                   # 239 tests
+└── tests/                   # 305 tests
 ```
 
 ## Tech Stack

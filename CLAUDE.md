@@ -151,4 +151,4 @@ The source of divergence is unidentified. Possibilities: precision differences (
   - `generate.py` - Parallel graph generation (multiprocessing, resumable)
   - `compute_tags.py` - Backfill tags for existing graphs
 - `sql/` - Database schema (PostgreSQL and SQLite versions)
-- `tests/` - Pytest tests (143 tests, all passing)
+- `tests/` - Pytest tests (305 tests)
