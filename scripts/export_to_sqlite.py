@@ -22,6 +22,7 @@ PG_DATABASE_URL = os.environ.get("DATABASE_URL", "dbname=smol")
 TABLES = {
     "graphs": "n <= {max_n}",
     "cospectral_mates": "graph1_id IN (SELECT id FROM graphs WHERE n <= {max_n})",
+    "switching_mechanisms": "graph1_id IN (SELECT id FROM graphs WHERE n <= {max_n})",
     "stats_cache": None,
 }
 
