@@ -4,23 +4,8 @@
 
 {% block content %}
 <div class="search-header">
-    <div>
-        <h1>Search Results</h1>
-        <p>Found <strong {% if results_capped %}hx-get="/search/count?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}" hx-trigger="load" hx-swap="innerHTML"{% endif %}>{% if results_capped %}1,000+{% else %}{{ "{:,}".format(total_count) }}{% endif %}</strong> graph{% if total_count != 1 %}s{% endif %} matching your criteria.</p>
-    </div>
-    {% if total_count > 0 %}
-    <div class="export-buttons">
-        <a href="/search/export?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}limit={{ limit }}&format=csv" class="export-btn" download>
-            📄 CSV
-        </a>
-        <a href="/search/export?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}limit={{ limit }}&format=json" class="export-btn" download>
-            📋 JSON
-        </a>
-        <a href="/search/export?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}limit={{ limit }}&format=graph6" class="export-btn" download>
-            🔢 graph6
-        </a>
-    </div>
-    {% endif %}
+    <h1 style="margin-bottom: 0.25rem;">Search Results</h1>
+    <p style="font-size: 1.1rem; margin-bottom: 1.5rem;">Found <strong {% if results_capped %}hx-get="/search/count?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}" hx-trigger="load" hx-swap="innerHTML"{% endif %}>{% if results_capped %}1,000+{% else %}{{ "{:,}".format(total_count) }}{% endif %}</strong> graph{% if total_count != 1 %}s{% endif %} matching your criteria</p>
 </div>
 
 {% if total_count > 0 %}
@@ -32,8 +17,8 @@ window.searchData = {{ all_graphs | tojson }};
 </script>
 
 <div class="results-cap-warning">
-    <strong>⚠️ Showing first 1,000 of 1,000+ results.</strong>
-    For the full dataset, use the <a href="#api-equivalent">API</a> or export functionality above.
+    <strong>Showing first 1,000 of <span hx-get="/search/count?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}" hx-trigger="load" hx-swap="innerHTML">1,000+</span> results.</strong>
+    For the full dataset, see the <a href="#api-equivalent">API</a> or <a href="#data-section">Data</a> sections below.
 </div>
 
 <!-- Alpine.js powered client-side sorting and pagination -->
@@ -42,22 +27,26 @@ window.searchData = {{ all_graphs | tojson }};
     sortBy: '{{ sort_by }}',
     sortOrder: '{{ sort_order }}',
     currentPage: 1,
-    perPage: {{ limit }},
+    perPage: {{ limit if limit else 20 }},
     columnPickerOpen: false,
     allColumns: [
-        { key: 'graph6', label: 'graph6', sortable: true, fixed: true },
-        { key: 'n', label: 'n', sortable: true, default: true },
-        { key: 'm', label: 'm', sortable: true, default: true },
-        { key: 'tags', label: 'Tags', sortable: false, default: true },
-        { key: 'diameter', label: 'Diameter', sortable: true, default: true },
-        { key: 'girth', label: 'Girth', sortable: true, default: true },
-        { key: 'radius', label: 'Radius', sortable: true, default: false },
-        { key: 'min_degree', label: 'Min Degree', sortable: true, default: false },
-        { key: 'max_degree', label: 'Max Degree', sortable: true, default: false },
-        { key: 'triangle_count', label: 'Triangles', sortable: true, default: false },
-        { key: 'clique_number', label: 'Clique #', sortable: true, default: false },
-        { key: 'chromatic_number', label: 'Chromatic #', sortable: true, default: false },
+        { key: 'graph6', label: 'graph6', sortable: true, fixed: true, group: 'core' },
+        { key: 'n', label: 'n', sortable: true, default: true, group: 'core' },
+        { key: 'm', label: 'm', sortable: true, default: true, group: 'core' },
+        { key: 'tags', label: 'Tags', sortable: false, default: true, group: 'core' },
+        { key: 'diameter', label: 'Diameter', sortable: true, default: false, group: 'properties' },
+        { key: 'girth', label: 'Girth', sortable: true, default: false, group: 'properties' },
+        { key: 'radius', label: 'Radius', sortable: true, default: false, group: 'properties' },
+        { key: 'min_degree', label: 'Min Degree', sortable: true, default: false, group: 'properties' },
+        { key: 'max_degree', label: 'Max Degree', sortable: true, default: false, group: 'properties' },
+        { key: 'triangle_count', label: 'Triangles', sortable: true, default: false, group: 'properties' },
+        { key: 'clique_number', label: 'Clique #', sortable: true, default: false, group: 'properties' },
+        { key: 'chromatic_number', label: 'Chromatic #', sortable: true, default: false, group: 'properties' },
     ],
+    columnGroups: {
+        'core': 'Core',
+        'properties': 'Properties'
+    },
     get availableColumns() {
         return this.allColumns;
     },
@@ -91,6 +80,20 @@ window.searchData = {{ all_graphs | tojson }};
             this.visibleColumns.push(key);
         }
         localStorage.setItem('smol_visible_columns', JSON.stringify(this.visibleColumns));
+    },
+    resetToDefaults() {
+        this.visibleColumns = this.allColumns.filter(c => c.default).map(c => c.key);
+        localStorage.setItem('smol_visible_columns', JSON.stringify(this.visibleColumns));
+    },
+    showAllColumns() {
+        this.visibleColumns = this.allColumns.filter(c => !c.fixed).map(c => c.key);
+        if (!this.visibleColumns.includes('graph6')) {
+            this.visibleColumns.unshift('graph6');
+        }
+        localStorage.setItem('smol_visible_columns', JSON.stringify(this.visibleColumns));
+    },
+    getColumnsByGroup(group) {
+        return this.toggleableColumns.filter(c => c.group === group);
     },
     getValue(graph, key) {
         if (key === 'graph6') return graph.graph6;
@@ -143,40 +146,50 @@ window.searchData = {{ all_graphs | tojson }};
             this.sortOrder = 'asc';
         }
         this.currentPage = 1;
+    },
+    changePerPage(newPerPage) {
+        this.perPage = parseInt(newPerPage);
+        this.currentPage = 1;
     }
 }">
 
-<!-- Column Picker -->
-<div class="column-picker" style="margin-bottom: 1rem;">
+<!-- Column Picker (will be moved to header) -->
+<div x-init="$nextTick(() => { const wrapper = document.querySelector('.column-picker-wrapper'); if (wrapper) wrapper.appendChild($el); })">
+<div class="column-picker">
     <div style="position: relative; display: inline-block;">
-        <button @click="columnPickerOpen = !columnPickerOpen" class="secondary" style="font-size: 0.9rem;">
-            ⚙️ Columns (<span x-text="visibleColumnCount"></span>)
+        <button @click="columnPickerOpen = !columnPickerOpen" role="button" style="padding: 0.2rem 0.4rem !important; line-height: 1; background: transparent; border: none; color: var(--pico-muted-color); min-width: auto;" aria-label="Column settings">
+            ⋮
         </button>
         <div x-show="columnPickerOpen"
              @click.outside="columnPickerOpen = false"
              x-transition
-             style="position: absolute; top: 100%; left: 0; background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); padding: 1rem; min-width: 200px; z-index: 1000; box-shadow: var(--pico-card-box-shadow); margin-top: 0.25rem;">
-            <div style="font-weight: bold; margin-bottom: 0.5rem; font-size: 0.9rem;">Select Columns:</div>
-            <template x-for="col in toggleableColumns" :key="col.key">
-                <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; cursor: pointer; font-size: 0.85rem;">
-                    <input type="checkbox"
-                           :checked="isColumnVisible(col.key)"
-                           @change="toggleColumn(col.key)"
-                           style="margin: 0; width: auto;">
-                    <span x-text="col.label"></span>
-                </label>
+             style="position: absolute; top: 100%; right: 0; background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); padding: 1rem; min-width: 220px; z-index: 1000; box-shadow: var(--pico-card-box-shadow); margin-top: 0.25rem;">
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                <button @click="showAllColumns()" class="secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">Show All</button>
+                <button @click="resetToDefaults()" class="secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">Reset</button>
+            </div>
+            <template x-for="group in Object.keys(columnGroups)" :key="group">
+                <div style="margin-bottom: 1rem;">
+                    <div style="font-weight: 600; margin-bottom: 0.5rem; font-size: 0.8rem; color: var(--pico-muted-color); text-transform: uppercase; letter-spacing: 0.05em;" x-text="columnGroups[group]"></div>
+                    <template x-for="col in getColumnsByGroup(group)" :key="col.key">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; cursor: pointer; font-size: 0.85rem;">
+                            <input type="checkbox"
+                                   :checked="isColumnVisible(col.key)"
+                                   @change="toggleColumn(col.key)"
+                                   style="margin: 0; width: auto;">
+                            <span x-text="col.label"></span>
+                        </label>
+                    </template>
+                </div>
             </template>
         </div>
     </div>
 </div>
-
-<p class="results-range">
-    Showing <span x-text="((currentPage - 1) * perPage + 1).toLocaleString()"></span>-<span x-text="Math.min(currentPage * perPage, sortedGraphs.length).toLocaleString()"></span> of <span x-text="sortedGraphs.length.toLocaleString()"></span>
-</p>
+</div>
 
 <!-- Results Table -->
 <div class="table-wrapper">
-<table>
+<table class="search-results-table">
     <thead>
         <tr>
             <template x-for="col in availableColumns" :key="col.key">
@@ -192,6 +205,9 @@ window.searchData = {{ all_graphs | tojson }};
                     </template>
                 </th>
             </template>
+            <th style="width: 1%; white-space: nowrap;">
+                <div class="column-picker-wrapper"></div>
+            </th>
         </tr>
     </thead>
     <tbody>
@@ -228,32 +244,47 @@ window.searchData = {{ all_graphs | tojson }};
                     </template>
                 </td>
             </template>
+            <td></td>
         </tr>
         </template>
     </tbody>
 </table>
 </div>
 
-<!-- Client-side Pagination -->
-<div class="pagination" x-show="totalPages > 1">
-    <button @click="currentPage > 1 && currentPage--" :disabled="currentPage === 1" class="page-link" :style="currentPage === 1 ? 'opacity: 0.5; cursor: not-allowed;' : ''">&laquo; Previous</button>
+<!-- Per-page selector and Pagination -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; gap: 1rem;">
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <label for="per-page-client" style="margin: 0; font-size: 0.875rem; color: var(--pico-muted-color); white-space: nowrap;">Show</label>
+        <select id="per-page-client" x-model="perPage" @change="changePerPage(perPage)" style="width: 80px; padding: 0.25rem 0.5rem; font-size: 0.875rem; margin: 0;">
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+        </select>
+        <span style="font-size: 0.875rem; color: var(--pico-muted-color); white-space: nowrap;">per page</span>
+    </div>
 
-    <template x-for="p in Array.from({length: totalPages}, (_, i) => i + 1)" :key="p">
-        <span>
-            <template x-if="p === 1 || p === totalPages || (p >= currentPage - 2 && p <= currentPage + 2)">
-                <button @click="currentPage = p"
-                        :class="p === currentPage ? 'page-current' : 'page-link'"
-                        x-text="p"
-                        :style="p === currentPage ? 'font-weight: bold;' : ''"></button>
-            </template>
-            <template x-if="p === currentPage - 3 || p === currentPage + 3">
-                <span class="page-ellipsis">...</span>
-            </template>
-        </span>
-    </template>
+    <!-- Client-side Pagination (Bottom) -->
+    <div x-show="totalPages > 1" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+        <button @click="currentPage > 1 && currentPage--" :disabled="currentPage === 1" class="page-link" :style="currentPage === 1 ? 'opacity: 0.5; cursor: not-allowed;' : ''">&laquo; Previous</button>
 
-    <button @click="currentPage < totalPages && currentPage++" :disabled="currentPage === totalPages" class="page-link" :style="currentPage === totalPages ? 'opacity: 0.5; cursor: not-allowed;' : ''">Next &raquo;</button>
-</div>
+        <template x-for="p in Array.from({length: totalPages}, (_, i) => i + 1)" :key="p">
+            <span>
+                <template x-if="p === 1 || p === totalPages || (p >= currentPage - 2 && p <= currentPage + 2)">
+                    <button @click="currentPage = p"
+                            :class="p === currentPage ? 'page-current' : 'page-link'"
+                            x-text="p"
+                            :style="p === currentPage ? 'font-weight: bold;' : ''"></button>
+                </template>
+                <template x-if="p === currentPage - 3 || p === currentPage + 3">
+                    <span class="page-ellipsis">...</span>
+                </template>
+            </span>
+        </template>
+
+        <button @click="currentPage < totalPages && currentPage++" :disabled="currentPage === totalPages" class="page-link" :style="currentPage === totalPages ? 'opacity: 0.5; cursor: not-allowed;' : ''">Next &raquo;</button>
+    </div>
+</div> <!-- Close flex container -->
 
 </div> <!-- Close Alpine.js x-data div -->
 
@@ -262,19 +293,23 @@ window.searchData = {{ all_graphs | tojson }};
 <div x-data="{
     columnPickerOpen: false,
     allColumns: [
-        { key: 'graph6', label: 'graph6', sortable: true, fixed: true },
-        { key: 'n', label: 'n', sortable: true, default: true },
-        { key: 'm', label: 'm', sortable: true, default: true },
-        { key: 'tags', label: 'Tags', sortable: false, default: true },
-        { key: 'diameter', label: 'Diameter', sortable: true, default: true },
-        { key: 'girth', label: 'Girth', sortable: true, default: true },
-        { key: 'radius', label: 'Radius', sortable: true, default: false },
-        { key: 'min_degree', label: 'Min Degree', sortable: true, default: false },
-        { key: 'max_degree', label: 'Max Degree', sortable: true, default: false },
-        { key: 'triangle_count', label: 'Triangles', sortable: true, default: false },
-        { key: 'clique_number', label: 'Clique #', sortable: true, default: false },
-        { key: 'chromatic_number', label: 'Chromatic #', sortable: true, default: false },
+        { key: 'graph6', label: 'graph6', sortable: true, fixed: true, group: 'core' },
+        { key: 'n', label: 'n', sortable: true, default: true, group: 'core' },
+        { key: 'm', label: 'm', sortable: true, default: true, group: 'core' },
+        { key: 'tags', label: 'Tags', sortable: false, default: true, group: 'core' },
+        { key: 'diameter', label: 'Diameter', sortable: true, default: false, group: 'properties' },
+        { key: 'girth', label: 'Girth', sortable: true, default: false, group: 'properties' },
+        { key: 'radius', label: 'Radius', sortable: true, default: false, group: 'properties' },
+        { key: 'min_degree', label: 'Min Degree', sortable: true, default: false, group: 'properties' },
+        { key: 'max_degree', label: 'Max Degree', sortable: true, default: false, group: 'properties' },
+        { key: 'triangle_count', label: 'Triangles', sortable: true, default: false, group: 'properties' },
+        { key: 'clique_number', label: 'Clique #', sortable: true, default: false, group: 'properties' },
+        { key: 'chromatic_number', label: 'Chromatic #', sortable: true, default: false, group: 'properties' },
     ],
+    columnGroups: {
+        'core': 'Core',
+        'properties': 'Properties'
+    },
     get availableColumns() {
         return this.allColumns;
     },
@@ -309,6 +344,20 @@ window.searchData = {{ all_graphs | tojson }};
         }
         localStorage.setItem('smol_visible_columns', JSON.stringify(this.visibleColumns));
     },
+    resetToDefaults() {
+        this.visibleColumns = this.allColumns.filter(c => c.default).map(c => c.key);
+        localStorage.setItem('smol_visible_columns', JSON.stringify(this.visibleColumns));
+    },
+    showAllColumns() {
+        this.visibleColumns = this.allColumns.filter(c => !c.fixed).map(c => c.key);
+        if (!this.visibleColumns.includes('graph6')) {
+            this.visibleColumns.unshift('graph6');
+        }
+        localStorage.setItem('smol_visible_columns', JSON.stringify(this.visibleColumns));
+    },
+    getColumnsByGroup(group) {
+        return this.toggleableColumns.filter(c => c.group === group);
+    },
     getValue(graph, key) {
         if (key === 'graph6') return graph.graph6;
         if (key === 'n') return graph.n;
@@ -326,40 +375,46 @@ window.searchData = {{ all_graphs | tojson }};
     }
 }">
 
-<!-- Column Picker -->
-<div class="column-picker" style="margin-bottom: 1rem;">
+<!-- Column Picker (will be moved to header) -->
+<div x-init="$nextTick(() => { const wrapper = document.querySelector('.column-picker-wrapper'); if (wrapper) wrapper.appendChild($el); })">
+<div class="column-picker">
     <div style="position: relative; display: inline-block;">
-        <button @click="columnPickerOpen = !columnPickerOpen" class="secondary" style="font-size: 0.9rem;">
-            ⚙️ Columns (<span x-text="visibleColumnCount"></span>)
+        <button @click="columnPickerOpen = !columnPickerOpen" role="button" style="padding: 0.2rem 0.4rem !important; line-height: 1; background: transparent; border: none; color: var(--pico-muted-color); min-width: auto;" aria-label="Column settings">
+            ⋮
         </button>
         <div x-show="columnPickerOpen"
              @click.outside="columnPickerOpen = false"
              x-transition
-             style="position: absolute; top: 100%; left: 0; background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); padding: 1rem; min-width: 200px; z-index: 1000; box-shadow: var(--pico-card-box-shadow); margin-top: 0.25rem;">
-            <div style="font-weight: bold; margin-bottom: 0.5rem; font-size: 0.9rem;">Select Columns:</div>
-            <template x-for="col in toggleableColumns" :key="col.key">
-                <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; cursor: pointer; font-size: 0.85rem;">
-                    <input type="checkbox"
-                           :checked="isColumnVisible(col.key)"
-                           @change="toggleColumn(col.key)"
-                           style="margin: 0; width: auto;">
-                    <span x-text="col.label"></span>
-                </label>
+             style="position: absolute; top: 100%; right: 0; background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); padding: 1rem; min-width: 220px; z-index: 1000; box-shadow: var(--pico-card-box-shadow); margin-top: 0.25rem;">
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                <button @click="showAllColumns()" class="secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">Show All</button>
+                <button @click="resetToDefaults()" class="secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">Reset</button>
+            </div>
+            <template x-for="group in Object.keys(columnGroups)" :key="group">
+                <div style="margin-bottom: 1rem;">
+                    <div style="font-weight: 600; margin-bottom: 0.5rem; font-size: 0.8rem; color: var(--pico-muted-color); text-transform: uppercase; letter-spacing: 0.05em;" x-text="columnGroups[group]"></div>
+                    <template x-for="col in getColumnsByGroup(group)" :key="col.key">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; cursor: pointer; font-size: 0.85rem;">
+                            <input type="checkbox"
+                                   :checked="isColumnVisible(col.key)"
+                                   @change="toggleColumn(col.key)"
+                                   style="margin: 0; width: auto;">
+                            <span x-text="col.label"></span>
+                        </label>
+                    </template>
+                </div>
             </template>
         </div>
     </div>
 </div>
-
-<p class="results-range">
-    Showing {{ "{:,}".format(start_idx) }}-{{ "{:,}".format(end_idx) }} of {{ "{:,}".format(total_count) }}
-</p>
+</div>
 
 <!-- Results Table -->
 <script>
 window.serverGraphs = {{ graphs | tojson }};
 </script>
 <div class="table-wrapper">
-<table>
+<table class="search-results-table">
     <thead>
         <tr>
             <template x-for="col in availableColumns" :key="col.key">
@@ -375,6 +430,9 @@ window.serverGraphs = {{ graphs | tojson }};
                     </template>
                 </th>
             </template>
+            <th style="width: 1%; white-space: nowrap;">
+                <div class="column-picker-wrapper"></div>
+            </th>
         </tr>
     </thead>
     <tbody>
@@ -411,44 +469,61 @@ window.serverGraphs = {{ graphs | tojson }};
                     </template>
                 </td>
             </template>
+            <td></td>
         </tr>
         </template>
     </tbody>
 </table>
 </div>
 
-<!-- Server-side Pagination -->
-{% if total_pages > 1 %}
-<div class="pagination">
-    {% if has_prev %}
-    <a href="/search?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page - 1 }}&limit={{ limit }}&sort_by={{ sort_by }}&sort_order={{ sort_order }}" class="page-link">&laquo; Previous</a>
-    {% endif %}
+<!-- Per-page selector and Pagination -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; gap: 1rem;">
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <label for="per-page-server" style="margin: 0; font-size: 0.875rem; color: var(--pico-muted-color); white-space: nowrap;">Show</label>
+        <select id="per-page-server" onchange="window.location.href='/search?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1&limit=' + this.value + '&sort_by={{ sort_by }}&sort_order={{ sort_order }}'" style="width: 80px; padding: 0.25rem 0.5rem; font-size: 0.875rem; margin: 0;">
+            <option value="10" {% if limit == 10 %}selected{% endif %}>10</option>
+            <option value="20" {% if limit == 20 or not limit %}selected{% endif %}>20</option>
+            <option value="50" {% if limit == 50 %}selected{% endif %}>50</option>
+            <option value="100" {% if limit == 100 %}selected{% endif %}>100</option>
+        </select>
+        <span style="font-size: 0.875rem; color: var(--pico-muted-color); white-space: nowrap;">per page</span>
+    </div>
 
-    {% for p in range(1, total_pages + 1) %}
-        {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
-            {% if p == page %}
-                <span class="page-current">{{ p }}</span>
-            {% else %}
-                <a href="/search?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ p }}&limit={{ limit }}&sort_by={{ sort_by }}&sort_order={{ sort_order }}" class="page-link">{{ p }}</a>
-            {% endif %}
-        {% elif p == page - 3 or p == page + 3 %}
-            <span class="page-ellipsis">...</span>
+    <!-- Server-side Pagination (Bottom) -->
+    {% if total_pages > 1 %}
+    <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+        {% if has_prev %}
+        <a href="/search?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page - 1 }}&limit={{ limit }}&sort_by={{ sort_by }}&sort_order={{ sort_order }}" class="page-link">&laquo; Previous</a>
         {% endif %}
-    {% endfor %}
 
-    {% if has_next %}
-    <a href="/search?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page + 1 }}&limit={{ limit }}&sort_by={{ sort_by }}&sort_order={{ sort_order }}" class="page-link">Next &raquo;</a>
+        {% for p in range(1, total_pages + 1) %}
+            {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+                {% if p == page %}
+                    <span class="page-current">{{ p }}</span>
+                {% else %}
+                    <a href="/search?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ p }}&limit={{ limit }}&sort_by={{ sort_by }}&sort_order={{ sort_order }}" class="page-link">{{ p }}</a>
+                {% endif %}
+            {% elif p == page - 3 or p == page + 3 %}
+                <span class="page-ellipsis">...</span>
+            {% endif %}
+        {% endfor %}
+
+        {% if has_next %}
+        <a href="/search?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page + 1 }}&limit={{ limit }}&sort_by={{ sort_by }}&sort_order={{ sort_order }}" class="page-link">Next &raquo;</a>
+        {% endif %}
+    </div>
+    {% else %}
+    <div></div> <!-- Empty div to maintain flex layout when no pagination -->
     {% endif %}
-</div>
-{% endif %}
+</div> <!-- Close flex container -->
 
 </div> <!-- Close Alpine.js x-data div for server-side -->
 
 {% endif %} <!-- Close results_capped if -->
 
 <!-- API Equivalent Component -->
-<div class="api-equivalent" id="api-equivalent" x-data="{ activeTab: 'url' }">
-    <h3>API Equivalent</h3>
+<details class="api-equivalent" id="api-equivalent" x-data="{ activeTab: 'url' }">
+    <summary><h3>API Equivalent</h3></summary>
     <p>Use these requests to get the same data programmatically:</p>
 
     <div class="code-tab-buttons">
@@ -516,7 +591,27 @@ response = requests.get(
 graphs = response.json()</code></pre>
         </div>
     </div>
+</details>
+
+<details id="data-section">
+    <summary><h3>Data</h3></summary>
+
+<p style="font-size: 0.875rem; color: var(--pico-muted-color); margin-bottom: 0.5rem;">Export search results</p>
+<div class="export-buttons">
+    <button class="outline" onclick="window.location.href='/search/export?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}limit={{ limit }}&format=csv'">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        CSV
+    </button>
+    <button class="outline" onclick="window.location.href='/search/export?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}limit={{ limit }}&format=json'">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        JSON
+    </button>
+    <button class="outline" onclick="window.location.href='/search/export?{% for key, value in query_params.items() %}{% if value is not string and value is iterable %}{% for v in value %}{{ key }}={{ v }}&{% endfor %}{% else %}{{ key }}={{ value }}&{% endif %}{% endfor %}limit={{ limit }}&format=graph6'">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        graph6
+    </button>
 </div>
+</details>
 
 {% else %}
 <p><em>No graphs found matching your criteria.</em></p>

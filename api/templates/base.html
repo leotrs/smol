@@ -1208,6 +1208,15 @@
             position: relative;
         }
 
+        .code-block pre {
+            background: var(--pico-code-background-color);
+            border-radius: var(--pico-border-radius);
+            margin: 0;
+            padding: 1rem;
+            font-size: 0.85rem;
+            overflow-x: auto;
+        }
+
         .code-block pre[class*="language-"] {
             border-radius: var(--pico-border-radius);
             margin: 0;
@@ -1704,9 +1713,9 @@
 
         /* Table wrapper for horizontal scrolling on mobile */
         .table-wrapper {
+            margin: 1rem 0;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
-            margin: 1rem 0;
         }
 
         .table-wrapper table {
@@ -1715,19 +1724,24 @@
 
         /* Search results page */
         .search-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 2rem;
-            margin-bottom: 1rem;
+            margin-bottom: 2rem;
         }
 
         .search-header h1 {
-            margin-bottom: 0.5rem;
+            font-size: 2rem;
         }
 
-        .search-header > div:first-child {
-            flex: 1;
+        /* Sticky table headers on search results */
+        .search-results-table {
+            position: relative;
+        }
+
+        .search-results-table thead th {
+            position: sticky;
+            top: 0;
+            background: var(--pico-background-color);
+            z-index: 10;
+            box-shadow: 0 2px 0 var(--pico-muted-border-color);
         }
 
         .results-range {
@@ -1736,18 +1750,20 @@
         }
 
         .results-cap-warning {
-            background: #FFF3CD;
-            border: 1px solid #FFE69C;
+            background: #FFFBEB;
+            border: 1px solid #FCD34D;
+            border-left: 3px solid #F59E0B;
             border-radius: var(--pico-border-radius);
             padding: 1rem;
             margin-bottom: 1.5rem;
-            color: #856404;
+            color: #92400E;
         }
 
         [data-theme="dark"] .results-cap-warning {
-            background: #332701;
-            border-color: #664D03;
-            color: #FFDA6A;
+            background: #1E1B13;
+            border-color: #F59E0B;
+            border-left: 3px solid #FBBF24;
+            color: #FCD34D;
         }
 
         .results-cap-warning a {
@@ -1801,10 +1817,6 @@
         }
 
         .api-equivalent {
-            background: var(--pico-card-background-color);
-            border: 1px solid var(--pico-muted-border-color);
-            border-radius: var(--pico-border-radius);
-            padding: 1.5rem;
             margin: 2rem 0;
         }
 
@@ -1846,11 +1858,12 @@
         }
 
         .page-link {
-            padding: 0.5rem 0.75rem;
-            border: 1px solid var(--pico-muted-border-color);
+            padding: 0.5rem !important;
+            border: 1px solid var(--pico-primary);
             border-radius: var(--pico-border-radius);
             text-decoration: none;
-            color: var(--pico-color);
+            color: var(--pico-primary);
+            background: transparent;
             transition: all 0.2s;
         }
 
@@ -1861,9 +1874,10 @@
         }
 
         .page-current {
-            padding: 0.5rem 0.75rem;
+            padding: 0.5rem !important;
             background: var(--pico-primary);
             color: white;
+            border: 1px solid var(--pico-primary);
             border-radius: var(--pico-border-radius);
             font-weight: 600;
         }
@@ -1871,6 +1885,28 @@
         .page-ellipsis {
             padding: 0.5rem;
             color: var(--pico-muted-color);
+        }
+
+        /* Column picker checkbox focus fix */
+        .column-picker input[type="checkbox"] {
+            accent-color: var(--pico-primary);
+        }
+
+        .column-picker input[type="checkbox"]:focus {
+            outline: none;
+        }
+
+        .column-picker input[type="checkbox"]:not(:checked) {
+            background-color: var(--pico-background-color) !important;
+            border-color: var(--pico-muted-border-color) !important;
+            background-image: none !important;
+        }
+
+        .column-picker input[type="checkbox"]:not(:checked):focus,
+        .column-picker input[type="checkbox"]:not(:checked):active {
+            background-color: var(--pico-background-color) !important;
+            border-color: var(--pico-muted-border-color) !important;
+            background-image: none !important;
         }
 
         /* Responsive mobile styles */

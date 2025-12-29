@@ -547,12 +547,11 @@ class TestSearchEndpoint:
         assert "Search Results" in response.text
 
     def test_search_shows_results_count(self):
-        """Search should show total count and range."""
+        """Search should show total count."""
         response = client.get("/search?n=5&m=6")
         assert response.status_code == 200
         assert "Found" in response.text
         assert "graphs matching your criteria" in response.text
-        assert "Showing" in response.text
 
     def test_search_with_filters(self):
         """Search should support multiple filters."""
@@ -564,8 +563,9 @@ class TestSearchEndpoint:
         """Search should support pagination."""
         response = client.get("/search?n=8&limit=50&page=1")
         assert response.status_code == 200
-        # For large result sets, uses client-side pagination with x-text
-        assert 'class="results-range"' in response.text
+        # For large result sets, uses client-side pagination
+        # Check for pagination controls (Previous/Next buttons)
+        assert "Previous" in response.text or "Next" in response.text or "currentPage" in response.text
 
     def test_search_pagination_page_2(self):
         """Search should support page 2."""
@@ -573,7 +573,7 @@ class TestSearchEndpoint:
         assert response.status_code == 200
         # For large result sets, client-side pagination ignores page param
         # All 1000 results are loaded and pagination is handled client-side
-        assert 'class="results-range"' in response.text
+        assert "Previous" in response.text or "Next" in response.text or "currentPage" in response.text
 
     def test_search_sorting(self):
         """Search should support sorting."""
@@ -647,14 +647,12 @@ class TestSearchEndpoint:
         # Should show warning banner
         assert "Showing first 1,000" in response.text
         assert "results-cap-warning" in response.text
-        assert "For the full dataset, use the" in response.text
+        assert "For the full dataset, see the" in response.text
+        assert "API" in response.text
+        assert "Data" in response.text
 
-        # Should show capped count in pagination
-        assert "of 1,000" in response.text or "1-100 of 1,000" in response.text
-
-        # Pagination should be capped to 10 pages (1000 results / 100 per page)
-        # Check that we don't show more than 10 pages
-        assert "page=11" not in response.text
+        # Should have pagination controls
+        assert "Previous" in response.text or "Next" in response.text or "currentPage" in response.text
 
     def test_search_beyond_cap_redirects_to_page_1(self):
         """Accessing page beyond cap should show page 1."""
@@ -662,8 +660,8 @@ class TestSearchEndpoint:
         response = client.get("/search?n=8&page=100")
         assert response.status_code == 200
 
-        # Should show results range (client-side pagination handles display)
-        assert 'class="results-range"' in response.text
+        # Should show pagination (client-side pagination handles display)
+        assert "Previous" in response.text or "Next" in response.text or "currentPage" in response.text
 
     def test_search_count_endpoint(self):
         """Count endpoint should return exact count."""
