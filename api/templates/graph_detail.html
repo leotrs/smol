@@ -583,227 +583,230 @@ function renderGraph() {
 </script>
 <script src="https://d3js.org/d3.v7.min.js" onload="renderGraph()"></script>
 
-<h3>Spectra</h3>
-<div style="display: flex; gap: 2rem; margin-bottom: 1rem;">
-    <div class="viz-container" style="flex: 1;">
-        <div id="graph-detail-real-plot" style="height: 280px;"></div>
-        <button class="viz-reset-btn" onclick="resetGraphDetailRealPlot()" title="Reset view">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-        </button>
+<details open>
+    <summary><h3>Spectra</h3></summary>
+    <div style="display: flex; gap: 2rem; margin-bottom: 1rem;">
+        <div class="viz-container" style="flex: 1;">
+            <div id="graph-detail-real-plot" style="height: 280px;"></div>
+            <button class="viz-reset-btn" onclick="resetGraphDetailRealPlot()" title="Reset view">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            </button>
+        </div>
+        <div class="viz-container" style="flex: 1;">
+            <div id="graph-detail-complex-plot" style="height: 280px;"></div>
+            <button class="viz-reset-btn" onclick="resetGraphDetailComplexPlot()" title="Reset view">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            </button>
+        </div>
     </div>
-    <div class="viz-container" style="flex: 1;">
-        <div id="graph-detail-complex-plot" style="height: 280px;"></div>
-        <button class="viz-reset-btn" onclick="resetGraphDetailComplexPlot()" title="Reset view">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-        </button>
-    </div>
-</div>
-</div>
-<script>
-if (typeof d3 !== 'undefined') {
-    renderGraphDetailRealPlot();
-    renderGraphDetailComplexPlot();
-} else {
-    document.addEventListener('DOMContentLoaded', () => {
-        const checkD3 = setInterval(() => {
-            if (typeof d3 !== 'undefined') {
-                clearInterval(checkD3);
-                renderGraphDetailRealPlot();
-                renderGraphDetailComplexPlot();
-            }
-        }, 50);
-    });
-}
+    <script>
+    if (typeof d3 !== 'undefined') {
+        renderGraphDetailRealPlot();
+        renderGraphDetailComplexPlot();
+    } else {
+        document.addEventListener('DOMContentLoaded', () => {
+            const checkD3 = setInterval(() => {
+                if (typeof d3 !== 'undefined') {
+                    clearInterval(checkD3);
+                    renderGraphDetailRealPlot();
+                    renderGraphDetailComplexPlot();
+                }
+            }, 50);
+        });
+    }
 
-function toggleEigenvalues(btn) {
-    const item = btn.closest('.spectrum-legend-item');
-    const eigenvalues = item.querySelector('.spectrum-eigenvalues');
-    const isOpen = eigenvalues.classList.toggle('open');
-    btn.classList.toggle('open', isOpen);
-}
+    function toggleEigenvalues(btn) {
+        const item = btn.closest('.spectrum-legend-item');
+        const eigenvalues = item.querySelector('.spectrum-eigenvalues');
+        const isOpen = eigenvalues.classList.toggle('open');
+        btn.classList.toggle('open', isOpen);
+    }
 
-function copyEigenvalues(btn) {
-    const code = btn.parentElement.querySelector('code').textContent;
-    navigator.clipboard.writeText(code).then(() => {
-        btn.classList.add('copied');
-        setTimeout(() => btn.classList.remove('copied'), 1500);
-    });
-}
-</script>
+    function copyEigenvalues(btn) {
+        const code = btn.parentElement.querySelector('code').textContent;
+        navigator.clipboard.writeText(code).then(() => {
+            btn.classList.add('copied');
+            setTimeout(() => btn.classList.remove('copied'), 1500);
+        });
+    }
+    </script>
+</details>
 
 
-<div class="section-header">
-    <h3>Cospectral Mates</h3>
-    <a href="/similar/{{ graph.graph6 | urlencode }}" class="find-similar-link">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        Find similar spectra
-    </a>
-</div>
-{% if graph.cospectral_mates.adj or graph.cospectral_mates.kirchhoff or graph.cospectral_mates.signless or graph.cospectral_mates.lap or graph.cospectral_mates.nb or graph.cospectral_mates.nbl or graph.cospectral_mates.dist %}
-<p>Graphs that share the same spectrum for a given matrix type.</p>
-<table>
-    <thead>
-        <tr>
-            <th>Matrix</th>
-            <th>Mates</th>
-            <th>Mechanism</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        {% if graph.cospectral_mates.adj %}
-        <tr>
-            <td>Adjacency</td>
-            <td>
-                {% for mate in graph.cospectral_mates.adj %}
-                    <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
-                {% endfor %}
-            </td>
-            <td>
-                {% if mechanisms and mechanisms.mechanisms and 'adj' in mechanisms.mechanisms %}
+<details open>
+    <summary><h3>Cospectral Mates</h3></summary>
+    <p style="margin: 0 0 0.75rem 0; color: var(--pico-muted-color);">Graphs with the same spectrum</p>
+    {% if graph.cospectral_mates.adj or graph.cospectral_mates.kirchhoff or graph.cospectral_mates.signless or graph.cospectral_mates.lap or graph.cospectral_mates.nb or graph.cospectral_mates.nbl or graph.cospectral_mates.dist %}
+    <table>
+        <thead>
+            <tr>
+                <th>Matrix</th>
+                <th>Mates</th>
+                <th>Mechanism</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if graph.cospectral_mates.adj %}
+            <tr>
+                <td>Adjacency</td>
+                <td>
                     {% for mate in graph.cospectral_mates.adj %}
-                        {% set found_mech = namespace(value='') %}
-                        {% for mech in mechanisms.mechanisms.adj %}
-                            {% if mech.mate == mate %}
-                                {% set found_mech.value = mech.mechanism | upper %}
-                            {% endif %}
-                        {% endfor %}
-                        {% if found_mech.value %}
-                            <span class="badge badge-{{ found_mech.value | lower }}" title="{{ found_mech.value }} switching">{{ found_mech.value }}</span>
-                        {% else %}
-                            <span style="color: var(--pico-muted-color);">—</span>
-                        {% endif %}
-                        {% if not loop.last %}, {% endif %}
+                        <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
                     {% endfor %}
-                {% else %}
-                    <span style="color: var(--pico-muted-color);">—</span>
-                {% endif %}
-            </td>
-            <td>
-                {% if graph.cospectral_mates.adj | length < 10 %}
-                <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.adj | join(',') | urlencode }}" role="button" class="outline">Compare</a>
-                {% else %}
-                <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
-                {% endif %}
-            </td>
-        </tr>
-        {% endif %}
-        {% if graph.cospectral_mates.kirchhoff %}
-        <tr>
-            <td>Kirchhoff</td>
-            <td>
-                {% for mate in graph.cospectral_mates.kirchhoff %}
-                    <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
-                {% endfor %}
-            </td>
-            <td><span style="color: var(--pico-muted-color);">—</span></td>
-            <td>
-                {% if graph.cospectral_mates.kirchhoff | length < 10 %}
-                <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.kirchhoff | join(',') | urlencode }}" role="button" class="outline">Compare</a>
-                {% else %}
-                <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
-                {% endif %}
-            </td>
-        </tr>
-        {% endif %}
-        {% if graph.cospectral_mates.signless %}
-        <tr>
-            <td>Signless</td>
-            <td>
-                {% for mate in graph.cospectral_mates.signless %}
-                    <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
-                {% endfor %}
-            </td>
-            <td><span style="color: var(--pico-muted-color);">—</span></td>
-            <td>
-                {% if graph.cospectral_mates.signless | length < 10 %}
-                <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.signless | join(',') | urlencode }}" role="button" class="outline">Compare</a>
-                {% else %}
-                <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
-                {% endif %}
-            </td>
-        </tr>
-        {% endif %}
-        {% if graph.cospectral_mates.lap %}
-        <tr>
-            <td>Laplacian</td>
-            <td>
-                {% for mate in graph.cospectral_mates.lap %}
-                    <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
-                {% endfor %}
-            </td>
-            <td><span style="color: var(--pico-muted-color);">—</span></td>
-            <td>
-                {% if graph.cospectral_mates.lap | length < 10 %}
-                <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.lap | join(',') | urlencode }}" role="button" class="outline">Compare</a>
-                {% else %}
-                <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
-                {% endif %}
-            </td>
-        </tr>
-        {% endif %}
-        {% if graph.cospectral_mates.nb %}
-        <tr>
-            <td>Non-backtracking</td>
-            <td>
-                {% for mate in graph.cospectral_mates.nb %}
-                    <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
-                {% endfor %}
-            </td>
-            <td><span style="color: var(--pico-muted-color);">—</span></td>
-            <td>
-                {% if graph.cospectral_mates.nb | length < 10 %}
-                <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.nb | join(',') | urlencode }}" role="button" class="outline">Compare</a>
-                {% else %}
-                <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
-                {% endif %}
-            </td>
-        </tr>
-        {% endif %}
-        {% if graph.cospectral_mates.nbl %}
-        <tr>
-            <td>NB-Laplacian</td>
-            <td>
-                {% for mate in graph.cospectral_mates.nbl %}
-                    <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
-                {% endfor %}
-            </td>
-            <td><span style="color: var(--pico-muted-color);">—</span></td>
-            <td>
-                {% if graph.cospectral_mates.nbl | length < 10 %}
-                <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.nbl | join(',') | urlencode }}" role="button" class="outline">Compare</a>
-                {% else %}
-                <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
-                {% endif %}
-            </td>
-        </tr>
-        {% endif %}
-        {% if graph.cospectral_mates.dist %}
-        <tr>
-            <td>Distance</td>
-            <td>
-                {% for mate in graph.cospectral_mates.dist %}
-                    <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
-                {% endfor %}
-            </td>
-            <td><span style="color: var(--pico-muted-color);">—</span></td>
-            <td>
-                {% if graph.cospectral_mates.dist | length < 10 %}
-                <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.dist | join(',') | urlencode }}" role="button" class="outline">Compare</a>
-                {% else %}
-                <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
-                {% endif %}
-            </td>
-        </tr>
-        {% endif %}
-    </tbody>
-</table>
-{% else %}
-<p><em>No cospectral mates for any matrix type.</em></p>
-{% endif %}
+                </td>
+                <td>
+                    {% if mechanisms and mechanisms.mechanisms and 'adj' in mechanisms.mechanisms %}
+                        {% for mate in graph.cospectral_mates.adj %}
+                            {% set found_mech = namespace(value='') %}
+                            {% for mech in mechanisms.mechanisms.adj %}
+                                {% if mech.mate == mate %}
+                                    {% set found_mech.value = mech.mechanism | upper %}
+                                {% endif %}
+                            {% endfor %}
+                            {% if found_mech.value %}
+                                <span class="badge badge-{{ found_mech.value | lower }}" title="{{ found_mech.value }} switching">{{ found_mech.value }}</span>
+                            {% else %}
+                                <span style="color: var(--pico-muted-color);">—</span>
+                            {% endif %}
+                            {% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <span style="color: var(--pico-muted-color);">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if graph.cospectral_mates.adj | length < 10 %}
+                    <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.adj | join(',') | urlencode }}" role="button" class="outline">Compare</a>
+                    {% else %}
+                    <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endif %}
+            {% if graph.cospectral_mates.kirchhoff %}
+            <tr>
+                <td>Kirchhoff</td>
+                <td>
+                    {% for mate in graph.cospectral_mates.kirchhoff %}
+                        <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </td>
+                <td><span style="color: var(--pico-muted-color);">—</span></td>
+                <td>
+                    {% if graph.cospectral_mates.kirchhoff | length < 10 %}
+                    <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.kirchhoff | join(',') | urlencode }}" role="button" class="outline">Compare</a>
+                    {% else %}
+                    <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endif %}
+            {% if graph.cospectral_mates.signless %}
+            <tr>
+                <td>Signless</td>
+                <td>
+                    {% for mate in graph.cospectral_mates.signless %}
+                        <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </td>
+                <td><span style="color: var(--pico-muted-color);">—</span></td>
+                <td>
+                    {% if graph.cospectral_mates.signless | length < 10 %}
+                    <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.signless | join(',') | urlencode }}" role="button" class="outline">Compare</a>
+                    {% else %}
+                    <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endif %}
+            {% if graph.cospectral_mates.lap %}
+            <tr>
+                <td>Laplacian</td>
+                <td>
+                    {% for mate in graph.cospectral_mates.lap %}
+                        <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </td>
+                <td><span style="color: var(--pico-muted-color);">—</span></td>
+                <td>
+                    {% if graph.cospectral_mates.lap | length < 10 %}
+                    <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.lap | join(',') | urlencode }}" role="button" class="outline">Compare</a>
+                    {% else %}
+                    <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endif %}
+            {% if graph.cospectral_mates.nb %}
+            <tr>
+                <td>Non-backtracking</td>
+                <td>
+                    {% for mate in graph.cospectral_mates.nb %}
+                        <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </td>
+                <td><span style="color: var(--pico-muted-color);">—</span></td>
+                <td>
+                    {% if graph.cospectral_mates.nb | length < 10 %}
+                    <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.nb | join(',') | urlencode }}" role="button" class="outline">Compare</a>
+                    {% else %}
+                    <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endif %}
+            {% if graph.cospectral_mates.nbl %}
+            <tr>
+                <td>NB-Laplacian</td>
+                <td>
+                    {% for mate in graph.cospectral_mates.nbl %}
+                        <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </td>
+                <td><span style="color: var(--pico-muted-color);">—</span></td>
+                <td>
+                    {% if graph.cospectral_mates.nbl | length < 10 %}
+                    <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.nbl | join(',') | urlencode }}" role="button" class="outline">Compare</a>
+                    {% else %}
+                    <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endif %}
+            {% if graph.cospectral_mates.dist %}
+            <tr>
+                <td>Distance</td>
+                <td>
+                    {% for mate in graph.cospectral_mates.dist %}
+                        <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </td>
+                <td><span style="color: var(--pico-muted-color);">—</span></td>
+                <td>
+                    {% if graph.cospectral_mates.dist | length < 10 %}
+                    <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ graph.cospectral_mates.dist | join(',') | urlencode }}" role="button" class="outline">Compare</a>
+                    {% else %}
+                    <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+    {% else %}
+    <p><em>No cospectral mates for any matrix type.</em></p>
+    {% endif %}
 
-<h3>Code <span class="code-lang">Python</span></h3>
-<div class="code-tabs">
+    <p style="margin-top: 1.5rem; color: var(--pico-muted-color);">
+        Graphs with similar spectrum:
+        <a href="/similar/{{ graph.graph6 | urlencode }}" style="color: var(--pico-primary); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.15s ease;">Find similar</a>.
+    </p>
+</details>
+
+<details>
+    <summary><h3>Code</h3></summary>
+    <div class="code-tabs">
     <div class="code-tab-buttons">
         <button class="code-tab-btn active" onclick="switchCodeTab(event, 'adj')">Adjacency</button>
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'kirchhoff')">Kirchhoff</button>
@@ -818,6 +821,7 @@ function copyEigenvalues(btn) {
 
     <div id="code-adj" class="code-tab-content active">
         <div class="code-block">
+            <span class="code-lang-label">Python</span>
             <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             </button>
@@ -833,6 +837,7 @@ print(eigenvalues)</code></pre>
 
     <div id="code-kirchhoff" class="code-tab-content">
         <div class="code-block">
+            <span class="code-lang-label">Python</span>
             <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             </button>
@@ -852,6 +857,7 @@ print(eigenvalues)</code></pre>
 
     <div id="code-signless" class="code-tab-content">
         <div class="code-block">
+            <span class="code-lang-label">Python</span>
             <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             </button>
@@ -871,6 +877,7 @@ print(eigenvalues)</code></pre>
 
     <div id="code-lap" class="code-tab-content">
         <div class="code-block">
+            <span class="code-lang-label">Python</span>
             <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             </button>
@@ -887,6 +894,7 @@ print(eigenvalues)</code></pre>
 
     <div id="code-nb" class="code-tab-content">
         <div class="code-block">
+            <span class="code-lang-label">Python</span>
             <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             </button>
@@ -912,6 +920,7 @@ print(eigenvalues)</code></pre>
 
     <div id="code-nbl" class="code-tab-content">
         <div class="code-block">
+            <span class="code-lang-label">Python</span>
             <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             </button>
@@ -944,6 +953,7 @@ print(eigenvalues)</code></pre>
     {% if graph.properties.diameter is not none %}
     <div id="code-dist" class="code-tab-content">
         <div class="code-block">
+            <span class="code-lang-label">Python</span>
             <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             </button>
@@ -997,8 +1007,10 @@ function copyCode(btn) {
     });
 }
 </script>
+</details>
 
-<h3>Data</h3>
+<details>
+    <summary><h3>Data</h3></summary>
 
 <div style="margin-bottom: 1.5rem;">
     <label for="graph6-field" style="font-size: 0.875rem; color: var(--pico-muted-color); display: block; margin-bottom: 0.25rem;">Graph6 string</label>
@@ -1195,5 +1207,19 @@ function downloadEigenvaluesCSV(matrixType) {
     const content = `${header}\n# ${graphData.graph6}\n` + lines.join('\n');
     downloadFile(content, filename, 'text/csv');
 }
+
+// Auto-scroll when details are opened
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('details').forEach(details => {
+        details.addEventListener('toggle', () => {
+            if (details.open) {
+                setTimeout(() => {
+                    details.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+                }, 100);
+            }
+        });
+    });
+});
 </script>
+</details>
 {% endblock %}

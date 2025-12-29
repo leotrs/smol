@@ -46,16 +46,9 @@
 </div>
 
 <h3>Spectra</h3>
-{% if result.graphs|length > 1 %}
-<div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1.5rem; margin-bottom: 0.75rem;">
-    {% for g in result.graphs %}
-    <button class="spectrum-pill active" data-graph="{{ loop.index0 }}" onclick="toggleCompareGraphMarkers(this, {{ loop.index0 }})">
-        <span class="graph-marker-icon" data-marker="{{ loop.index0 }}"></span>
-        <code style="font-size: 0.75rem; margin-left: 0.25rem;">{{ g.graph6 }}</code>
-    </button>
-    {% endfor %}
+<div id="spectrum-legend-controls" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+    <!-- Legend buttons will be added here by JavaScript -->
 </div>
-{% endif %}
 <div style="display: flex; gap: 3rem; flex-wrap: wrap;">
     <div class="viz-container" style="flex: 1; min-width: 450px;">
         <div id="compare-spectrum-real-plot" style="height: 350px;"></div>
@@ -344,6 +337,20 @@ function renderCompareSpectrumRealPlot() {
         }
     }));
 
+    // Create legend buttons (only once)
+    const legendContainer = document.getElementById('spectrum-legend-controls');
+    if (legendContainer && legendContainer.children.length === 0) {
+        const markerShapes = ['●', '■', '▲', '◆', '+', '★'];
+        graphsSpectra.forEach((gs, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'spectrum-legend-btn active';
+            btn.setAttribute('data-graph-idx', idx);
+            btn.innerHTML = `<span style="margin-right: 0.35rem; color: var(--pico-muted-color);">${markerShapes[idx % markerShapes.length]}</span><code style="font-size: 0.85rem;">${gs.graph6}</code>`;
+            btn.onclick = () => toggleGraphVisibility(idx);
+            legendContainer.appendChild(btn);
+        });
+    }
+
     const width = container.clientWidth || 500;
     const height = 350;
     const margin = {top: 10, right: 20, bottom: 50, left: 100};
@@ -605,6 +612,79 @@ function renderCompareSpectrumRealPlot() {
                     });
             }
         });
+    });
+
+    // Add legend in top-right corner with clickable items
+    const visibilityState = graphsSpectra.map(() => true); // Track visibility of each graph
+    const legend = g.append('g')
+        .attr('class', 'spectrum-legend-compare')
+        .attr('transform', `translate(${plotWidth - 10}, 15)`);
+
+    graphsSpectra.forEach((gs, graphIdx) => {
+        const markerInfo = markerShapes[graphIdx % markerShapes.length];
+        const legendItem = legend.append('g')
+            .attr('transform', `translate(0, ${graphIdx * 22})`)
+            .attr('class', `legend-item graph-legend-${graphIdx}`)
+            .style('cursor', 'pointer')
+            .on('click', function() {
+                visibilityState[graphIdx] = !visibilityState[graphIdx];
+                const visible = visibilityState[graphIdx];
+
+                // Toggle visibility of data points in THIS plot (real eigenvalues)
+                content.selectAll(`.graph-${graphIdx}`).style('opacity', visible ? 1 : 0).style('pointer-events', visible ? null : 'none');
+
+                // Update legend item appearance
+                legendItemBg.attr('fill', visible ? 'transparent' : 'var(--pico-muted-border-color)');
+                legendItemBg.attr('opacity', visible ? 0 : 0.3);
+                legendText.attr('opacity', visible ? 1 : 0.4);
+                if (markerShape) markerShape.attr('opacity', visible ? 0.7 : 0.3);
+            });
+
+        // Background rect for button
+        const legendItemBg = legendItem.append('rect')
+            .attr('x', -110)
+            .attr('y', -10)
+            .attr('width', 105)
+            .attr('height', 20)
+            .attr('fill', 'transparent')
+            .attr('rx', 3);
+
+        // Draw marker shape
+        let markerShape;
+        if (markerInfo.name === 'circle') {
+            markerShape = legendItem.append('circle')
+                .attr('cx', -18)
+                .attr('cy', 0)
+                .attr('r', 4)
+                .attr('fill', style.getPropertyValue('--pico-muted-color').trim())
+                .attr('opacity', 0.7);
+        } else if (markerInfo.name === 'square') {
+            markerShape = legendItem.append('rect')
+                .attr('x', -22)
+                .attr('y', -4)
+                .attr('width', 8)
+                .attr('height', 8)
+                .attr('fill', style.getPropertyValue('--pico-muted-color').trim())
+                .attr('opacity', 0.7);
+        } else {
+            markerShape = legendItem.append('path')
+                .attr('d', d3.symbol().type(markerInfo.type).size(50))
+                .attr('transform', 'translate(-18, 0)')
+                .attr('fill', style.getPropertyValue('--pico-muted-color').trim())
+                .attr('opacity', 0.7);
+        }
+
+        // Add graph6 label
+        const legendText = legendItem.append('text')
+            .attr('x', -10)
+            .attr('y', 0)
+            .attr('text-anchor', 'start')
+            .attr('dominant-baseline', 'middle')
+            .attr('fill', axisColor)
+            .attr('font-size', '11px')
+            .attr('font-weight', '500')
+            .attr('font-family', 'monospace')
+            .text(gs.graph6.length > 8 ? gs.graph6.substring(0, 8) + '...' : gs.graph6);
     });
 
     return () => tooltip.remove();
@@ -997,8 +1077,8 @@ function renderCompareSpectrumComplexPlot() {
         });
     }
 
-    // Add legend in top-right corner
-    const legend = g.append('g')
+    // Add matrix type legend in top-right corner
+    const matrixLegend = g.append('g')
         .attr('class', 'spectrum-legend')
         .attr('transform', `translate(${plotWidth - 10}, 10)`);
 
@@ -1008,7 +1088,7 @@ function renderCompareSpectrumComplexPlot() {
     ];
 
     legendItems.forEach((item, i) => {
-        const legendRow = legend.append('g')
+        const legendRow = matrixLegend.append('g')
             .attr('transform', `translate(0, ${i * 18})`);
 
         legendRow.append('text')
@@ -1019,15 +1099,102 @@ function renderCompareSpectrumComplexPlot() {
             .text(item.label);
     });
 
+    // Add graph marker legend below matrix legend with clickable items
+    const complexVisibilityState = plotData.map(() => true); // Track visibility of each graph
+    const graphLegend = g.append('g')
+        .attr('class', 'spectrum-legend-compare')
+        .attr('transform', `translate(${plotWidth - 10}, 60)`);
+
+    plotData.forEach((gs, graphIdx) => {
+        const markerInfo = markerShapes[graphIdx % markerShapes.length];
+        const legendItem = graphLegend.append('g')
+            .attr('transform', `translate(0, ${graphIdx * 22})`)
+            .attr('class', `legend-item graph-legend-${graphIdx}`)
+            .style('cursor', 'pointer')
+            .on('click', function() {
+                complexVisibilityState[graphIdx] = !complexVisibilityState[graphIdx];
+                const visible = complexVisibilityState[graphIdx];
+
+                // Toggle visibility of data points in THIS plot (complex eigenvalues)
+                content.selectAll(`.graph-${graphIdx}`).style('opacity', visible ? 1 : 0).style('pointer-events', visible ? null : 'none');
+
+                // Update legend item appearance
+                legendItemBg.attr('fill', visible ? 'transparent' : 'var(--pico-muted-border-color)');
+                legendItemBg.attr('opacity', visible ? 0 : 0.3);
+                legendText.attr('opacity', visible ? 1 : 0.4);
+                if (markerShape) markerShape.attr('opacity', visible ? 0.7 : 0.3);
+            });
+
+        // Background rect for button
+        const legendItemBg = legendItem.append('rect')
+            .attr('x', -110)
+            .attr('y', -10)
+            .attr('width', 105)
+            .attr('height', 20)
+            .attr('fill', 'transparent')
+            .attr('rx', 3);
+
+        // Draw marker shape
+        let markerShape;
+        if (markerInfo.name === 'circle') {
+            markerShape = legendItem.append('circle')
+                .attr('cx', -18)
+                .attr('cy', 0)
+                .attr('r', 4)
+                .attr('fill', style.getPropertyValue('--pico-muted-color').trim())
+                .attr('opacity', 0.7);
+        } else if (markerInfo.name === 'square') {
+            markerShape = legendItem.append('rect')
+                .attr('x', -22)
+                .attr('y', -4)
+                .attr('width', 8)
+                .attr('height', 8)
+                .attr('fill', style.getPropertyValue('--pico-muted-color').trim())
+                .attr('opacity', 0.7);
+        } else {
+            markerShape = legendItem.append('path')
+                .attr('d', d3.symbol().type(markerInfo.type).size(50))
+                .attr('transform', 'translate(-18, 0)')
+                .attr('fill', style.getPropertyValue('--pico-muted-color').trim())
+                .attr('opacity', 0.7);
+        }
+
+        // Add graph6 label
+        const legendText = legendItem.append('text')
+            .attr('x', -10)
+            .attr('y', 0)
+            .attr('text-anchor', 'start')
+            .attr('dominant-baseline', 'middle')
+            .attr('fill', axisColor)
+            .attr('font-size', '11px')
+            .attr('font-weight', '500')
+            .attr('font-family', 'monospace')
+            .text(gs.graph6.length > 8 ? gs.graph6.substring(0, 8) + '...' : gs.graph6);
+    });
+
     // Clean up tooltip when plot is re-rendered
     return () => tooltip.remove();
 }
 
-function toggleCompareGraphMarkers(btn, graphIdx) {
+function toggleGraphVisibility(graphIdx) {
+    const btn = document.querySelector(`.spectrum-legend-btn[data-graph-idx="${graphIdx}"]`);
+    if (!btn) return;
+
     btn.classList.toggle('active');
     const visible = btn.classList.contains('active');
+
+    // Toggle visibility in all plots
     d3.selectAll(`.graph-${graphIdx}`)
-        .style('display', visible ? null : 'none');
+        .transition()
+        .duration(200)
+        .style('opacity', visible ? null : 0)
+        .style('pointer-events', visible ? null : 'none');
+
+    // Update D3 legend items
+    d3.selectAll(`.graph-legend-${graphIdx}`)
+        .transition()
+        .duration(200)
+        .style('opacity', visible ? 1 : 0.3);
 }
 
 function resetCompareSpectrumRealPlot() {

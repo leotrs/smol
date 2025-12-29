@@ -164,8 +164,9 @@
 <h2 class="section-header">Browse examples</h2>
 
 <div class="examples-section" x-data="{ tab: 'examples' }">
-    <div class="tab-pills" role="tablist" aria-label="Example categories">
-        <button type="button" role="tab" :aria-selected="tab === 'examples'" aria-controls="examples-panel" id="examples-tab" :class="{ active: tab === 'examples' }" @click="tab = 'examples'">Examples</button>
+    <div class="tab-pills grouped-tabs" role="tablist" aria-label="Example categories">
+        <button type="button" role="tab" :aria-selected="tab === 'examples'" aria-controls="examples-panel" id="examples-tab" :class="{ active: tab === 'examples' }" @click="tab = 'examples'">Example Graphs</button>
+        <span class="tab-separator">|</span>
         <button type="button" role="tab" :aria-selected="tab === 'adjacency'" aria-controls="adjacency-panel" id="adjacency-tab" :class="{ active: tab === 'adjacency' }" @click="tab = 'adjacency'">Adjacency</button>
         <button type="button" role="tab" :aria-selected="tab === 'kirchhoff'" aria-controls="kirchhoff-panel" id="kirchhoff-tab" :class="{ active: tab === 'kirchhoff' }" @click="tab = 'kirchhoff'">Kirchhoff</button>
         <button type="button" role="tab" :aria-selected="tab === 'signless'" aria-controls="signless-panel" id="signless-tab" :class="{ active: tab === 'signless' }" @click="tab = 'signless'">Signless</button>

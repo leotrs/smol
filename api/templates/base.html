@@ -37,7 +37,7 @@
 
         /* Narrower container */
         .container {
-            max-width: 800px;
+            max-width: 860px;
         }
 
         [data-theme="light"],
@@ -541,6 +541,78 @@
             color: white;
         }
 
+        /* Grouped tabs with separator */
+        .grouped-tabs {
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .examples-section .grouped-tabs {
+            justify-content: space-between;
+        }
+
+        .examples-section .grouped-tabs .tab-separator {
+            margin-left: auto;
+        }
+
+        .tab-separator {
+            color: var(--pico-muted-border-color);
+            font-size: 1.2rem;
+            font-weight: 300;
+            padding: 0 0.5rem;
+            user-select: none;
+            line-height: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Spectrum legend buttons */
+        .spectrum-legend-btn {
+            background: var(--pico-card-background-color);
+            border: 1px solid var(--pico-muted-border-color);
+            border-radius: 2rem;
+            padding: 0.4rem 1rem !important;
+            color: var(--pico-color);
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .spectrum-legend-btn:hover {
+            border-color: var(--pico-primary);
+            background: var(--pico-card-background-color);
+        }
+
+        .spectrum-legend-btn.active {
+            border-color: var(--pico-primary);
+            color: var(--pico-color);
+        }
+
+        .spectrum-legend-btn:not(.active) {
+            opacity: 0.4;
+            color: var(--pico-muted-color);
+        }
+
+        /* Tab dropdown */
+        .tab-dropdown button:hover {
+            border-color: var(--pico-primary);
+            color: var(--pico-primary);
+        }
+
+        .tab-dropdown-menu button:hover {
+            background: var(--pico-secondary-background) !important;
+            color: var(--pico-color) !important;
+        }
+
+        .tab-dropdown-menu button:first-child {
+            border-radius: 4px 4px 0 0;
+        }
+
+        .tab-dropdown-menu button:last-child {
+            border-radius: 0 0 4px 4px;
+        }
+
         .tab-content {
             background: var(--pico-card-background-color);
             border: 1px solid var(--pico-muted-border-color);
@@ -1020,11 +1092,57 @@
 
         /* Details/summary */
         details {
-            margin-bottom: 0.5rem;
+            margin-bottom: 2rem;
         }
 
         summary {
-            font-size: 0.9rem;
+            cursor: pointer;
+            user-select: none;
+            list-style: none;
+            padding: 0.25rem 0.5rem 0.25rem 0;
+            margin-left: -0.5rem;
+            border-radius: 4px;
+            transition: background-color 0.1s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        summary:hover {
+            background-color: rgba(128, 128, 128, 0.05);
+        }
+
+        summary::-webkit-details-marker {
+            display: none;
+        }
+
+        summary::after {
+            content: '▼';
+            font-size: 0.65em;
+            transition: transform 0.2s ease;
+            margin-left: 1rem;
+            color: var(--pico-muted-color);
+        }
+
+        details[open] > summary::after {
+            transform: none;
+        }
+
+        details:not([open]) > summary::after {
+            transform: rotate(-90deg);
+        }
+
+        summary h3 {
+            display: inline;
+            margin: 0;
+        }
+
+        details[open] {
+            margin-bottom: 2.5rem;
+        }
+
+        details[open] > summary {
+            margin-bottom: 1rem;
         }
 
         /* Spectrum boxes with copy button */
@@ -1071,6 +1189,19 @@
             color: var(--pico-muted-color);
             vertical-align: middle;
             margin-left: 0.5rem;
+        }
+
+        .code-lang-label {
+            position: absolute;
+            top: 0.75rem;
+            right: 3rem;
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: var(--pico-muted-color);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            opacity: 0.6;
+            pointer-events: none;
         }
 
         .code-block {
