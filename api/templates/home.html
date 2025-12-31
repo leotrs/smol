@@ -66,6 +66,8 @@
     </div>
 </div>
 
+<div id="results" aria-live="polite"></div>
+
 <h2 class="section-header">Browse examples</h2>
 
 <div class="examples-section" x-data="{ category: 'examples', matrix: 'adjacency' }">
@@ -75,13 +77,13 @@
     </div>
 
     <div class="tab-pills secondary-tabs" role="tablist" aria-label="Matrix types" x-show="category === 'cospectral'">
-        <button type="button" role="tab" :aria-selected="matrix === 'adjacency'" :class="{ active: matrix === 'adjacency' }" @click="matrix = 'adjacency'">Adjacency</button>
-        <button type="button" role="tab" :aria-selected="matrix === 'kirchhoff'" :class="{ active: matrix === 'kirchhoff' }" @click="matrix = 'kirchhoff'">Kirchhoff</button>
-        <button type="button" role="tab" :aria-selected="matrix === 'signless'" :class="{ active: matrix === 'signless' }" @click="matrix = 'signless'">Signless</button>
-        <button type="button" role="tab" :aria-selected="matrix === 'laplacian'" :class="{ active: matrix === 'laplacian' }" @click="matrix = 'laplacian'">Laplacian</button>
-        <button type="button" role="tab" :aria-selected="matrix === 'nb'" :class="{ active: matrix === 'nb' }" @click="matrix = 'nb'">NB</button>
-        <button type="button" role="tab" :aria-selected="matrix === 'nbl'" :class="{ active: matrix === 'nbl' }" @click="matrix = 'nbl'">NBL</button>
-        <button type="button" role="tab" :aria-selected="matrix === 'distance'" :class="{ active: matrix === 'distance' }" @click="matrix = 'distance'">Distance</button>
+        <button type="button" role="tab" id="adjacency-tab" :aria-selected="matrix === 'adjacency'" aria-controls="adjacency-panel" :class="{ active: matrix === 'adjacency' }" @click="matrix = 'adjacency'">Adjacency</button>
+        <button type="button" role="tab" id="kirchhoff-tab" :aria-selected="matrix === 'kirchhoff'" aria-controls="kirchhoff-panel" :class="{ active: matrix === 'kirchhoff' }" @click="matrix = 'kirchhoff'">Kirchhoff</button>
+        <button type="button" role="tab" id="signless-tab" :aria-selected="matrix === 'signless'" aria-controls="signless-panel" :class="{ active: matrix === 'signless' }" @click="matrix = 'signless'">Signless</button>
+        <button type="button" role="tab" id="laplacian-tab" :aria-selected="matrix === 'laplacian'" aria-controls="laplacian-panel" :class="{ active: matrix === 'laplacian' }" @click="matrix = 'laplacian'">Laplacian</button>
+        <button type="button" role="tab" id="nb-tab" :aria-selected="matrix === 'nb'" aria-controls="nb-panel" :class="{ active: matrix === 'nb' }" @click="matrix = 'nb'">NB</button>
+        <button type="button" role="tab" id="nbl-tab" :aria-selected="matrix === 'nbl'" aria-controls="nbl-panel" :class="{ active: matrix === 'nbl' }" @click="matrix = 'nbl'">NBL</button>
+        <button type="button" role="tab" id="distance-tab" :aria-selected="matrix === 'distance'" aria-controls="distance-panel" :class="{ active: matrix === 'distance' }" @click="matrix = 'distance'">Distance</button>
     </div>
 
     <div class="tab-content" role="tabpanel" id="examples-panel" aria-labelledby="examples-tab" x-show="category === 'examples'">

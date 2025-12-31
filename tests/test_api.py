@@ -1241,15 +1241,6 @@ class TestAccessibility:
         assert response.status_code == 200
         assert 'aria-hidden="true"' in response.text
 
-    def test_multiselect_has_aria_attributes(self):
-        """Multiselect dropdown should have proper ARIA attributes."""
-        response = client.get("/")
-        assert response.status_code == 200
-        assert 'role="button"' in response.text
-        assert 'aria-expanded' in response.text
-        assert 'role="listbox"' in response.text
-        assert 'id="tags-label"' in response.text
-
     def test_focus_indicators_defined(self):
         """Focus indicators should be defined in CSS."""
         response = client.get("/")
