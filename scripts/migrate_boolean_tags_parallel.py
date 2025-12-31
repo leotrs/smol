@@ -23,7 +23,7 @@ def update_chunk(args):
     cur = conn.cursor()
 
     # Simple UPDATE by ID - no complex WHERE clause
-    cur.execute(f"""
+    cur.execute("""
         UPDATE graphs
         SET tags = array_append(COALESCE(tags, '{{}}'), %s)
         WHERE id = ANY(%s)
