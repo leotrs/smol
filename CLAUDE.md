@@ -83,7 +83,7 @@ GET /cospectral-pairs              Get cospectral pairs (matrix, n, limit, offse
 GET /search                        Advanced search with filters
 GET /compare?graphs=...            Compare multiple graphs
 GET /similar/{graph6}              Find spectrally similar graphs (Earth Mover's Distance)
-GET /random                        Redirect to random graph
+GET /random                        Redirect to random graph (n=4 to 9)
 GET /random/cospectral             Redirect to random cospectral family
 GET /glossary                      Terminology with MathJax, references
 GET /about                         Stats, API docs, citation

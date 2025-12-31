@@ -232,7 +232,7 @@ async def get_graph_by_id(graph6: str, request: Request):
 
 @app.get("/random")
 async def random_graph():
-    """Redirect to a random graph."""
+    """Redirect to a random graph with 4-9 vertices."""
     from fastapi.responses import RedirectResponse
     from urllib.parse import quote
 
