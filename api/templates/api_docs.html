@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}API Documentation - SMOL{% endblock %}
+
+{% block content %}
+<hgroup>
+    <h1>Advanced Search via API</h1>
+    <p>Complete reference for querying the SMOL database</p>
+</hgroup>
+
+<p>
+    The <code>/search</code> endpoint supports comprehensive filtering by all graph properties.
+    Combine multiple parameters to find exactly the graphs you need.
+</p>
+
+<p>All endpoints return JSON by default. Use <code>Accept: text/html</code> header or access via browser for HTML responses.</p>
+
+<h2>Basic Filters</h2>
+<dl>
+    <dt><code>n</code>, <code>n_min</code>, <code>n_max</code></dt>
+    <dd>Filter by number of vertices (exact or range)</dd>
+
+    <dt><code>m</code>, <code>m_min</code>, <code>m_max</code></dt>
+    <dd>Filter by number of edges (exact or range)</dd>
+
+    <dt><code>min_degree</code>, <code>max_degree</code></dt>
+    <dd>Filter by minimum or maximum degree</dd>
+</dl>
+
+<p><strong>Examples:</strong></p>
+<pre><code>/search?n=7                    # All 7-vertex graphs
+/search?n_min=6&amp;n_max=8        # Graphs with 6, 7, or 8 vertices
+/search?n=6&amp;m_min=10           # 6-vertex graphs with at least 10 edges</code></pre>
+
+<h2>Structural Properties</h2>
+<dl>
+    <dt><code>diameter</code>, <code>diameter_min</code>, <code>diameter_max</code></dt>
+    <dd>Filter by graph diameter</dd>
+
+    <dt><code>radius</code>, <code>radius_min</code>, <code>radius_max</code></dt>
+    <dd>Filter by graph radius</dd>
+
+    <dt><code>girth</code>, <code>girth_min</code>, <code>girth_max</code></dt>
+    <dd>Filter by girth (shortest cycle length)</dd>
+
+    <dt><code>triangle_count</code>, <code>triangle_count_min</code>, <code>triangle_count_max</code></dt>
+    <dd>Filter by number of triangles</dd>
+</dl>
+
+<p><strong>Examples:</strong></p>
+<pre><code>/search?n=8&amp;diameter=2                      # 8-vertex graphs with diameter 2
+/search?n=7&amp;girth_min=4                     # 7-vertex graphs with girth ≥ 4
+/search?n=6&amp;radius_min=2&amp;radius_max=3      # 6-vertex graphs with radius 2 or 3</code></pre>
+
+<h2>Tags</h2>
+<dl>
+    <dt><code>tags</code></dt>
+    <dd>Filter by named graph types (complete, cycle, path, star, wheel, petersen, etc.)</dd>
+
+    <dt><code>tag_mode</code></dt>
+    <dd>Use <code>OR</code> (default) to match ANY tag, or <code>AND</code> to match ALL tags</dd>
+</dl>
+
+<p><strong>Available tags:</strong> bipartite, complete, complete-bipartite, complete-multipartite, cubic, cycle, eulerian, fan, ladder, line-graph, path, petersen, planar, prism, regular, star, strongly-regular, tree, triangle-free, vertex-transitive, wheel, windmill</p>
+
+<p><strong>Examples:</strong></p>
+<pre><code>/search?tags=complete                           # All complete graphs
+/search?tags=bipartite&amp;tags=planar&amp;tag_mode=OR  # Graphs that are bipartite OR planar
+/search?tags=bipartite&amp;tags=planar&amp;tag_mode=AND # Graphs that are bipartite AND planar</code></pre>
+
+<h2>Cospectral Mates</h2>
+<dl>
+    <dt><code>has_cospectral_mate</code></dt>
+    <dd>Filter by cospectrality. Values: <code>adj</code>, <code>kirchhoff</code>, <code>signless</code>, <code>lap</code>, <code>nb</code>, <code>nbl</code>, <code>dist</code>, or <code>none</code></dd>
+</dl>
+
+<p><strong>Examples:</strong></p>
+<pre><code>/search?n=8&amp;has_cospectral_mate=adj        # 8-vertex graphs with adjacency cospectral mates
+/search?n=7&amp;has_cospectral_mate=kirchhoff  # 7-vertex graphs with Kirchhoff cospectral mates
+/search?n=6&amp;has_cospectral_mate=none       # 6-vertex graphs with NO cospectral mates</code></pre>
+
+<h2>Switching Mechanisms</h2>
+<dl>
+    <dt><code>has_mechanism</code></dt>
+    <dd>Filter by known switching mechanisms. Values: <code>gm</code> (Godsil-McKay), <code>any</code>, or <code>none</code></dd>
+</dl>
+
+<p><strong>Examples:</strong></p>
+<pre><code>/search?n=8&amp;has_mechanism=gm    # Graphs with GM switching mechanisms
+/search?n=8&amp;has_mechanism=any   # Graphs with any known mechanism
+/search?n=8&amp;has_mechanism=none  # Graphs with no known mechanism</code></pre>
+
+<h2>Pagination</h2>
+<dl>
+    <dt><code>limit</code></dt>
+    <dd>Number of results per page (default: 100, max: 1000)</dd>
+
+    <dt><code>offset</code></dt>
+    <dd>Number of results to skip</dd>
+</dl>
+
+<p><strong>Examples:</strong></p>
+<pre><code>/search?n=7&amp;limit=50                  # First 50 results
+/search?n=7&amp;limit=50&amp;offset=50       # Results 51-100</code></pre>
+
+<h2>Complex Queries</h2>
+<p>Combine multiple filters for sophisticated searches:</p>
+<pre><code># 8-vertex bipartite planar graphs with diameter ≤ 3 and adjacency cospectral mates
+/search?n=8&amp;tags=bipartite&amp;tags=planar&amp;tag_mode=AND&amp;diameter_max=3&amp;has_cospectral_mate=adj
+
+# 7-vertex regular graphs with girth ≥ 4 and no cospectral mates
+/search?n=7&amp;tags=regular&amp;girth_min=4&amp;has_cospectral_mate=none
+
+# Cubic graphs (3-regular) with 8 vertices and exactly 1 triangle
+/search?n=8&amp;tags=cubic&amp;triangle_count=1</code></pre>
+
+<h2>Other Endpoints</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Endpoint</th>
+            <th>Description</th>
+            <th>Example</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>GET /graph/{graph6}</code></td>
+            <td>Graph details with cospectral mates</td>
+            <td><code>/graph/D?{</code></td>
+        </tr>
+        <tr>
+            <td><code>GET /random</code></td>
+            <td>Redirect to random graph</td>
+            <td><code>/random</code></td>
+        </tr>
+        <tr>
+            <td><code>GET /random/cospectral</code></td>
+            <td>Random cospectral family</td>
+            <td><code>/random/cospectral?matrix=adj</code></td>
+        </tr>
+        <tr>
+            <td><code>GET /cospectral-pairs</code></td>
+            <td>Get cospectral pairs</td>
+            <td><code>/cospectral-pairs?matrix=adj&amp;n=8</code></td>
+        </tr>
+        <tr>
+            <td><code>GET /compare</code></td>
+            <td>Side-by-side graph comparison</td>
+            <td><code>/compare?graphs=D?{,DEo</code></td>
+        </tr>
+        <tr>
+            <td><code>GET /similar/{graph6}</code></td>
+            <td>Spectrally similar graphs</td>
+            <td><code>/similar/D?{?matrix=adj</code></td>
+        </tr>
+        <tr>
+            <td><code>GET /api/graph/{g6}/mechanisms</code></td>
+            <td>Switching mechanisms for graph</td>
+            <td><code>/api/graph/GCQvBk/mechanisms</code></td>
+        </tr>
+        <tr>
+            <td><code>GET /api/stats/mechanisms</code></td>
+            <td>Mechanism coverage statistics</td>
+            <td><code>/api/stats/mechanisms?n=9</code></td>
+        </tr>
+        <tr>
+            <td><code>GET /stats</code></td>
+            <td>Database statistics</td>
+            <td><code>/stats</code></td>
+        </tr>
+        <tr>
+            <td><code>GET /glossary</code></td>
+            <td>Terminology reference</td>
+            <td><code>/glossary</code></td>
+        </tr>
+    </tbody>
+</table>
+{% endblock %}

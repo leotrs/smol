@@ -1683,4 +1683,31 @@ function resetCompareSpectrumComplexPlot() {
 {% endfor %}
 {% endif %}
 
+<details style="margin-top: 3rem;">
+    <summary><h3>Modify Comparison</h3></summary>
+    <p style="margin-bottom: 1rem; color: var(--pico-muted-color);">Edit the graph6 strings below to add or remove graphs from the comparison.</p>
+    <form onsubmit="updateComparison(this); return false;">
+        <label for="compare-graphs-edit">Graph6 strings (space-separated)</label>
+        <textarea id="compare-graphs-edit" name="graphs" rows="3" placeholder="D?{ DEo F?ABo">{{ result.graphs | map(attribute='graph6') | join(' ') }}</textarea>
+        <button type="submit">Update Comparison</button>
+    </form>
+</details>
+
+<script>
+function updateComparison(form) {
+    const text = form.graphs.value.trim();
+    const graphs = text.split(/\s+/).map(g => g.trim()).filter(g => g);
+    if (graphs.length < 2) {
+        alert('Please enter at least 2 graphs to compare');
+        return;
+    }
+    if (graphs.length > 10) {
+        alert('Maximum 10 graphs allowed');
+        return;
+    }
+    const params = graphs.map(g => encodeURIComponent(g)).join(',');
+    window.location.href = '/compare?graphs=' + params;
+}
+</script>
+
 {% endblock %}

@@ -283,8 +283,8 @@ async def random_cospectral(matrix: str | None = None):
     return RedirectResponse(url=f"/compare?graphs={graphs_param}", status_code=302)
 
 
-@app.get("/graphs")
-async def list_graphs(
+@app.get("/search")
+async def search_graphs(
     request: Request,
     graph6: str | None = None,
     n: str | None = None,
@@ -293,23 +293,63 @@ async def list_graphs(
     m: str | None = None,
     m_min: str | None = None,
     m_max: str | None = None,
+    min_degree: str | None = None,
+    max_degree: str | None = None,
+    diameter: str | None = None,
+    diameter_min: str | None = None,
+    diameter_max: str | None = None,
+    radius: str | None = None,
+    radius_min: str | None = None,
+    radius_max: str | None = None,
+    girth: str | None = None,
+    girth_min: str | None = None,
+    girth_max: str | None = None,
+    triangle_count: str | None = None,
+    triangle_count_min: str | None = None,
+    triangle_count_max: str | None = None,
     bipartite: str | None = None,
     planar: str | None = None,
     regular: str | None = None,
+    tags: list[str] = Query(default=[]),
+    tag_mode: str = Query(default="OR"),
+    has_cospectral_mate: str | None = None,
+    has_mechanism: str | None = None,
     connected: bool = True,
     limit: int = Query(default=100, le=1000),
     offset: int = 0,
+    page: int = Query(default=1, ge=1),
+    sort_by: str = Query(default="n"),
+    sort_order: str = Query(default="asc"),
 ):
-    """Query graphs with filters."""
+    """Query graphs with filters. Supports all graph properties via API."""
     n = int(n) if n else None
     n_min = int(n_min) if n_min else None
     n_max = int(n_max) if n_max else None
     m = int(m) if m else None
     m_min = int(m_min) if m_min else None
     m_max = int(m_max) if m_max else None
+    min_degree_val = int(min_degree) if min_degree else None
+    max_degree_val = int(max_degree) if max_degree else None
+    diameter_val = int(diameter) if diameter else None
+    diameter_min_val = int(diameter_min) if diameter_min else None
+    diameter_max_val = int(diameter_max) if diameter_max else None
+    radius_val = int(radius) if radius else None
+    radius_min_val = int(radius_min) if radius_min else None
+    radius_max_val = int(radius_max) if radius_max else None
+    girth_val = int(girth) if girth else None
+    girth_min_val = int(girth_min) if girth_min else None
+    girth_max_val = int(girth_max) if girth_max else None
+    triangle_count_val = int(triangle_count) if triangle_count else None
+    triangle_count_min_val = int(triangle_count_min) if triangle_count_min else None
+    triangle_count_max_val = int(triangle_count_max) if triangle_count_max else None
     bipartite = bipartite == "true" if bipartite else None
     planar = planar == "true" if planar else None
     regular = regular == "true" if regular else None
+
+    # Calculate offset from page if page parameter was provided
+    # (Check if page was explicitly set by seeing if it's not the default)
+    if "page" in request.query_params:
+        offset = (page - 1) * limit
 
     if graph6:
         row = await fetch_graph(graph6)
@@ -346,9 +386,27 @@ async def list_graphs(
         m=m,
         m_min=m_min,
         m_max=m_max,
+        min_degree=min_degree_val,
+        max_degree=max_degree_val,
+        diameter=diameter_val,
+        diameter_min=diameter_min_val,
+        diameter_max=diameter_max_val,
+        radius=radius_val,
+        radius_min=radius_min_val,
+        radius_max=radius_max_val,
+        girth=girth_val,
+        girth_min=girth_min_val,
+        girth_max=girth_max_val,
+        triangle_count=triangle_count_val,
+        triangle_count_min=triangle_count_min_val,
+        triangle_count_max=triangle_count_max_val,
         bipartite=bipartite,
         planar=planar,
         regular=regular,
+        tags=tags if tags else None,
+        tag_mode=tag_mode,
+        has_cospectral_mate=has_cospectral_mate,
+        has_mechanism=has_mechanism,
         connected=connected,
         limit=limit,
         offset=offset,
@@ -357,196 +415,35 @@ async def list_graphs(
     graphs = [row_to_graph_summary(row) for row in rows]
 
     if wants_html(request):
+        # Build query params dict for the template
+        query_params = {k: v for k, v in request.query_params.items()}
+
+        # Calculate pagination variables
+        total_pages = (total_count + limit - 1) // limit if total_count <= MAX_COUNT else 1
+        has_prev = page > 1
+        has_next = page < total_pages if total_count <= MAX_COUNT else False
+
+        # Convert GraphSummary objects to dicts for JSON serialization in template
+        graphs_dicts = [g.model_dump() for g in graphs]
+
         return templates.TemplateResponse(
-            request, "graph_list.html", {"graphs": graphs}
+            request, "search_results.html", {
+                "graphs": graphs_dicts,
+                "total_count": total_count,
+                "results_capped": total_count > MAX_COUNT,
+                "all_graphs": graphs_dicts,
+                "query_params": query_params,
+                "limit": limit,
+                "offset": offset,
+                "page": page,
+                "total_pages": total_pages,
+                "has_prev": has_prev,
+                "has_next": has_next,
+                "sort_by": sort_by,
+                "sort_order": sort_order,
+            }
         )
     return graphs
-
-
-@app.get("/search")
-async def search_graphs(
-    request: Request,
-    n: str | None = None,
-    m: str | None = None,
-    min_degree: str | None = None,
-    max_degree: str | None = None,
-    diameter: str | None = None,
-    radius: str | None = None,
-    girth: str | None = None,
-    triangle_count: str | None = None,
-    bipartite: str | None = None,
-    planar: str | None = None,
-    regular: str | None = None,
-    tags: list[str] = Query(default=[]),
-    has_mechanism: str | None = None,
-    page: int = Query(default=1, ge=1),
-    limit: int = Query(default=100, le=1000),
-    sort_by: str = Query(default="n"),
-    sort_order: str = Query(default="asc"),
-):
-    """Search graphs with filters - returns HTML page with results."""
-    # Parse params
-    n_val = int(n) if n else None
-    m_val = int(m) if m else None
-    min_degree_val = int(min_degree) if min_degree else None
-    max_degree_val = int(max_degree) if max_degree else None
-    diameter_val = int(diameter) if diameter else None
-    radius_val = int(radius) if radius else None
-    girth_val = int(girth) if girth else None
-    triangle_count_val = int(triangle_count) if triangle_count else None
-    bipartite_val = bipartite == "true" if bipartite else None
-    planar_val = planar == "true" if planar else None
-    regular_val = regular == "true" if regular else None
-
-    # Cap results at 1000 to keep site responsive
-    MAX_RESULTS = 1000
-
-    # First, get the total count to check if we need to cap
-    offset = (page - 1) * limit
-
-    # Prevent accessing beyond the cap
-    if offset >= MAX_RESULTS:
-        offset = 0
-        page = 1
-
-    # Check if we'll need to cap results (fast count up to 1001)
-    _, estimated_count = await query_graphs(
-        n=n_val,
-        m=m_val,
-        min_degree=min_degree_val,
-        max_degree=max_degree_val,
-        diameter=diameter_val,
-        radius=radius_val,
-        girth=girth_val,
-        triangle_count=triangle_count_val,
-        bipartite=bipartite_val,
-        planar=planar_val,
-        regular=regular_val,
-        tags=tags if tags else None,
-        has_mechanism=has_mechanism,
-        connected=True,
-        limit=0,
-        offset=0,
-        max_count=MAX_RESULTS,
-    )
-
-    # Check if results are capped
-    results_capped = estimated_count > MAX_RESULTS
-
-    if results_capped:
-        # For large result sets: fetch all 1000 results for client-side sorting/pagination
-        rows, total_count = await query_graphs(
-            n=n_val,
-            m=m_val,
-            min_degree=min_degree_val,
-            max_degree=max_degree_val,
-            diameter=diameter_val,
-            radius=radius_val,
-            girth=girth_val,
-            triangle_count=triangle_count_val,
-            bipartite=bipartite_val,
-            planar=planar_val,
-            regular=regular_val,
-            tags=tags if tags else None,
-            has_mechanism=has_mechanism,
-            connected=True,
-            limit=MAX_RESULTS,
-            offset=0,
-            sort_by="n",  # Use fast indexed order
-            sort_order="asc",
-            max_count=MAX_RESULTS,
-        )
-
-        # Convert ALL results to graph objects for client-side use
-        graph_objects = [row_to_graph_summary(row) for row in rows]
-        graphs = graph_objects  # Pass all to template for server-side display
-        all_graphs = [g.model_dump() for g in graph_objects]  # Convert to dicts for JSON
-    else:
-        # For small result sets: use SQL ORDER BY (normal server-side pagination)
-        rows, total_count = await query_graphs(
-            n=n_val,
-            m=m_val,
-            min_degree=min_degree_val,
-            max_degree=max_degree_val,
-            diameter=diameter_val,
-            radius=radius_val,
-            girth=girth_val,
-            triangle_count=triangle_count_val,
-            bipartite=bipartite_val,
-            planar=planar_val,
-            regular=regular_val,
-            tags=tags if tags else None,
-            has_mechanism=has_mechanism,
-            connected=True,
-            limit=limit,
-            offset=offset,
-            sort_by=sort_by,
-            sort_order=sort_order,
-            max_count=MAX_RESULTS,
-        )
-        graph_objects = [row_to_graph_summary(row) for row in rows]
-        graphs = [g.model_dump() for g in graph_objects]  # Convert to dicts for JSON
-        all_graphs = None  # Not needed for server-side pagination
-
-    display_count = min(total_count, MAX_RESULTS)
-
-    # Build query params for API call display and pagination
-    query_params = {}
-    if n:
-        query_params["n"] = n
-    if m:
-        query_params["m"] = m
-    if min_degree:
-        query_params["min_degree"] = min_degree
-    if max_degree:
-        query_params["max_degree"] = max_degree
-    if diameter:
-        query_params["diameter"] = diameter
-    if radius:
-        query_params["radius"] = radius
-    if girth:
-        query_params["girth"] = girth
-    if triangle_count:
-        query_params["triangle_count"] = triangle_count
-    if bipartite:
-        query_params["bipartite"] = bipartite
-    if planar:
-        query_params["planar"] = planar
-    if regular:
-        query_params["regular"] = regular
-    for tag in tags:
-        query_params.setdefault("tags", []).append(tag) if isinstance(query_params.get("tags"), list) else query_params.update({"tags": [tag]})
-    if has_mechanism:
-        query_params["has_mechanism"] = has_mechanism
-
-    # Pagination info - use capped count for pagination
-    total_pages = (display_count + limit - 1) // limit
-    has_prev = page > 1
-    has_next = page < total_pages
-    start_idx = offset + 1 if display_count > 0 else 0
-    end_idx = min(offset + limit, display_count)
-
-    return templates.TemplateResponse(
-        request,
-        "search_results.html",
-        {
-            "graphs": graphs,
-            "all_graphs": all_graphs,  # All 1000 for client-side sorting when capped
-            "total_count": total_count,
-            "results_capped": results_capped,
-            "display_count": display_count,
-            "page": page,
-            "limit": limit,
-            "total_pages": total_pages,
-            "has_prev": has_prev,
-            "has_next": has_next,
-            "start_idx": start_idx,
-            "end_idx": end_idx,
-            "query_params": query_params,
-            "sort_by": sort_by,
-            "sort_order": sort_order,
-        },
-    )
 
 
 @app.get("/search/count")
@@ -941,6 +838,12 @@ async def about(request: Request):
             request, "about.html", {}
         )
     return {"message": "About page - use HTML request"}
+
+
+@app.get("/api-docs")
+async def api_docs(request: Request):
+    """API documentation page."""
+    return templates.TemplateResponse(request, "api_docs.html", {})
 
 
 @app.get("/stats")

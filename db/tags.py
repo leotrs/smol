@@ -27,6 +27,14 @@ def compute_tags(G: nx.Graph) -> list[str]:
     max_deg = max(degrees)
     is_connected = nx.is_connected(G) if n > 0 else False
 
+    # Bipartite: graph can be two-colored
+    if nx.is_bipartite(G):
+        tags.append("bipartite")
+
+    # Planar: graph can be drawn without edge crossings
+    if nx.check_planarity(G)[0]:
+        tags.append("planar")
+
     # Regular: all vertices have same degree
     if min_deg == max_deg:
         tags.append("regular")

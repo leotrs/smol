@@ -240,14 +240,24 @@ async def query_graphs(
     min_degree: int | None = None,
     max_degree: int | None = None,
     diameter: int | None = None,
+    diameter_min: int | None = None,
+    diameter_max: int | None = None,
     radius: int | None = None,
+    radius_min: int | None = None,
+    radius_max: int | None = None,
     girth: int | None = None,
+    girth_min: int | None = None,
+    girth_max: int | None = None,
     triangle_count: int | None = None,
-    bipartite: bool | None = None,
-    planar: bool | None = None,
-    regular: bool | None = None,
+    triangle_count_min: int | None = None,
+    triangle_count_max: int | None = None,
+    bipartite: bool | None = None,  # Deprecated: use tags=["bipartite"] instead
+    planar: bool | None = None,  # Deprecated: use tags=["planar"] instead
+    regular: bool | None = None,  # Deprecated: use tags=["regular"] instead
     tags: list[str] | None = None,
+    tag_mode: str = "OR",
     has_mechanism: str | None = None,
+    has_cospectral_mate: str | None = None,
     connected: bool = True,
     limit: int = 100,
     offset: int = 0,
@@ -295,31 +305,82 @@ async def query_graphs(
     if diameter is not None:
         conditions.append(f"diameter = {ph}")
         params.append(diameter)
+    if diameter_min is not None:
+        conditions.append(f"diameter >= {ph}")
+        params.append(diameter_min)
+    if diameter_max is not None:
+        conditions.append(f"diameter <= {ph}")
+        params.append(diameter_max)
     if radius is not None:
         conditions.append(f"radius = {ph}")
         params.append(radius)
+    if radius_min is not None:
+        conditions.append(f"radius >= {ph}")
+        params.append(radius_min)
+    if radius_max is not None:
+        conditions.append(f"radius <= {ph}")
+        params.append(radius_max)
     if girth is not None:
         conditions.append(f"girth = {ph}")
         params.append(girth)
+    if girth_min is not None:
+        conditions.append(f"girth >= {ph}")
+        params.append(girth_min)
+    if girth_max is not None:
+        conditions.append(f"girth <= {ph}")
+        params.append(girth_max)
     if triangle_count is not None:
         conditions.append(f"triangle_count = {ph}")
         params.append(triangle_count)
-    if bipartite is not None:
-        conditions.append(f"is_bipartite = {ph}")
-        params.append((1 if bipartite else 0) if IS_SQLITE else bipartite)
-    if planar is not None:
-        conditions.append(f"is_planar = {ph}")
-        params.append((1 if planar else 0) if IS_SQLITE else planar)
-    if regular is not None:
-        conditions.append(f"is_regular = {ph}")
-        params.append((1 if regular else 0) if IS_SQLITE else regular)
-    if tags and has_tags:
-        for tag in tags:
+    if triangle_count_min is not None:
+        conditions.append(f"triangle_count >= {ph}")
+        params.append(triangle_count_min)
+    if triangle_count_max is not None:
+        conditions.append(f"triangle_count <= {ph}")
+        params.append(triangle_count_max)
+
+    # Boolean properties are now handled via tags
+    # bipartite/planar/regular parameters are deprecated, use tags instead
+    if bipartite is not None and has_tags:
+        if bipartite:
             if IS_SQLITE:
                 conditions.append(f"EXISTS (SELECT 1 FROM json_each(tags) WHERE value = {ph})")
             else:
                 conditions.append(f"{ph} = ANY(tags)")
-            params.append(tag)
+            params.append("bipartite")
+    if planar is not None and has_tags:
+        if planar:
+            if IS_SQLITE:
+                conditions.append(f"EXISTS (SELECT 1 FROM json_each(tags) WHERE value = {ph})")
+            else:
+                conditions.append(f"{ph} = ANY(tags)")
+            params.append("planar")
+    if regular is not None and has_tags:
+        if regular:
+            if IS_SQLITE:
+                conditions.append(f"EXISTS (SELECT 1 FROM json_each(tags) WHERE value = {ph})")
+            else:
+                conditions.append(f"{ph} = ANY(tags)")
+            params.append("regular")
+
+    if tags and has_tags:
+        if tag_mode == "OR":
+            # Match graphs that have ANY of the selected tags
+            if IS_SQLITE:
+                tag_conditions = " OR ".join([f"EXISTS (SELECT 1 FROM json_each(tags) WHERE value = {ph})" for _ in tags])
+                conditions.append(f"({tag_conditions})")
+                params.extend(tags)
+            else:
+                conditions.append(f"tags && ARRAY[{', '.join([ph] * len(tags))}]")
+                params.extend(tags)
+        else:
+            # Match graphs that have ALL of the selected tags (AND mode)
+            for tag in tags:
+                if IS_SQLITE:
+                    conditions.append(f"EXISTS (SELECT 1 FROM json_each(tags) WHERE value = {ph})")
+                else:
+                    conditions.append(f"{ph} = ANY(tags)")
+                params.append(tag)
 
     # Mechanism filter
     if has_mechanism:
@@ -333,6 +394,16 @@ async def query_graphs(
             # Specific mechanism type (e.g., "gm")
             conditions.append(f"graphs.id IN (SELECT DISTINCT graph1_id FROM switching_mechanisms WHERE mechanism_type = {ph} UNION SELECT DISTINCT graph2_id FROM switching_mechanisms WHERE mechanism_type = {ph})")
             params.extend([has_mechanism, has_mechanism])
+
+    # Cospectral mate filter
+    if has_cospectral_mate:
+        if has_cospectral_mate == "none":
+            # No cospectral mates for any matrix type
+            conditions.append("graphs.id NOT IN (SELECT DISTINCT graph1_id FROM cospectral_mates UNION SELECT DISTINCT graph2_id FROM cospectral_mates)")
+        else:
+            # Filter graphs that have cospectral mates for the specified matrix type
+            conditions.append(f"graphs.id IN (SELECT DISTINCT graph1_id FROM cospectral_mates WHERE matrix_type = {ph} UNION SELECT DISTINCT graph2_id FROM cospectral_mates WHERE matrix_type = {ph})")
+            params.extend([has_cospectral_mate, has_cospectral_mate])
 
     where = " AND ".join(conditions) if conditions else "1=1"
 

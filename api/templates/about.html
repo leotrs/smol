@@ -9,79 +9,129 @@
 </hgroup>
 
 <p>
-    SMOL is a comprehensive database of <strong>12.3 million graphs</strong> (all simple graphs up to 10 vertices)
-    with precomputed spectral properties for seven matrix types: adjacency, Kirchhoff Laplacian, signless Laplacian,
-    normalized Laplacian, non-backtracking (Hashimoto), non-backtracking Laplacian, and distance matrix (connected graphs only).
+    SMOL is a comprehensive database of all simple graphs up to 9 vertices with precomputed spectral properties
+    for seven matrix types: adjacency, Kirchhoff Laplacian, signless Laplacian, normalized Laplacian,
+    non-backtracking (Hashimoto), non-backtracking Laplacian, and distance matrix (connected graphs only).
 </p>
 
 <p>
-    Use it to find examples, explore cospectral pairs, discover switching mechanisms that explain cospectrality,
+    The full database extending to n=10 vertices (12 million additional graphs) is available on request.
+    Public deployment is currently limited to n≤9 due to hosting costs.
+</p>
+
+<p>
+    Use SMOL to find examples, explore cospectral pairs, discover switching mechanisms that explain cospectrality,
     and understand which matrix types can distinguish which graphs.
 </p>
 
-<h3>API</h3>
+<h3 id="api">API</h3>
 <p>All endpoints return JSON by default. Use <code>Accept: text/html</code> header or access via browser for HTML.</p>
 
-<h4>Core Endpoints</h4>
-<pre><code># Graph lookup and details
-GET /graph/{graph6}                    # Graph details with cospectral mates
-GET /graphs?n=7&amp;regular=true           # Query by properties
-GET /search?diameter=3&amp;girth=5         # Advanced search
-GET /random                            # Random graph
-GET /random/cospectral?matrix=adj      # Random cospectral family
-
-# Cospectrality
-GET /cospectral-pairs?matrix=adj&amp;n=8   # Get cospectral pairs
-
-# Comparison and similarity
-GET /compare?graphs=D?{,DEo            # Side-by-side comparison
-GET /similar/{graph6}?matrix=adj       # Spectrally similar graphs
-
-# Mechanisms and statistics
-GET /api/graph/{graph6}/mechanisms     # Switching mechanisms for a graph
-GET /api/stats/mechanisms?n=9          # Mechanism coverage statistics
-GET /stats                             # Database statistics
-GET /glossary                          # Terminology reference</code></pre>
+<table>
+    <thead>
+        <tr>
+            <th>Endpoint</th>
+            <th>Description</th>
+            <th>Example</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>GET /graph/{graph6}</code></td>
+            <td>Graph details with cospectral mates</td>
+            <td><code>/graph/D?{</code></td>
+        </tr>
+        <tr>
+            <td><code>GET /search</code></td>
+            <td>Query/filter graphs by properties. <a href="/api-docs">Full API docs →</a></td>
+            <td><code>/search?n=7&amp;tags=bipartite</code></td>
+        </tr>
+        <tr>
+            <td><code>GET /random</code></td>
+            <td>Redirect to random graph</td>
+            <td><code>/random</code></td>
+        </tr>
+        <tr>
+            <td><code>GET /random/cospectral</code></td>
+            <td>Random cospectral family</td>
+            <td><code>/random/cospectral?matrix=adj</code></td>
+        </tr>
+        <tr>
+            <td><code>GET /cospectral-pairs</code></td>
+            <td>Get cospectral pairs</td>
+            <td><code>/cospectral-pairs?matrix=adj&amp;n=8</code></td>
+        </tr>
+        <tr>
+            <td><code>GET /compare</code></td>
+            <td>Side-by-side graph comparison</td>
+            <td><code>/compare?graphs=D?{,DEo</code></td>
+        </tr>
+        <tr>
+            <td><code>GET /similar/{graph6}</code></td>
+            <td>Spectrally similar graphs</td>
+            <td><code>/similar/D?{?matrix=adj</code></td>
+        </tr>
+        <tr>
+            <td><code>GET /api/graph/{g6}/mechanisms</code></td>
+            <td>Switching mechanisms for graph</td>
+            <td><code>/api/graph/GCQvBk/mechanisms</code></td>
+        </tr>
+        <tr>
+            <td><code>GET /api/stats/mechanisms</code></td>
+            <td>Mechanism coverage statistics</td>
+            <td><code>/api/stats/mechanisms?n=9</code></td>
+        </tr>
+        <tr>
+            <td><code>GET /stats</code></td>
+            <td>Database statistics</td>
+            <td><code>/stats</code></td>
+        </tr>
+        <tr>
+            <td><code>GET /glossary</code></td>
+            <td>Terminology reference</td>
+            <td><code>/glossary</code></td>
+        </tr>
+    </tbody>
+</table>
 
 <h3>References</h3>
-<dl>
-        <dt>Cospectrality enumeration</dt>
-        <dd>
-            W.H. Haemers, E. Spence. <a href="https://www.sciencedirect.com/science/article/pii/S0195669803001008">Enumeration of cospectral graphs</a>. <em>European Journal of Combinatorics</em>, 2004.
-        </dd>
-        <dd>
-            A. Abiad, N. van de Berg, K. Simoens. <a href="https://arxiv.org/abs/2503.08627">Counting cospectral graphs obtained via switching</a>. <em>arXiv:2503.08627</em>, 2025.
-        </dd>
 
-        <dt>Switching operations</dt>
-        <dd>
-            C.D. Godsil, B.D. McKay. <a href="https://www.researchgate.net/publication/225524626_Constructing_cospectral_graphs">Constructing cospectral graphs</a>. <em>Aequationes Mathematicae</em>, 1982.
-        </dd>
+<h4 class="ref-category">Cospectrality enumeration</h4>
+<p class="ref-item">
+    W.H. Haemers, E. Spence. <a href="https://www.sciencedirect.com/science/article/pii/S0195669803001008">Enumeration of cospectral graphs</a>. <em>European Journal of Combinatorics</em>, 2004.
+</p>
+<p class="ref-item">
+    A. Abiad, N. van de Berg, K. Simoens. <a href="https://arxiv.org/abs/2503.08627">Counting cospectral graphs obtained via switching</a>. <em>arXiv:2503.08627</em>, 2025.
+</p>
 
-        <dt>Non-backtracking matrices</dt>
-        <dd>
-            K. Hashimoto. Zeta functions of finite graphs and representations of p-adic groups. <em>Adv. Stud. Pure Math.</em>, 1989.
-        </dd>
-        <dd>
-            J. Jost, R. Mulas, L. Torres. <a href="https://www.sciencedirect.com/science/article/pii/S0012365X23002224">Spectral theory of the non-backtracking Laplacian for graphs</a>. <em>Discrete Mathematics</em>, 2023.
-        </dd>
+<h4 class="ref-category">Switching operations</h4>
+<p class="ref-item">
+    C.D. Godsil, B.D. McKay. <a href="https://www.researchgate.net/publication/225524626_Constructing_cospectral_graphs">Constructing cospectral graphs</a>. <em>Aequationes Mathematicae</em>, 1982.
+</p>
 
-        <dt>Zeta functions</dt>
-        <dd>
-            C. Durfee, K. Martin. <a href="https://www.sciencedirect.com/science/article/pii/S0024379515002797">Distinguishing graphs with zeta functions and generalized spectra</a>. <em>Linear Algebra and its Applications</em>, 2015.
-        </dd>
+<h4 class="ref-category">Non-backtracking matrices</h4>
+<p class="ref-item">
+    K. Hashimoto. Zeta functions of finite graphs and representations of p-adic groups. <em>Adv. Stud. Pure Math.</em>, 1989.
+</p>
+<p class="ref-item">
+    J. Jost, R. Mulas, L. Torres. <a href="https://www.sciencedirect.com/science/article/pii/S0012365X23002224">Spectral theory of the non-backtracking Laplacian for graphs</a>. <em>Discrete Mathematics</em>, 2023.
+</p>
 
-        <dt>Graph enumeration (OEIS)</dt>
-        <dd>
-            <a href="https://oeis.org/A000088">A000088</a>: Number of unlabeled graphs on n vertices.
-        </dd>
-        <dd>
-            <a href="https://oeis.org/A001349">A001349</a>: Number of connected unlabeled graphs on n vertices.
-        </dd>
-        <dd>
-            <a href="https://oeis.org/A006608">A006608</a>: Graphs with adjacency cospectral mates (matches SMOL data).
-        </dd>
-    </dl>
+<h4 class="ref-category">Zeta functions</h4>
+<p class="ref-item">
+    C. Durfee, K. Martin. <a href="https://www.sciencedirect.com/science/article/pii/S0024379515002797">Distinguishing graphs with zeta functions and generalized spectra</a>. <em>Linear Algebra and its Applications</em>, 2015.
+</p>
+
+<h4 class="ref-category">Graph enumeration (OEIS)</h4>
+<p class="ref-item">
+    <a href="https://oeis.org/A000088">A000088</a>: Number of unlabeled graphs on n vertices.
+</p>
+<p class="ref-item">
+    <a href="https://oeis.org/A001349">A001349</a>: Number of connected unlabeled graphs on n vertices.
+</p>
+<p class="ref-item">
+    <a href="https://oeis.org/A006608">A006608</a>: Graphs with adjacency cospectral mates (matches SMOL data).
+</p>
 
 <h3>Citation</h3>
 <pre><code>@misc{smol2025,

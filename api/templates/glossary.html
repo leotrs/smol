@@ -4,11 +4,35 @@
 
 {% block content %}
 <hgroup>
-    <h1>Glossary</h1>
+    <h1 id="top">Glossary</h1>
     <p>Key concepts and terminology used throughout SMOL.</p>
 </hgroup>
 
-<h3>Graph Encoding</h3>
+<div style="margin-bottom: 2rem; padding: 1rem; background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius);">
+    <div style="font-weight: 600; margin-bottom: 0.5rem; color: var(--pico-muted-color); font-size: 0.875rem;">QUICK JUMP</div>
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <a href="#A" role="button" class="outline" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; margin: 0;">A</a>
+        <a href="#B" role="button" class="outline" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; margin: 0;">B</a>
+        <a href="#C" role="button" class="outline" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; margin: 0;">C</a>
+        <a href="#D" role="button" class="outline" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; margin: 0;">D</a>
+        <a href="#E" role="button" class="outline" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; margin: 0;">E</a>
+        <a href="#F" role="button" class="outline" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; margin: 0;">F</a>
+        <a href="#G" role="button" class="outline" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; margin: 0;">G</a>
+        <a href="#H" role="button" class="outline" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; margin: 0;">H</a>
+        <a href="#I" role="button" class="outline" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; margin: 0;">I</a>
+        <a href="#K" role="button" class="outline" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; margin: 0;">K</a>
+        <a href="#L" role="button" class="outline" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; margin: 0;">L</a>
+        <a href="#N" role="button" class="outline" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; margin: 0;">N</a>
+        <a href="#P" role="button" class="outline" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; margin: 0;">P</a>
+        <a href="#R" role="button" class="outline" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; margin: 0;">R</a>
+        <a href="#S" role="button" class="outline" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; margin: 0;">S</a>
+        <a href="#T" role="button" class="outline" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; margin: 0;">T</a>
+        <a href="#V" role="button" class="outline" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; margin: 0;">V</a>
+        <a href="#W" role="button" class="outline" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; margin: 0;">W</a>
+    </div>
+</div>
+
+<h3 id="G">G</h3>
 <dl>
     <dt id="graph6"><strong>graph6</strong></dt>
     <dd>
@@ -21,7 +45,7 @@
     </dd>
 </dl>
 
-<h3>Matrix Types</h3>
+<h3 id="A">A</h3>
 <dl>
         <dt id="adjacency"><strong>Adjacency matrix</strong></dt>
         <dd>
@@ -29,6 +53,10 @@
             Symmetric for undirected graphs. Eigenvalues are real.
         </dd>
 
+</dl>
+
+<h3 id="K">K</h3>
+<dl>
         <dt id="kirchhoff"><strong>Kirchhoff Laplacian</strong> (Combinatorial Laplacian)</dt>
         <dd>
             $L = D - A$, where $D$ is the diagonal degree matrix and $A$ is the adjacency matrix.
@@ -37,6 +65,10 @@
             The second-smallest eigenvalue $\lambda_2$ is the algebraic connectivity (Fiedler value).
         </dd>
 
+</dl>
+
+<h3 id="S">S</h3>
+<dl>
         <dt id="signless"><strong>Signless Laplacian</strong></dt>
         <dd>
             $Q = D + A$, where $D$ is the diagonal degree matrix and $A$ is the adjacency matrix.
@@ -44,6 +76,10 @@
             Related to chromatic number and bipartiteness detection.
         </dd>
 
+</dl>
+
+<h3 id="L">L</h3>
+<dl>
         <dt id="laplacian"><strong>Normalized Laplacian</strong></dt>
         <dd>
             The symmetric normalized Laplacian: $L = I - D^{-1/2} A D^{-1/2}$, where $D$ is the
@@ -51,6 +87,10 @@
             Has the same eigenvalues as the random walk Laplacian $I - D^{-1} A$.
         </dd>
 
+</dl>
+
+<h3 id="N">N</h3>
+<dl>
         <dt id="nonbacktracking"><strong>Non-backtracking matrix</strong> (Hashimoto)</dt>
         <dd>
             A $2m \times 2m$ matrix indexed by directed edges. $B_{e \to f} = 1$ if edge $e$ leads into edge $f$ without
@@ -65,6 +105,10 @@
             Eigenvalues are generally complex.
         </dd>
 
+</dl>
+
+<h3 id="D">D</h3>
+<dl>
         <dt id="distance"><strong>Distance matrix</strong></dt>
         <dd>
             The $n \times n$ matrix $D$ where $D_{ij}$ is the shortest path length between vertices $i$ and $j$.
@@ -73,7 +117,8 @@
         </dd>
     </dl>
 
-<h3>Spectral Concepts</h3>
+</dl>
+
 <dl>
         <dt id="spectrum"><strong>Spectrum</strong></dt>
         <dd>
@@ -104,7 +149,8 @@
         </dd>
     </dl>
 
-<h3>Switching Mechanisms</h3>
+</dl>
+
 <dl>
         <dt id="gm-switching"><strong>GM switching</strong> (Godsil-McKay)</dt>
         <dd>
@@ -132,6 +178,10 @@
             Understanding which mechanisms explain observed cospectrality is an active area of research.
         </dd>
 
+</dl>
+
+<h3 id="E">E</h3>
+<dl>
         <dt id="equitable-partition"><strong>Equitable partition</strong></dt>
         <dd>
             A partition of vertices $V = C_1 \cup C_2 \cup \cdots \cup C_k$ where all vertices in the same class $C_i$
@@ -140,7 +190,7 @@
         </dd>
     </dl>
 
-<h3>Graph Properties</h3>
+<h3 id="B">B</h3>
 <dl>
         <dt id="bipartite"><strong>Bipartite</strong></dt>
         <dd>
@@ -148,11 +198,19 @@
             a vertex in one set to a vertex in the other. Equivalently, a graph with no odd cycles.
         </dd>
 
+</dl>
+
+<h3 id="P">P</h3>
+<dl>
         <dt id="planar"><strong>Planar</strong></dt>
         <dd>
             A graph that can be drawn in the plane without any edges crossing.
         </dd>
 
+</dl>
+
+<h3 id="R">R</h3>
+<dl>
         <dt id="regular"><strong>Regular</strong></dt>
         <dd>
             A graph where every vertex has the same degree.
@@ -174,6 +232,10 @@
             that vertex to any other vertex.
         </dd>
 
+</dl>
+
+<h3 id="C">C</h3>
+<dl>
         <dt id="clique-number"><strong>Clique number</strong></dt>
         <dd>
             The size of the largest clique (complete subgraph) in the graph.
@@ -191,6 +253,10 @@
             in the graph, shown as a range [min, max].
         </dd>
 
+</dl>
+
+<h3 id="T">T</h3>
+<dl>
         <dt id="triangles"><strong>Triangle count</strong></dt>
         <dd>
             The number of triangles (3-cycles) in the graph. A triangle is a set of three vertices
@@ -233,7 +299,8 @@
         </dd>
     </dl>
 
-<h3>Named Graph Types</h3>
+</dl>
+
 <dl>
         <dt id="complete"><strong>Complete graph</strong> ($K_n$)</dt>
         <dd>
@@ -257,6 +324,10 @@
             all other vertices have degree 1.
         </dd>
 
+</dl>
+
+<h3 id="W">W</h3>
+<dl>
         <dt id="wheel"><strong>Wheel</strong> ($W_n$)</dt>
         <dd>
             A cycle with an additional central vertex (hub) connected to all cycle vertices.
@@ -297,6 +368,10 @@
             The friendship graph $F_n$ is the special case $Wd(3, n)$ (triangles sharing a vertex).
         </dd>
 
+</dl>
+
+<h3 id="F">F</h3>
+<dl>
         <dt id="fan"><strong>Fan</strong> ($F_{1,n}$)</dt>
         <dd>
             A path $P_n$ with an additional vertex connected to all path vertices.
@@ -332,6 +407,10 @@
             Parameters denoted $srg(n, k, \lambda, \mu)$.
         </dd>
 
+</dl>
+
+<h3 id="V">V</h3>
+<dl>
         <dt id="vertex-transitive"><strong>Vertex-transitive</strong></dt>
         <dd>
             A graph whose automorphism group acts transitively on vertices—every vertex can be mapped
@@ -356,4 +435,62 @@
     <li>Haemers, W. H., & Spence, E. (2004). Enumeration of cospectral graphs. <em>European Journal of Combinatorics</em>, 25(2), 199-211.</li>
     <li>Jost, J., Mulas, R., & Torres, L. (2023). Spectral theory of the non-backtracking Laplacian for graphs. <em>Discrete Mathematics</em>, 346(8), 113547.</li>
 </ul>
+
+<button id="back-to-top" style="position: fixed; bottom: 2rem; right: 2rem; display: none; padding: 0.5rem 1rem; border-radius: 2rem; background: var(--pico-primary); color: white; border: none; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 1000; font-size: 0.875rem; display: flex; align-items: center; gap: 0.5rem;" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" title="Back to top">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 19V5M5 12l7-7 7 7"/>
+    </svg>
+    Back to top
+</button>
+
+<style>
+    dl dt[id] {
+        position: relative;
+        scroll-margin-top: 2rem;
+    }
+
+    .anchor-link {
+        position: absolute;
+        left: -1.5rem;
+        color: var(--pico-primary);
+        opacity: 0;
+        transition: opacity 0.2s;
+        text-decoration: none;
+        font-weight: normal;
+    }
+
+    dl dt[id]:hover .anchor-link {
+        opacity: 1;
+    }
+
+    .anchor-link:hover {
+        text-decoration: underline;
+    }
+</style>
+
+<script>
+// Add anchor links to all dt elements with id
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('dl dt[id]').forEach(dt => {
+        const id = dt.getAttribute('id');
+        const anchor = document.createElement('a');
+        anchor.href = '#' + id;
+        anchor.className = 'anchor-link';
+        anchor.textContent = '#';
+        anchor.title = 'Link to this term';
+        dt.insertBefore(anchor, dt.firstChild);
+    });
+});
+
+// Show/hide back to top button
+window.addEventListener('scroll', () => {
+    const backToTop = document.getElementById('back-to-top');
+    if (window.scrollY > 300) {
+        backToTop.style.display = 'flex';
+    } else {
+        backToTop.style.display = 'none';
+    }
+});
+</script>
+
 {% endblock %}

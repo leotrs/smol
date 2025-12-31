@@ -541,27 +541,27 @@ class TestSimilarEndpoint:
 class TestSearchEndpoint:
     def test_search_returns_html(self):
         """Search endpoint should return HTML page."""
-        response = client.get("/search?n=5&m=6")
+        response = client.get("/search?n=5&m=6", headers={"Accept": "text/html"})
         assert response.status_code == 200
         assert "text/html" in response.headers["content-type"]
         assert "Search Results" in response.text
 
     def test_search_shows_results_count(self):
         """Search should show total count."""
-        response = client.get("/search?n=5&m=6")
+        response = client.get("/search?n=5&m=6", headers={"Accept": "text/html"})
         assert response.status_code == 200
         assert "Found" in response.text
         assert "graphs matching your criteria" in response.text
 
     def test_search_with_filters(self):
         """Search should support multiple filters."""
-        response = client.get("/search?n=5&m=6&diameter=2")
+        response = client.get("/search?n=5&m=6&diameter=2", headers={"Accept": "text/html"})
         assert response.status_code == 200
         assert "Search Results" in response.text
 
     def test_search_pagination(self):
         """Search should support pagination."""
-        response = client.get("/search?n=8&limit=50&page=1")
+        response = client.get("/search?n=8&limit=50&page=1", headers={"Accept": "text/html"})
         assert response.status_code == 200
         # For large result sets, uses client-side pagination
         # Check for pagination controls (Previous/Next buttons)
@@ -569,7 +569,7 @@ class TestSearchEndpoint:
 
     def test_search_pagination_page_2(self):
         """Search should support page 2."""
-        response = client.get("/search?n=8&limit=100&page=2")
+        response = client.get("/search?n=8&limit=100&page=2", headers={"Accept": "text/html"})
         assert response.status_code == 200
         # For large result sets, client-side pagination ignores page param
         # All 1000 results are loaded and pagination is handled client-side
@@ -577,24 +577,24 @@ class TestSearchEndpoint:
 
     def test_search_sorting(self):
         """Search should support sorting."""
-        response = client.get("/search?n=5&sort_by=m&sort_order=desc")
+        response = client.get("/search?n=5&sort_by=m&sort_order=desc", headers={"Accept": "text/html"})
         assert response.status_code == 200
         assert "sort-indicator" in response.text
 
     def test_search_sorting_ascending(self):
         """Search should support ascending sort."""
-        response = client.get("/search?n=5&sort_by=m&sort_order=asc")
+        response = client.get("/search?n=5&sort_by=m&sort_order=asc", headers={"Accept": "text/html"})
         assert response.status_code == 200
         assert "sort-indicator" in response.text
 
     def test_search_invalid_sort_defaults(self):
         """Invalid sort column should default to 'n'."""
-        response = client.get("/search?n=5&sort_by=invalid")
+        response = client.get("/search?n=5&sort_by=invalid", headers={"Accept": "text/html"})
         assert response.status_code == 200
 
     def test_search_api_equivalent_component(self):
         """Search should show API equivalent component."""
-        response = client.get("/search?n=5&m=6")
+        response = client.get("/search?n=5&m=6", headers={"Accept": "text/html"})
         assert response.status_code == 200
         assert "API Equivalent" in response.text
         assert "curl" in response.text.lower()
@@ -603,25 +603,25 @@ class TestSearchEndpoint:
 
     def test_search_api_equivalent_includes_params(self):
         """API equivalent should include search params."""
-        response = client.get("/search?n=5&m=6")
+        response = client.get("/search?n=5&m=6", headers={"Accept": "text/html"})
         assert response.status_code == 200
         assert "n=5" in response.text or "n': 5" in response.text or 'n": 5' in response.text
 
     def test_search_with_tags(self):
         """Search should support tags filter."""
-        response = client.get("/search?n=4&tags=complete")
+        response = client.get("/search?n=4&tags=complete", headers={"Accept": "text/html"})
         assert response.status_code == 200
         assert "C~" in response.text
 
     def test_search_empty_results(self):
         """Search with no matches should show empty message."""
-        response = client.get("/search?n=10&m=1&diameter=1")
+        response = client.get("/search?n=10&m=1&diameter=1", headers={"Accept": "text/html"})
         assert response.status_code == 200
         assert "Found 0 graphs" in response.text or "No graphs found" in response.text
 
     def test_search_table_headers_sortable(self):
         """Table headers should be sortable (either via links or Alpine.js)."""
-        response = client.get("/search?n=5")
+        response = client.get("/search?n=5", headers={"Accept": "text/html"})
         assert response.status_code == 200
         # Check for sorting capability (either href links or Alpine.js columns)
         assert "sort_by=" in response.text or "sortable: true" in response.text
@@ -632,7 +632,7 @@ class TestSearchEndpoint:
 
     def test_search_preserves_params_in_pagination(self):
         """Pagination links should preserve search params."""
-        response = client.get("/search?n=8&m=7&limit=50")
+        response = client.get("/search?n=8&m=7&limit=50", headers={"Accept": "text/html"})
         assert response.status_code == 200
         if "Next" in response.text or "page=2" in response.text:
             assert "n=8" in response.text
@@ -641,7 +641,7 @@ class TestSearchEndpoint:
     def test_search_caps_at_1000_results(self):
         """Search should cap results at 1000 and show warning."""
         # Search for all graphs with n=8 (should be >1000 results)
-        response = client.get("/search?n=8")
+        response = client.get("/search?n=8", headers={"Accept": "text/html"})
         assert response.status_code == 200
 
         # Should show warning banner
@@ -657,7 +657,7 @@ class TestSearchEndpoint:
     def test_search_beyond_cap_redirects_to_page_1(self):
         """Accessing page beyond cap should show page 1."""
         # Try to access page 100 when there are 1000 max results
-        response = client.get("/search?n=8&page=100")
+        response = client.get("/search?n=8&page=100", headers={"Accept": "text/html"})
         assert response.status_code == 200
 
         # Should show pagination (client-side pagination handles display)
@@ -675,7 +675,7 @@ class TestSearchEndpoint:
 
     def test_search_page_loads_count_async(self):
         """Search page should have HTMX attributes to load count asynchronously."""
-        response = client.get("/search?n=8")
+        response = client.get("/search?n=8", headers={"Accept": "text/html"})
         assert response.status_code == 200
 
         # Should have HTMX attributes when results are capped
@@ -686,7 +686,7 @@ class TestSearchEndpoint:
     def test_search_large_results_uses_client_side_sorting(self):
         """Large result sets should embed all data for client-side sorting."""
         # Search for n=8 which has >1000 results
-        response = client.get("/search?n=8")
+        response = client.get("/search?n=8", headers={"Accept": "text/html"})
         assert response.status_code == 200
 
         # Should have Alpine.js data attribute with all results
@@ -701,7 +701,7 @@ class TestSearchEndpoint:
 
     def test_search_large_results_embeds_json_data(self):
         """Large result sets should embed all 1000 results as JSON."""
-        response = client.get("/search?n=8")
+        response = client.get("/search?n=8", headers={"Accept": "text/html"})
         assert response.status_code == 200
 
         # Should have a script tag with data
@@ -711,7 +711,7 @@ class TestSearchEndpoint:
     def test_search_small_results_uses_server_side_pagination(self):
         """Small result sets should use traditional server-side pagination."""
         # Search for n=5&m=4 which has <1000 results
-        response = client.get("/search?n=5&m=4")
+        response = client.get("/search?n=5&m=4", headers={"Accept": "text/html"})
         assert response.status_code == 200
 
         # Should use server-side rendering (window.serverGraphs, not window.searchData)
@@ -720,7 +720,7 @@ class TestSearchEndpoint:
 
     def test_search_client_side_pagination_markup(self):
         """Large result sets should have Alpine.js pagination controls."""
-        response = client.get("/search?n=8")
+        response = client.get("/search?n=8", headers={"Accept": "text/html"})
         assert response.status_code == 200
 
         # Should have Alpine.js pagination controls
@@ -733,7 +733,7 @@ class TestSearchClientSideRegression:
 
     def test_large_results_always_use_client_side(self):
         """Large result sets (>1000) should always use client-side sorting."""
-        response = client.get("/search?n=8")
+        response = client.get("/search?n=8", headers={"Accept": "text/html"})
         assert response.status_code == 200
 
         # Should have Alpine.js component
@@ -753,7 +753,7 @@ class TestSearchClientSideRegression:
 
     def test_small_results_always_use_server_side(self):
         """Small result sets (<=1000) should use server-side sorting."""
-        response = client.get("/search?n=5&m=4")
+        response = client.get("/search?n=5&m=4", headers={"Accept": "text/html"})
         assert response.status_code == 200
 
         # Should use server-side data (window.serverGraphs)
@@ -764,7 +764,7 @@ class TestSearchClientSideRegression:
 
     def test_client_side_sorting_all_columns(self):
         """Client-side sorting should handle all sortable columns."""
-        response = client.get("/search?n=8")
+        response = client.get("/search?n=8", headers={"Accept": "text/html"})
         assert response.status_code == 200
 
         # Should have sortable column definitions
@@ -781,7 +781,7 @@ class TestSearchClientSideRegression:
 
     def test_client_side_pagination_controls(self):
         """Client-side pagination should have Previous/Next buttons."""
-        response = client.get("/search?n=8")
+        response = client.get("/search?n=8", headers={"Accept": "text/html"})
         assert response.status_code == 200
 
         # Should have pagination buttons (not links)
@@ -794,7 +794,7 @@ class TestSearchClientSideRegression:
 
     def test_client_side_handles_nullable_properties(self):
         """Client-side sorting should handle null diameter/girth."""
-        response = client.get("/search?n=8")
+        response = client.get("/search?n=8", headers={"Accept": "text/html"})
         assert response.status_code == 200
 
         # Should have null handling in sort logic
@@ -802,7 +802,7 @@ class TestSearchClientSideRegression:
 
     def test_client_side_respects_initial_sort(self):
         """Client-side should initialize with requested sort params."""
-        response = client.get("/search?n=8&sort_by=m&sort_order=desc")
+        response = client.get("/search?n=8&sort_by=m&sort_order=desc", headers={"Accept": "text/html"})
         assert response.status_code == 200
 
         # Should initialize Alpine.js with sort params
@@ -813,13 +813,13 @@ class TestSearchClientSideRegression:
         """Exactly 1000 results should trigger client-side mode."""
         # Find a query that returns exactly 1000 results
         # For now, just verify >1000 uses client-side
-        response = client.get("/search?n=8")
+        response = client.get("/search?n=8", headers={"Accept": "text/html"})
         assert response.status_code == 200
         assert 'window.searchData' in response.text
 
     def test_capped_warning_shows_for_large_results(self):
         """Should show warning when results are capped at 1000."""
-        response = client.get("/search?n=8")
+        response = client.get("/search?n=8", headers={"Accept": "text/html"})
         assert response.status_code == 200
 
         # Should have cap warning
@@ -828,7 +828,7 @@ class TestSearchClientSideRegression:
 
     def test_all_1000_results_embedded_in_json(self):
         """All 1000 results should be embedded for client-side use."""
-        response = client.get("/search?n=8")
+        response = client.get("/search?n=8", headers={"Accept": "text/html"})
         assert response.status_code == 200
 
         # Should have searchData array
@@ -839,7 +839,7 @@ class TestSearchClientSideRegression:
 
     def test_table_uses_alpine_template(self):
         """Table body should use Alpine.js x-for template."""
-        response = client.get("/search?n=8")
+        response = client.get("/search?n=8", headers={"Accept": "text/html"})
         assert response.status_code == 200
 
         # Should use x-for template for rows
@@ -858,7 +858,7 @@ class TestSearchColumnPicker:
 
     def test_search_has_column_picker_ui(self):
         """Search page should have column picker button/dropdown."""
-        response = client.get("/search?n=5")
+        response = client.get("/search?n=5", headers={"Accept": "text/html"})
         assert response.status_code == 200
 
         # Should have column picker UI element
@@ -868,7 +868,7 @@ class TestSearchColumnPicker:
 
     def test_column_picker_has_all_properties(self):
         """Column picker should list all available numeric properties."""
-        response = client.get("/search?n=5")
+        response = client.get("/search?n=5", headers={"Accept": "text/html"})
         assert response.status_code == 200
 
         # Should have options for numeric properties
@@ -891,7 +891,7 @@ class TestSearchColumnPicker:
 
     def test_default_columns_shown(self):
         """Default columns should be graph6, n, m, tags, diameter, girth."""
-        response = client.get("/search?n=5")
+        response = client.get("/search?n=5", headers={"Accept": "text/html"})
         assert response.status_code == 200
 
         # Should have column definitions in JavaScript
@@ -908,7 +908,7 @@ class TestSearchColumnPicker:
     def test_boolean_properties_shown_as_tags(self):
         """Boolean properties should appear as tags in the Tags column, not as separate columns."""
         # Get a graph that we know is bipartite, planar, and regular (cycle graph)
-        response = client.get("/search?n=5&m=5")
+        response = client.get("/search?n=5&m=5", headers={"Accept": "text/html"})
         assert response.status_code == 200
 
         # The getAllTags function should include these properties
@@ -1032,7 +1032,7 @@ class TestSearchExport:
 
     def test_search_page_has_export_ui(self):
         """Search results page should have export UI."""
-        response = client.get("/search?n=5&m=4")
+        response = client.get("/search?n=5&m=4", headers={"Accept": "text/html"})
         assert response.status_code == 200
         assert "/search/export" in response.text
         assert "format=csv" in response.text

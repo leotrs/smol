@@ -24,7 +24,7 @@
             <td><a href="/graph/{{ g.graph6 | urlencode }}"><code>{{ g.graph6 }}</code></a></td>
             <td>{{ g.n }}</td>
             <td>{{ g.m }}</td>
-            <td>{% if all_tags %}{% for tag in all_tags | sort %}<span class="tag tag-sm">{{ tag }}</span>{% endfor %}{% else %}-{% endif %}</td>
+            <td>{% if all_tags %}{% for tag in all_tags | sort %}<span class="tag tag-sm">{{ tag }}</span> {% endfor %}{% else %}-{% endif %}</td>
             <td>{{ g.properties.diameter if g.properties.diameter else "-" }}</td>
             <td>{{ g.properties.girth if g.properties.girth else "-" }}</td>
         </tr>

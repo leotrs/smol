@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}Advanced Search - SMOL{% endblock %}
+
+{% block content %}
+<hgroup>
+    <h1>Advanced Search</h1>
+    <p>Search graphs by structural properties, tags, and switching mechanisms</p>
+</hgroup>
+
+<form action="/search" method="get" class="advanced-search-form">
+    <div class="search-columns">
+        <div class="search-column">
+            <h4>Basic Properties</h4>
+            <label>
+                <span>Vertices (n)</span>
+                <div class="range-inputs">
+                    <input type="number" name="n_min" min="1" max="9" placeholder="1" step="1">
+                    <span class="range-separator">to</span>
+                    <input type="number" name="n_max" min="1" max="9" placeholder="9" step="1">
+                </div>
+            </label>
+            <label>
+                <span>Edges (m)</span>
+                <div class="range-inputs">
+                    <input type="number" name="m_min" min="0" max="36" placeholder="min">
+                    <span class="range-separator">to</span>
+                    <input type="number" name="m_max" min="0" max="36" placeholder="max">
+                </div>
+            </label>
+            <label>
+                <span>Degree range</span>
+                <div class="range-inputs">
+                    <input type="number" name="min_degree" min="0" placeholder="min">
+                    <span class="range-separator">to</span>
+                    <input type="number" name="max_degree" min="0" placeholder="max">
+                </div>
+            </label>
+        </div>
+
+        <div class="search-column">
+            <h4>Structural Properties</h4>
+            <label>
+                <span>Diameter</span>
+                <div class="range-inputs">
+                    <input type="number" name="diameter_min" min="0" placeholder="min">
+                    <span class="range-separator">to</span>
+                    <input type="number" name="diameter_max" min="0" placeholder="max">
+                </div>
+            </label>
+            <label>
+                <span>Radius</span>
+                <div class="range-inputs">
+                    <input type="number" name="radius_min" min="0" placeholder="min">
+                    <span class="range-separator">to</span>
+                    <input type="number" name="radius_max" min="0" placeholder="max">
+                </div>
+            </label>
+            <label>
+                <span>Girth</span>
+                <div class="range-inputs">
+                    <input type="number" name="girth_min" min="0" placeholder="min">
+                    <span class="range-separator">to</span>
+                    <input type="number" name="girth_max" min="0" placeholder="max">
+                </div>
+            </label>
+            <label>
+                <span>Triangles</span>
+                <div class="range-inputs">
+                    <input type="number" name="triangle_count_min" min="0" placeholder="min">
+                    <span class="range-separator">to</span>
+                    <input type="number" name="triangle_count_max" min="0" placeholder="max">
+                </div>
+            </label>
+
+        </div>
+
+        <div class="search-column">
+            <h4>Tags & Filters</h4>
+            <div x-data="{
+                selected: [],
+                open: false,
+                tagMode: 'OR',
+                tags: ['bipartite', 'complete', 'complete-bipartite', 'complete-multipartite', 'cubic', 'cycle', 'eulerian', 'fan', 'ladder', 'line-graph', 'path', 'petersen', 'planar', 'prism', 'regular', 'star', 'strongly-regular', 'tree', 'triangle-free', 'vertex-transitive', 'wheel', 'windmill'],
+                toggle(tag) {
+                    if (this.selected.includes(tag)) {
+                        this.selected = this.selected.filter(t => t !== tag);
+                    } else {
+                        this.selected.push(tag);
+                    }
+                },
+                remove(tag) {
+                    this.selected = this.selected.filter(t => t !== tag);
+                }
+            }">
+                <label>
+                    <span class="search-column-label" id="tags-label">Graph tags</span>
+                    <div class="multiselect-container">
+                        <div class="multiselect-selected"
+                             role="button"
+                             tabindex="0"
+                             aria-labelledby="tags-label"
+                             aria-expanded="false"
+                             :aria-expanded="open.toString()"
+                             @click.stop="open = !open"
+                             @keydown.enter="open = !open"
+                             @keydown.space.prevent="open = !open">
+                            <span x-show="selected.length === 0" class="multiselect-placeholder">Select tags...</span>
+                            <template x-for="tag in selected" :key="tag">
+                                <span class="multiselect-chip">
+                                    <span x-text="tag"></span>
+                                    <button type="button" @click.stop="remove(tag)" :aria-label="'Remove ' + tag" class="chip-remove">×</button>
+                                </span>
+                            </template>
+                        </div>
+                        <div class="multiselect-dropdown"
+                             role="listbox"
+                             aria-labelledby="tags-label"
+                             x-show="open"
+                             @click.away="open = false">
+                            <template x-for="tag in tags" :key="tag">
+                                <label class="multiselect-option">
+                                    <input type="checkbox" :checked="selected.includes(tag)" @change="toggle(tag)">
+                                    <span x-text="tag"></span>
+                                </label>
+                            </template>
+                        </div>
+                    </div>
+                    <template x-for="tag in selected" :key="tag">
+                        <input type="hidden" name="tags" :value="tag">
+                    </template>
+                </label>
+                <div class="tag-mode-selector" x-show="selected.length > 1">
+                    <label style="font-size: 0.8rem; color: var(--pico-muted-color); margin-bottom: 0.25rem; display: block;">Match</label>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <label class="radio-label">
+                            <input type="radio" name="tag_mode" value="OR" x-model="tagMode">
+                            <span>Any tag</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="tag_mode" value="AND" x-model="tagMode">
+                            <span>All tags</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <label>
+                <span>Cospectral mates</span>
+                <select name="has_cospectral_mate">
+                    <option value="">any</option>
+                    <option value="adj">Adjacency</option>
+                    <option value="kirchhoff">Kirchhoff Laplacian</option>
+                    <option value="signless">Signless Laplacian</option>
+                    <option value="lap">Normalized Laplacian</option>
+                    <option value="nb">Non-backtracking</option>
+                    <option value="nbl">NB Laplacian</option>
+                    <option value="dist">Distance</option>
+                    <option value="none">No cospectral mates</option>
+                </select>
+            </label>
+            <label>
+                <span>Switching mechanism</span>
+                <select name="has_mechanism">
+                    <option value="">any</option>
+                    <option value="gm">GM switching</option>
+                    <option value="any">has any mechanism</option>
+                    <option value="none">no known mechanism</option>
+                </select>
+            </label>
+        </div>
+    </div>
+
+    <div class="search-submit-row">
+        <button type="submit">Search</button>
+        <label class="results-per-page">
+            <span>Results per page</span>
+            <select name="limit">
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100" selected>100</option>
+                <option value="500">500</option>
+            </select>
+        </label>
+    </div>
+</form>
+{% endblock %}

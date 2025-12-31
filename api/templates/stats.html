@@ -8,200 +8,182 @@
     <p>Comprehensive statistics on graph counts and cospectrality</p>
 </hgroup>
 
-<p><strong>{{ "{:,}".format(stats.total_graphs) }}</strong> total graphs ({{ "{:,}".format(stats.connected_graphs) }} connected)</p>
-
-<p>
-    SMOL precomputes spectral properties for seven matrix types. The table below shows
-    the number of graphs at each vertex count that have at least one cospectral mate
-    (another non-isomorphic graph with the same spectrum).
-</p>
-
-<div style="overflow-x: auto;">
-<table>
-    <caption>Graphs with cospectral mates by vertex count and matrix type</caption>
-    <thead>
-        <tr>
-            <th>n</th>
-            <th>Graphs</th>
-            <th>Adj</th>
-            <th>Kirchhoff</th>
-            <th>Signless</th>
-            <th>Lap</th>
-            <th>NB</th>
-            <th>NBL</th>
-            <th>Distance</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for n, count in stats.counts_by_n.items() %}
-        <tr>
-            <td>{{ n }}</td>
-            <td>{{ "{:,}".format(count) }}</td>
-            <td>{{ "{:,}".format(stats.cospectral_counts.adj.get(n, 0)) if stats.cospectral_counts.adj.get(n, 0) else "-" }}</td>
-            <td>{{ "{:,}".format(stats.cospectral_counts.kirchhoff.get(n, 0)) if stats.cospectral_counts.kirchhoff.get(n, 0) else "-" }}</td>
-            <td>{{ "{:,}".format(stats.cospectral_counts.signless.get(n, 0)) if stats.cospectral_counts.signless.get(n, 0) else "-" }}</td>
-            <td>{{ "{:,}".format(stats.cospectral_counts.lap.get(n, 0)) if stats.cospectral_counts.lap.get(n, 0) else "-" }}</td>
-            <td>{{ "{:,}".format(stats.cospectral_counts.nb.get(n, 0)) if stats.cospectral_counts.nb.get(n, 0) else "-" }}</td>
-            <td>{{ "{:,}".format(stats.cospectral_counts.nbl.get(n, 0)) if stats.cospectral_counts.nbl.get(n, 0) else "-" }}</td>
-            <td>{{ "{:,}".format(stats.cospectral_counts.dist.get(n, 0)) if stats.cospectral_counts.dist.get(n, 0) else "-" }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="stats-summary">
+    <div class="stat-card">
+        <div class="stat-label">Total Graphs</div>
+        <div class="stat-value">{{ "{:,}".format(stats.total_graphs) }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Connected Graphs</div>
+        <div class="stat-value">{{ "{:,}".format(stats.connected_graphs) }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Matrix Types</div>
+        <div class="stat-value">7</div>
+    </div>
+    {% if stats.tag_counts %}
+    <div class="stat-card">
+        <div class="stat-label">Named Graph Types</div>
+        <div class="stat-value">{{ stats.tag_counts | length }}</div>
+    </div>
+    {% endif %}
 </div>
 
-{% if stats.mechanism_stats %}
-<h3 style="margin-top: 2rem;">Switching Mechanisms (Adjacency)</h3>
+<div class="collapsible-sections">
 
-<p>
-    SMOL detects switching mechanisms that explain why graphs are adjacency-cospectral.
-    The table below shows the number and percentage of graphs with cospectral mates that
-    can be explained by each known mechanism type.
-</p>
+    <details>
+        <summary><h3>Cospectral Counts</h3></summary>
+        <div>
+            <p class="section-description">
+                Number of graphs at each vertex count that have at least one cospectral mate
+                (another non-isomorphic graph with the same spectrum).
+            </p>
 
-<div style="overflow-x: auto;">
-<table>
-    <caption>Mechanism coverage by vertex count</caption>
-    <thead>
-        <tr>
-            <th>n</th>
-            <th>Graphs with mates</th>
-            <th>GM switching</th>
-            <th>Coverage</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for n in range(1, 11) %}
-            {% if n in stats.mechanism_stats %}
-            <tr>
-                <td>{{ n }}</td>
-                <td>{{ "{:,}".format(stats.mechanism_stats[n].total_graphs) }}</td>
-                {% if 'gm' in stats.mechanism_stats[n].mechanisms %}
-                    <td>{{ "{:,}".format(stats.mechanism_stats[n].mechanisms.gm.graphs) }}</td>
-                    <td>{{ "{:.1f}%".format(stats.mechanism_stats[n].mechanisms.gm.coverage * 100) }}</td>
-                {% else %}
-                    <td>—</td>
-                    <td>—</td>
-                {% endif %}
-            </tr>
+            <h4>All Graphs</h4>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>n</th>
+                            <th>Graphs</th>
+                            <th>Adj</th>
+                            <th>Kirchhoff</th>
+                            <th>Signless</th>
+                            <th>Lap</th>
+                            <th>NB</th>
+                            <th>NBL</th>
+                            <th>Distance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for n, count in stats.counts_by_n.items() %}
+                        <tr>
+                            <td>{{ n }}</td>
+                            <td>{{ "{:,}".format(count) }}</td>
+                            <td>{{ "{:,}".format(stats.cospectral_counts.adj.get(n, 0)) if stats.cospectral_counts.adj.get(n, 0) else "—" }}</td>
+                            <td>{{ "{:,}".format(stats.cospectral_counts.kirchhoff.get(n, 0)) if stats.cospectral_counts.kirchhoff.get(n, 0) else "—" }}</td>
+                            <td>{{ "{:,}".format(stats.cospectral_counts.signless.get(n, 0)) if stats.cospectral_counts.signless.get(n, 0) else "—" }}</td>
+                            <td>{{ "{:,}".format(stats.cospectral_counts.lap.get(n, 0)) if stats.cospectral_counts.lap.get(n, 0) else "—" }}</td>
+                            <td>{{ "{:,}".format(stats.cospectral_counts.nb.get(n, 0)) if stats.cospectral_counts.nb.get(n, 0) else "—" }}</td>
+                            <td>{{ "{:,}".format(stats.cospectral_counts.nbl.get(n, 0)) if stats.cospectral_counts.nbl.get(n, 0) else "—" }}</td>
+                            <td>{{ "{:,}".format(stats.cospectral_counts.dist.get(n, 0)) if stats.cospectral_counts.dist.get(n, 0) else "—" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if stats.cospectral_counts_mindeg2 %}
+            <h4 class="subsection-title">Graphs with Minimum Degree ≥ 2</h4>
+            <p class="subsection-description">
+                Same statistics restricted to graphs where every vertex has degree at least 2
+                (excludes trees, stars, and graphs with pendant vertices).
+            </p>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>n</th>
+                            <th>Graphs</th>
+                            <th>Adj</th>
+                            <th>Kirchhoff</th>
+                            <th>Signless</th>
+                            <th>Lap</th>
+                            <th>NB</th>
+                            <th>NBL</th>
+                            <th>Distance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for n, count in stats.counts_by_n_mindeg2.items() %}
+                        <tr>
+                            <td>{{ n }}</td>
+                            <td>{{ "{:,}".format(count) }}</td>
+                            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.adj.get(n, 0)) if stats.cospectral_counts_mindeg2.adj.get(n, 0) else "—" }}</td>
+                            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.kirchhoff.get(n, 0)) if stats.cospectral_counts_mindeg2.kirchhoff.get(n, 0) else "—" }}</td>
+                            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.signless.get(n, 0)) if stats.cospectral_counts_mindeg2.signless.get(n, 0) else "—" }}</td>
+                            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.lap.get(n, 0)) if stats.cospectral_counts_mindeg2.lap.get(n, 0) else "—" }}</td>
+                            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.nb.get(n, 0)) if stats.cospectral_counts_mindeg2.nb.get(n, 0) else "—" }}</td>
+                            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.nbl.get(n, 0)) if stats.cospectral_counts_mindeg2.nbl.get(n, 0) else "—" }}</td>
+                            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.dist.get(n, 0)) if stats.cospectral_counts_mindeg2.dist.get(n, 0) else "—" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
             {% endif %}
-        {% endfor %}
-    </tbody>
-</table>
+        </div>
+    </details>
+
+    {% if stats.mechanism_stats %}
+    <details>
+        <summary><h3>Switching Mechanisms</h3></summary>
+        <div>
+            <p class="section-description">
+                Number and percentage of adjacency-cospectral graphs that can be explained by known switching mechanisms.
+                See the <a href="/glossary#gm-switching">glossary</a> for details on GM switching.
+            </p>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>n</th>
+                            <th>Graphs with Mates</th>
+                            <th>GM Switching</th>
+                            <th>Coverage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for n in range(1, 10) %}
+                            {% if n in stats.mechanism_stats %}
+                            <tr>
+                                <td>{{ n }}</td>
+                                <td>{{ "{:,}".format(stats.mechanism_stats[n].total_graphs) }}</td>
+                                {% if 'gm' in stats.mechanism_stats[n].mechanisms %}
+                                    <td>{{ "{:,}".format(stats.mechanism_stats[n].mechanisms.gm.graphs) }}</td>
+                                    <td>{{ "{:.1f}%".format(stats.mechanism_stats[n].mechanisms.gm.coverage * 100) }}</td>
+                                {% else %}
+                                    <td>—</td>
+                                    <td>—</td>
+                                {% endif %}
+                            </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </details>
+    {% endif %}
+
+    {% if stats.tag_counts %}
+    <details>
+        <summary><h3>Named Graph Types</h3></summary>
+        <div>
+            <p class="section-description">
+                Number of graphs identified with each named type. Graphs can have multiple tags.
+            </p>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tag</th>
+                            <th>Count</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tag, count in stats.tag_counts.items() | sort %}
+                        <tr>
+                            <td><code>{{ tag }}</code></td>
+                            <td>{{ "{:,}".format(count) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </details>
+    {% endif %}
+
 </div>
-
-<p style="margin-top: 1rem; color: var(--pico-muted-color); font-size: 0.9rem;">
-    See the <a href="/glossary#gm-switching">glossary</a> for an explanation of GM switching.
-    Graph detail pages show specific mechanism configurations for each cospectral pair.
-</p>
-{% endif %}
-
-{% if stats.property_distributions %}
-<h3 style="margin-top: 2rem;">Property Distributions</h3>
-
-<p>
-    Distribution of graph properties across the entire database.
-</p>
-
-{% for prop_name, distribution in stats.property_distributions.items() %}
-<h4 style="margin-top: 1.5rem; text-transform: capitalize;">{{ prop_name.replace('_', ' ') }}</h4>
-<div style="overflow-x: auto;">
-<table>
-    <thead>
-        <tr>
-            <th style="text-align: right;">Value</th>
-            <th>Count</th>
-            <th style="width: 60%;">Distribution</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% set max_count = distribution.values() | max %}
-        {% for value, count in distribution.items() | sort %}
-        <tr>
-            <td style="text-align: right;"><code>{{ value }}</code></td>
-            <td>{{ "{:,}".format(count) }}</td>
-            <td>
-                <div style="background: linear-gradient(90deg, var(--pico-primary) {{ (count / max_count * 100) | round(1) }}%, transparent {{ (count / max_count * 100) | round(1) }}%); padding: 0.25rem 0.5rem; border-radius: 4px;">
-                    {{ "{:.1f}".format(count / stats.connected_graphs * 100) }}%
-                </div>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-</div>
-{% endfor %}
-{% endif %}
-
-{% if stats.tag_counts %}
-<h3 style="margin-top: 2rem;">Graphs by named type</h3>
-
-<p>
-    The table below shows the number of graphs identified with each named graph type.
-    Note that graphs can have multiple tags (e.g., a graph can be both regular and triangle-free).
-</p>
-
-<div style="overflow-x: auto;">
-<table>
-    <caption>Number of graphs by tag</caption>
-    <thead>
-        <tr>
-            <th>Tag</th>
-            <th>Count</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for tag, count in stats.tag_counts.items() %}
-        <tr>
-            <td><code>{{ tag }}</code></td>
-            <td>{{ "{:,}".format(count) }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-</div>
-{% endif %}
-
-{% if stats.cospectral_counts_mindeg2 %}
-<h3 style="margin-top: 2rem;">Graphs with minimum degree ≥ 2</h3>
-
-<p>
-    The table below shows the same statistics restricted to graphs where every vertex has degree at least 2
-    (excludes trees, stars, and other graphs with pendant vertices).
-</p>
-
-<div style="overflow-x: auto;">
-<table>
-    <caption>Graphs with min degree ≥ 2: cospectral mates by vertex count and matrix type</caption>
-    <thead>
-        <tr>
-            <th>n</th>
-            <th>Graphs</th>
-            <th>Adj</th>
-            <th>Kirchhoff</th>
-            <th>Signless</th>
-            <th>Lap</th>
-            <th>NB</th>
-            <th>NBL</th>
-            <th>Distance</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for n, count in stats.counts_by_n_mindeg2.items() %}
-        <tr>
-            <td>{{ n }}</td>
-            <td>{{ "{:,}".format(count) }}</td>
-            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.adj.get(n, 0)) if stats.cospectral_counts_mindeg2.adj.get(n, 0) else "-" }}</td>
-            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.kirchhoff.get(n, 0)) if stats.cospectral_counts_mindeg2.kirchhoff.get(n, 0) else "-" }}</td>
-            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.signless.get(n, 0)) if stats.cospectral_counts_mindeg2.signless.get(n, 0) else "-" }}</td>
-            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.lap.get(n, 0)) if stats.cospectral_counts_mindeg2.lap.get(n, 0) else "-" }}</td>
-            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.nb.get(n, 0)) if stats.cospectral_counts_mindeg2.nb.get(n, 0) else "-" }}</td>
-            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.nbl.get(n, 0)) if stats.cospectral_counts_mindeg2.nbl.get(n, 0) else "-" }}</td>
-            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.dist.get(n, 0)) if stats.cospectral_counts_mindeg2.dist.get(n, 0) else "-" }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-</div>
-{% endif %}
 {% endblock %}

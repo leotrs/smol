@@ -3,9 +3,9 @@
 {% block title %}SMOL - Spectra and Matrices Of Little graphs{% endblock %}
 
 {% block content %}
-<hgroup class="hero">
+<hgroup style="margin-bottom: 3rem;">
     <h1>SMOL Graphs DB</h1>
-    <p>Spectra and matrices of all simple graphs with up to 10 vertices.</p>
+    <p>Spectra and matrices of small simple graphs.</p>
 </hgroup>
 
 <h2 class="section-header">Query the DB</h2>
@@ -27,156 +27,64 @@
     </div>
 
     <div class="tab-content" role="tabpanel" id="compare-panel" aria-labelledby="compare-tab" x-show="tab === 'compare'">
-        <p class="tab-hint">Compare multiple graphs side by side (2-10 <a href="/glossary#graph6">graph6</a> strings, one per line)</p>
+        <p class="tab-hint">Compare multiple graphs side by side (2-10 <a href="/glossary#graph6">graph6</a> strings, separated by whitespace)</p>
         <form class="compare-form" onsubmit="compareGraphs(this); return false;">
-            <label for="compare-graphs-input" class="sr-only">Graph6 encodings (one per line)</label>
-            <textarea id="compare-graphs-input" name="graphs" rows="3" placeholder="D?{&#10;DEo" aria-describedby="compare-hint"></textarea>
+            <label for="compare-graphs-input" class="sr-only">Graph6 encodings</label>
+            <textarea id="compare-graphs-input" name="graphs" rows="1" placeholder="D?{ DEo" aria-describedby="compare-hint"></textarea>
             <button type="submit">Compare</button>
         </form>
     </div>
 
     <div class="tab-content" role="tabpanel" id="search-panel" aria-labelledby="search-tab" x-show="tab === 'search'">
-        <p class="tab-hint">Find graphs by structural properties and tags</p>
-        <form action="/search" method="get" class="search-form">
-            <div class="search-columns">
-                <div class="search-column">
-                    <label>
-                        <span>Vertices</span>
-                        <select name="n">
-                            <option value="">any</option>
-                            {% for i in range(1, 11) %}
-                            <option value="{{ i }}">{{ i }}</option>
-                            {% endfor %}
-                        </select>
-                    </label>
-                    <label>
-                        <span>Edges</span>
-                        <input type="number" name="m" min="0" max="45" placeholder="any">
-                    </label>
-                    <label>
-                        <span>Min degree</span>
-                        <input type="number" name="min_degree" min="0" placeholder="any">
-                    </label>
-                    <label>
-                        <span>Max degree</span>
-                        <input type="number" name="max_degree" min="0" placeholder="any">
-                    </label>
-                </div>
-                <div class="search-column">
-                    <label>
-                        <span>Diameter</span>
-                        <input type="number" name="diameter" min="0" placeholder="any">
-                    </label>
-                    <label>
-                        <span>Radius</span>
-                        <input type="number" name="radius" min="0" placeholder="any">
-                    </label>
-                    <label>
-                        <span>Girth</span>
-                        <input type="number" name="girth" min="0" placeholder="any">
-                    </label>
-                    <label>
-                        <span>Triangles</span>
-                        <input type="number" name="triangle_count" min="0" placeholder="any">
-                    </label>
-                </div>
-                <div class="search-column">
-                    <div x-data="{
-                        selected: [],
-                        open: false,
-                        tags: ['complete', 'complete-bipartite', 'complete-multipartite', 'cubic', 'cycle', 'eulerian', 'fan', 'ladder', 'line-graph', 'path', 'petersen', 'prism', 'regular', 'star', 'strongly-regular', 'tree', 'triangle-free', 'vertex-transitive', 'wheel', 'windmill'],
-                        toggle(tag) {
-                            if (this.selected.includes(tag)) {
-                                this.selected = this.selected.filter(t => t !== tag);
-                            } else {
-                                this.selected.push(tag);
-                            }
-                        },
-                        remove(tag) {
-                            this.selected = this.selected.filter(t => t !== tag);
-                        }
-                    }">
-                        <div>
-                            <span class="search-column-label" id="tags-label">Tags</span>
-                            <div class="multiselect-container">
-                                <div class="multiselect-selected"
-                                     role="button"
-                                     tabindex="0"
-                                     aria-labelledby="tags-label"
-                                     aria-expanded="false"
-                                     :aria-expanded="open.toString()"
-                                     @click.stop="open = !open"
-                                     @keydown.enter="open = !open"
-                                     @keydown.space.prevent="open = !open">
-                                    <span x-show="selected.length === 0" class="multiselect-placeholder">Select tags...</span>
-                                    <template x-for="tag in selected" :key="tag">
-                                        <span class="multiselect-chip">
-                                            <span x-text="tag"></span>
-                                            <button type="button" @click.stop="remove(tag)" :aria-label="'Remove ' + tag" class="chip-remove">×</button>
-                                        </span>
-                                    </template>
-                                </div>
-                                <div class="multiselect-dropdown"
-                                     role="listbox"
-                                     aria-labelledby="tags-label"
-                                     x-show="open"
-                                     @click.away="open = false">
-                                    <template x-for="tag in tags" :key="tag">
-                                        <label class="multiselect-option">
-                                            <input type="checkbox" :checked="selected.includes(tag)" @change="toggle(tag)">
-                                            <span x-text="tag"></span>
-                                        </label>
-                                    </template>
-                                </div>
-                            </div>
-                            <template x-for="tag in selected" :key="tag">
-                                <input type="hidden" name="tags" :value="tag">
-                            </template>
-                        </div>
-                        <label>
-                            <span>Switching mechanism</span>
-                            <select name="has_mechanism">
-                                <option value="">any</option>
-                                <option value="gm">GM switching</option>
-                                <option value="any">has any mechanism</option>
-                                <option value="none">no known mechanism</option>
-                            </select>
-                        </label>
-                        <label>
-                            <span>Limit</span>
-                            <select name="limit">
-                                <option value="20">20</option>
-                                <option value="50">50</option>
-                                <option value="100" selected>100</option>
-                                <option value="500">500</option>
-                            </select>
-                        </label>
-                    </div>
-                </div>
+        <p class="tab-hint">Search by basic properties. For advanced queries, see <a href="/api-docs">API docs</a>.</p>
+        <form action="/search" method="get" class="search-form-simple">
+            <div class="search-inputs">
+                <label for="search-n-input">Vertices</label>
+                <select id="search-n-input" name="n">
+                    <option value="">any</option>
+                    {% for i in range(1, 10) %}
+                    <option value="{{ i }}">{{ i }}</option>
+                    {% endfor %}
+                </select>
+                <label for="search-m-input">Edges</label>
+                <input type="number" id="search-m-input" name="m" min="0" max="36" placeholder="any">
+                <label for="search-cosp-input">Cospectral</label>
+                <select id="search-cosp-input" name="has_cospectral_mate">
+                    <option value="">any</option>
+                    <option value="adj">Adjacency</option>
+                    <option value="kirchhoff">Kirchhoff</option>
+                    <option value="signless">Signless</option>
+                    <option value="lap">Laplacian</option>
+                    <option value="nb">NB</option>
+                    <option value="nbl">NBL</option>
+                    <option value="dist">Distance</option>
+                    <option value="none">None</option>
+                </select>
             </div>
             <button type="submit">Search</button>
         </form>
     </div>
 </div>
 
-<section id="results" aria-live="polite" aria-atomic="false"></section>
-
 <h2 class="section-header">Browse examples</h2>
 
-<div class="examples-section" x-data="{ tab: 'examples' }">
-    <div class="tab-pills grouped-tabs" role="tablist" aria-label="Example categories">
-        <button type="button" role="tab" :aria-selected="tab === 'examples'" aria-controls="examples-panel" id="examples-tab" :class="{ active: tab === 'examples' }" @click="tab = 'examples'">Example Graphs</button>
-        <span class="tab-separator">|</span>
-        <button type="button" role="tab" :aria-selected="tab === 'adjacency'" aria-controls="adjacency-panel" id="adjacency-tab" :class="{ active: tab === 'adjacency' }" @click="tab = 'adjacency'">Adjacency</button>
-        <button type="button" role="tab" :aria-selected="tab === 'kirchhoff'" aria-controls="kirchhoff-panel" id="kirchhoff-tab" :class="{ active: tab === 'kirchhoff' }" @click="tab = 'kirchhoff'">Kirchhoff</button>
-        <button type="button" role="tab" :aria-selected="tab === 'signless'" aria-controls="signless-panel" id="signless-tab" :class="{ active: tab === 'signless' }" @click="tab = 'signless'">Signless</button>
-        <button type="button" role="tab" :aria-selected="tab === 'laplacian'" aria-controls="laplacian-panel" id="laplacian-tab" :class="{ active: tab === 'laplacian' }" @click="tab = 'laplacian'">Laplacian</button>
-        <button type="button" role="tab" :aria-selected="tab === 'nb'" aria-controls="nb-panel" id="nb-tab" :class="{ active: tab === 'nb' }" @click="tab = 'nb'">NB</button>
-        <button type="button" role="tab" :aria-selected="tab === 'nbl'" aria-controls="nbl-panel" id="nbl-tab" :class="{ active: tab === 'nbl' }" @click="tab = 'nbl'">NBL</button>
-        <button type="button" role="tab" :aria-selected="tab === 'distance'" aria-controls="distance-panel" id="distance-tab" :class="{ active: tab === 'distance' }" @click="tab = 'distance'">Distance</button>
+<div class="examples-section" x-data="{ category: 'examples', matrix: 'adjacency' }">
+    <div class="tab-pills" role="tablist" aria-label="Example categories">
+        <button type="button" role="tab" :aria-selected="category === 'examples'" aria-controls="examples-panel" id="examples-tab" :class="{ active: category === 'examples' }" @click="category = 'examples'">Example Graphs</button>
+        <button type="button" role="tab" :aria-selected="category === 'cospectral'" aria-controls="cospectral-panel" id="cospectral-tab" :class="{ active: category === 'cospectral' }" @click="category = 'cospectral'">Cospectral Families</button>
     </div>
 
-    <div class="tab-content" role="tabpanel" id="examples-panel" aria-labelledby="examples-tab" x-show="tab === 'examples'">
+    <div class="tab-pills secondary-tabs" role="tablist" aria-label="Matrix types" x-show="category === 'cospectral'">
+        <button type="button" role="tab" :aria-selected="matrix === 'adjacency'" :class="{ active: matrix === 'adjacency' }" @click="matrix = 'adjacency'">Adjacency</button>
+        <button type="button" role="tab" :aria-selected="matrix === 'kirchhoff'" :class="{ active: matrix === 'kirchhoff' }" @click="matrix = 'kirchhoff'">Kirchhoff</button>
+        <button type="button" role="tab" :aria-selected="matrix === 'signless'" :class="{ active: matrix === 'signless' }" @click="matrix = 'signless'">Signless</button>
+        <button type="button" role="tab" :aria-selected="matrix === 'laplacian'" :class="{ active: matrix === 'laplacian' }" @click="matrix = 'laplacian'">Laplacian</button>
+        <button type="button" role="tab" :aria-selected="matrix === 'nb'" :class="{ active: matrix === 'nb' }" @click="matrix = 'nb'">NB</button>
+        <button type="button" role="tab" :aria-selected="matrix === 'nbl'" :class="{ active: matrix === 'nbl' }" @click="matrix = 'nbl'">NBL</button>
+        <button type="button" role="tab" :aria-selected="matrix === 'distance'" :class="{ active: matrix === 'distance' }" @click="matrix = 'distance'">Distance</button>
+    </div>
+
+    <div class="tab-content" role="tabpanel" id="examples-panel" aria-labelledby="examples-tab" x-show="category === 'examples'">
         <p class="examples-subtitle">Classic named graphs from graph theory</p>
         <div class="examples-grid">
             <a href="/graph/D~{" class="example-card">
@@ -206,7 +114,7 @@
         </div>
     </div>
 
-    <div class="tab-content" role="tabpanel" id="adjacency-panel" aria-labelledby="adjacency-tab" x-show="tab === 'adjacency'">
+    <div class="tab-content" role="tabpanel" id="adjacency-panel" aria-labelledby="adjacency-tab" x-show="category === 'cospectral' && matrix === 'adjacency'">
         <p class="examples-subtitle">Graphs with identical adjacency spectra but different structure</p>
         <div class="cospectral-families">
         <a href="/compare?graphs=D%3F%7B,DEo" class="family-card">
@@ -240,7 +148,7 @@
         </div>
     </div>
 
-    <div class="tab-content" role="tabpanel" id="kirchhoff-panel" aria-labelledby="kirchhoff-tab" x-show="tab === 'kirchhoff'">
+    <div class="tab-content" role="tabpanel" id="kirchhoff-panel" aria-labelledby="kirchhoff-tab" x-show="category === 'cospectral' && matrix === 'kirchhoff'">
         <p class="examples-subtitle">Graphs with identical Kirchhoff spectra but different structure</p>
         <div class="cospectral-families">
         <a href="/compare?graphs=ECZo,EEr_" class="family-card">
@@ -274,7 +182,7 @@
         </div>
     </div>
 
-    <div class="tab-content" role="tabpanel" id="signless-panel" aria-labelledby="signless-tab" x-show="tab === 'signless'">
+    <div class="tab-content" role="tabpanel" id="signless-panel" aria-labelledby="signless-tab" x-show="category === 'cospectral' && matrix === 'signless'">
         <p class="examples-subtitle">Graphs with identical signless Laplacian spectra but different structure</p>
         <div class="cospectral-families">
         <a href="/compare?graphs=E%3Fzw,ECfw" class="family-card">
@@ -308,7 +216,7 @@
         </div>
     </div>
 
-    <div class="tab-content" role="tabpanel" id="laplacian-panel" aria-labelledby="laplacian-tab" x-show="tab === 'laplacian'">
+    <div class="tab-content" role="tabpanel" id="laplacian-panel" aria-labelledby="laplacian-tab" x-show="category === 'cospectral' && matrix === 'laplacian'">
         <p class="examples-subtitle">Graphs with identical normalized Laplacian spectra but different structure</p>
         <div class="cospectral-families">
         <a href="/compare?graphs=F%3Fb~w,FEzfw" class="family-card">
@@ -342,7 +250,7 @@
         </div>
     </div>
 
-    <div class="tab-content" role="tabpanel" id="nb-panel" aria-labelledby="nb-tab" x-show="tab === 'nb'">
+    <div class="tab-content" role="tabpanel" id="nb-panel" aria-labelledby="nb-tab" x-show="category === 'cospectral' && matrix === 'nb'">
         <p class="examples-subtitle">Graphs with identical non-backtracking spectra but different structure</p>
         <div class="cospectral-families">
         <a href="/compare?graphs=GCXmew,GCdevg" class="family-card">
@@ -372,7 +280,7 @@
         </div>
     </div>
 
-    <div class="tab-content" role="tabpanel" id="nbl-panel" aria-labelledby="nbl-tab" x-show="tab === 'nbl'">
+    <div class="tab-content" role="tabpanel" id="nbl-panel" aria-labelledby="nbl-tab" x-show="category === 'cospectral' && matrix === 'nbl'">
         <p class="examples-subtitle">Graphs with identical non-backtracking Laplacian spectra but different structure</p>
         <div class="cospectral-families">
         <a href="/compare?graphs=I%3Fqa%60hidg,I%3Fqa%60iYXg" class="family-card">
@@ -402,7 +310,7 @@
         </div>
     </div>
 
-    <div class="tab-content" role="tabpanel" id="distance-panel" aria-labelledby="distance-tab" x-show="tab === 'distance'">
+    <div class="tab-content" role="tabpanel" id="distance-panel" aria-labelledby="distance-tab" x-show="category === 'cospectral' && matrix === 'distance'">
         <p class="examples-subtitle">Graphs with identical distance matrix spectra but different structure</p>
         <div class="cospectral-families">
         <a href="/compare?graphs=F%3FzPw,FCRfo" class="family-card">
@@ -440,7 +348,7 @@
 <script>
 function compareGraphs(form) {
     const text = form.graphs.value.trim();
-    const graphs = text.split(/[\n,]+/).map(g => g.trim()).filter(g => g);
+    const graphs = text.split(/\s+/).map(g => g.trim()).filter(g => g);
     if (graphs.length < 2) {
         alert('Please enter at least 2 graphs to compare');
         return;
