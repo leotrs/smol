@@ -497,9 +497,9 @@ async def query_graphs(
 
 
 async def fetch_random_graph() -> dict[str, Any] | None:
-    """Fetch a random connected graph.
+    """Fetch a random graph with n in [4, 9].
 
-    First uniformly samples n from {1, 2, ..., 10}, then samples a random
+    First uniformly samples n from {4, 5, 6, 7, 8, 9}, then samples a random
     graph with that n. This avoids bias toward larger n values.
     """
     import random
@@ -507,28 +507,24 @@ async def fetch_random_graph() -> dict[str, Any] | None:
     has_tags = await _check_tags_column()
     tags_col = _tags_col(has_tags)
 
-    # First, uniformly sample n from available values
+    # Uniformly sample n from [4, 9]
+    rand_n = random.randint(4, 9)
+
     async with get_db() as conn:
         if IS_SQLITE:
+            # Get count for this n
             cursor = await conn.execute(
-                "SELECT DISTINCT n FROM graphs WHERE diameter IS NOT NULL ORDER BY n"
-            )
-            rows = await cursor.fetchall()
-            if not rows:
-                return None
-            available_n = [row[0] for row in rows]
-            rand_n = random.choice(available_n)
-
-            # Now get a random graph with this n
-            cursor = await conn.execute(
-                f"SELECT COUNT(*) FROM graphs WHERE n = {ph} AND diameter IS NOT NULL",
+                f"SELECT COUNT(*) FROM graphs WHERE n = {ph}",
                 (rand_n,)
             )
             count_row = await cursor.fetchone()
             if not count_row or count_row[0] == 0:
                 return None
 
-            offset = random.randint(0, count_row[0] - 1)
+            count = count_row[0]
+            offset = random.randint(0, count - 1)
+
+            # Get graph at random offset
             cursor = await conn.execute(
                 f"""
                 SELECT graph6, n, m,
@@ -547,10 +543,10 @@ async def fetch_random_graph() -> dict[str, Any] | None:
                        dist_eigenvalues, dist_spectral_hash
                        {tags_col}
                 FROM graphs
-                WHERE n = {ph} AND diameter IS NOT NULL
+                WHERE n = {ph}
                 LIMIT 1 OFFSET {ph}
                 """,
-                (rand_n, offset),
+                (rand_n, offset)
             )
             row = await cursor.fetchone()
             if row:
@@ -558,24 +554,19 @@ async def fetch_random_graph() -> dict[str, Any] | None:
             return None
         else:
             cur = conn.cursor()
-            cur.execute("SELECT DISTINCT n FROM graphs WHERE diameter IS NOT NULL ORDER BY n")
-            rows = cur.fetchall()
-            if not rows:
-                return None
-            available_n = [row[0] for row in rows]
-            rand_n = random.choice(available_n)
-
-            # Now get a random graph with this n
+            # Get count for this n
             cur.execute(
-                f"SELECT COUNT(*) FROM graphs WHERE n = {ph} AND diameter IS NOT NULL",
+                f"SELECT COUNT(*) FROM graphs WHERE n = {ph}",
                 (rand_n,)
             )
             count_row = cur.fetchone()
             if not count_row or count_row[0] == 0:
                 return None
 
-            offset = random.randint(0, count_row[0] - 1)
+            count = count_row[0]
+            offset = random.randint(0, count - 1)
 
+            # Get graph at random offset
             from psycopg2.extras import RealDictCursor
             cur = conn.cursor(cursor_factory=RealDictCursor)
             cur.execute(
@@ -596,10 +587,10 @@ async def fetch_random_graph() -> dict[str, Any] | None:
                        dist_eigenvalues, dist_spectral_hash
                        {tags_col}
                 FROM graphs
-                WHERE n = {ph} AND diameter IS NOT NULL
+                WHERE n = {ph}
                 LIMIT 1 OFFSET {ph}
                 """,
-                (rand_n, offset),
+                (rand_n, offset)
             )
             row = cur.fetchone()
             if row:
