@@ -1,5 +1,5 @@
 ---
-title: 'SMOL: A Database of Spectral Properties for Small Graphs'
+title: 'SMOL: Spectra and Matrices Of Small Graphs'
 tags:
   - Python
   - spectral graph theory
@@ -8,13 +8,13 @@ tags:
   - cospectral graphs
 authors:
   - name: Leo Torres
-    orcid: 0000-0002-8843-9341
+    orcid: 0000-0002-2675-2775
     corresponding: true
     affiliation: 1
 affiliations:
-  - name: Independent Researcher
+  - name: Independent Researcher, Germany
     index: 1
-date: 31 December 2024
+date: 31 December 2025
 bibliography: paper.bib
 ---
 
