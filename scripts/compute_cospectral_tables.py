@@ -116,12 +116,90 @@ def compute_for_matrix(conn, matrix: str, n_filter: int | None = None):
     print(f"  {label}: {total_pairs:,} pairs, {total_graphs:,} graphs total")
 
 
+def compute_nb_charpoly(conn, n_filter: int | None = None):
+    """Compute NB cospectral mates using exact characteristic polynomials.
+
+    Uses the nb_charpoly_hash column (populated by the Bareiss algorithm)
+    instead of the floating-point nb_spectral_hash. This is exact — no
+    precision issues.
+    """
+    cur = conn.cursor()
+    label = "nb_charpoly" if n_filter is None else f"nb_charpoly (n={n_filter})"
+
+    print(f"{label}: Streaming graphs ordered by charpoly hash...")
+
+    if n_filter is not None:
+        cur.execute("""
+            SELECT id, n, nb_charpoly_hash
+            FROM graphs
+            WHERE n = %s AND nb_charpoly_hash IS NOT NULL
+            ORDER BY nb_charpoly_hash, id
+        """, (n_filter,))
+    else:
+        cur.execute("""
+            SELECT id, n, nb_charpoly_hash
+            FROM graphs
+            WHERE nb_charpoly_hash IS NOT NULL
+            ORDER BY n, nb_charpoly_hash, id
+        """)
+
+    mates_buffer = []
+    total_pairs = 0
+    total_graphs = 0
+    current_key = None
+    current_group = []
+
+    def flush_group():
+        nonlocal total_pairs, total_graphs
+        if len(current_group) > 1:
+            total_graphs += len(current_group)
+            for id1, id2 in combinations(current_group, 2):
+                mates_buffer.append((id1, id2, "nb"))
+            total_pairs += len(current_group) * (len(current_group) - 1) // 2
+
+    def flush_buffers():
+        if mates_buffer:
+            from psycopg2.extras import execute_values
+            insert_cur = conn.cursor()
+            execute_values(
+                insert_cur,
+                "INSERT INTO cospectral_mates (graph1_id, graph2_id, matrix_type) VALUES %s ON CONFLICT DO NOTHING",
+                mates_buffer,
+            )
+            mates_buffer.clear()
+        conn.commit()
+
+    for row in cur:
+        graph_id, n, hash_val = row
+        key = (n, hash_val)
+
+        if key != current_key:
+            flush_group()
+            current_key = key
+            current_group = []
+
+        current_group.append(graph_id)
+
+        if len(mates_buffer) >= 100000:
+            flush_buffers()
+            print(f"  {label}: {total_pairs:,} pairs, {total_graphs:,} graphs so far...")
+
+    flush_group()
+    flush_buffers()
+
+    print(f"  {label}: {total_pairs:,} pairs, {total_graphs:,} graphs total")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Compute cospectral tables")
     parser.add_argument(
         "--matrix",
         choices=["adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"],
         help="Compute only this matrix type (default: all)",
+    )
+    parser.add_argument(
+        "--nb-charpoly", action="store_true",
+        help="Use exact charpoly for NB instead of eigenvalue hashing",
     )
     parser.add_argument(
         "--n",
@@ -132,7 +210,9 @@ def main():
 
     conn = connect()
 
-    if args.matrix:
+    if args.nb_charpoly:
+        compute_nb_charpoly(conn, args.n)
+    elif args.matrix:
         compute_for_matrix(conn, args.matrix, args.n)
     else:
         for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"]:

@@ -8,3 +8,16 @@ smol.db
 .coverage
 .deploy_chunks/
 research/
+venv/
+env/
+node_modules/
+*.pyo
+.DS_Store
+.mypy_cache/
+.tox/
+build/
+dist/
+coverage/
+.beads/dolt-server.*
+.beads/embeddeddolt/
+.beads/.beads-credential-key

@@ -7,6 +7,106 @@ from numpy.linalg import eigvalsh, eigvals
 PRECISION = 8
 
 
+# ---------------------------------------------------------------------------
+# Exact characteristic polynomial via Bareiss algorithm
+# ---------------------------------------------------------------------------
+
+
+def _poly_mul(a, b):
+    if not a or not b:
+        return [0]
+    la, lb = len(a), len(b)
+    result = [0] * (la + lb - 1)
+    for i in range(la):
+        if a[i] == 0:
+            continue
+        for j in range(lb):
+            result[i + j] += a[i] * b[j]
+    return result
+
+
+def _poly_sub(a, b):
+    result = [0] * max(len(a), len(b))
+    for i in range(len(a)):
+        result[i] += a[i]
+    for i in range(len(b)):
+        result[i] -= b[i]
+    return result
+
+
+def _poly_divexact(a, b):
+    if all(c == 0 for c in b):
+        return [0]
+    db = len(b) - 1
+    while db > 0 and b[db] == 0:
+        db -= 1
+    da = len(a) - 1
+    while da > 0 and a[da] == 0:
+        da -= 1
+    if da < db:
+        return [0]
+    a = list(a)
+    result = [0] * (da - db + 1)
+    for i in range(da - db, -1, -1):
+        q, r = divmod(a[i + db], b[db])
+        assert r == 0, f"Bareiss division not exact: {a[i + db]} / {b[db]}"
+        result[i] = q
+        for j in range(db + 1):
+            a[i + j] -= q * b[j]
+    return result
+
+
+def bareiss_poly_det(M_polys, n):
+    """Determinant of an n×n matrix of integer polynomials via Bareiss."""
+    M = [[list(M_polys[i][j]) for j in range(n)] for i in range(n)]
+    prev = [1]
+    for k in range(n):
+        for i in range(k + 1, n):
+            for j in range(k + 1, n):
+                num = _poly_sub(
+                    _poly_mul(M[k][k], M[i][j]),
+                    _poly_mul(M[i][k], M[k][j]),
+                )
+                M[i][j] = _poly_divexact(num, prev)
+            M[i][k] = [0]
+        prev = list(M[k][k])
+    result = M[n - 1][n - 1]
+    while len(result) > 1 and result[-1] == 0:
+        result.pop()
+    return result
+
+
+def nb_charpoly(adjacency: np.ndarray) -> list[int]:
+    """Compute the exact NB characteristic polynomial det(M(z)).
+
+    M(z) = I - zA + z²(D - I), where A is the adjacency matrix and D the
+    degree matrix. Returns integer coefficients [c₀, c₁, ..., c_{2n}] of
+    det(M(z)) = c₀ + c₁z + ... + c_{2n}z^{2n}.
+
+    Uses Bareiss algorithm — exact integer arithmetic, no floating point.
+    """
+    n = adjacency.shape[0]
+    A = adjacency.astype(int)
+    degs = A.sum(axis=1)
+    M_polys = [[None] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(n):
+            if i == j:
+                M_polys[i][j] = [1, -int(A[i, j]), int(degs[i]) - 1]
+            else:
+                M_polys[i][j] = [0, -int(A[i, j]), 0]
+    return bareiss_poly_det(M_polys, n)
+
+
+def charpoly_hash(coeffs) -> str:
+    """Hash a characteristic polynomial (list of integer coefficients).
+
+    Returns 16-character hex hash. Deterministic for identical polynomials.
+    """
+    canonical = ",".join(str(c) for c in coeffs)
+    return hashlib.sha256(canonical.encode()).hexdigest()[:16]
+
+
 def compute_real_eigenvalues(matrix: np.ndarray) -> np.ndarray:
     """
     Compute eigenvalues of a symmetric real matrix.
