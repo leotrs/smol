@@ -2,7 +2,7 @@
 
 import networkx as nx
 
-from db.graph_data import process_graph, graph_from_graph6, GraphRecord
+from db.graph_data import process_graph, graph_from_graph6, GraphRecord, INSERT_COLUMNS
 
 
 def test_graph_from_graph6_path():
@@ -127,9 +127,24 @@ def test_to_db_tuple():
     tup = record.to_db_tuple()
 
     assert isinstance(tup, tuple)
-    assert len(tup) == 26  # All fields for DB insert (includes kirchhoff and signless)
+    # Value order/length must match the shared INSERT column list exactly.
+    assert len(tup) == len(INSERT_COLUMNS) == 28
     assert tup[0] == 3  # n
     assert tup[1] == 2  # m
+
+
+def test_dist_spectrum_connected_vs_disconnected():
+    """Distance spectrum is computed for connected graphs, None otherwise."""
+    connected = process_graph(nx.path_graph(4), "CF")
+    assert connected.dist_eigenvalues is not None
+    assert len(connected.dist_spectral_hash) == 16
+
+    disconnected = nx.Graph()
+    disconnected.add_nodes_from(range(3))  # no edges
+    g6 = nx.to_graph6_bytes(disconnected, header=False).decode("ascii").strip()
+    rec = process_graph(disconnected, g6)
+    assert rec.dist_eigenvalues is None
+    assert rec.dist_spectral_hash is None
 
 
 def test_cospectral_graphs_same_hash():

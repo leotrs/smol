@@ -11,6 +11,7 @@ from .matrices import (
     laplacian_matrix,
     nonbacktracking_matrix,
     nonbacktracking_laplacian,
+    distance_matrix,
 )
 from .spectrum import (
     compute_real_eigenvalues,
@@ -19,6 +20,24 @@ from .spectrum import (
     spectral_hash_complex,
 )
 from .metadata import compute_metadata
+
+
+# Canonical column order for inserting a GraphRecord. to_db_tuple() emits values
+# in exactly this order; consumers (e.g. scripts/generate.py) build their INSERT
+# column list from here so the two cannot drift apart.
+INSERT_COLUMNS = (
+    "n", "m", "graph6",
+    "adj_eigenvalues", "adj_spectral_hash",
+    "kirchhoff_eigenvalues", "kirchhoff_spectral_hash",
+    "signless_eigenvalues", "signless_spectral_hash",
+    "lap_eigenvalues", "lap_spectral_hash",
+    "nb_eigenvalues_re", "nb_eigenvalues_im", "nb_spectral_hash",
+    "nbl_eigenvalues_re", "nbl_eigenvalues_im", "nbl_spectral_hash",
+    "dist_eigenvalues", "dist_spectral_hash",
+    "is_bipartite", "is_planar", "is_regular",
+    "diameter", "girth", "radius",
+    "min_degree", "max_degree", "triangle_count",
+)
 
 
 @dataclass
@@ -55,6 +74,10 @@ class GraphRecord:
     nbl_eigenvalues_im: np.ndarray
     nbl_spectral_hash: str
 
+    # Distance spectrum (real; None for disconnected graphs)
+    dist_eigenvalues: np.ndarray | None
+    dist_spectral_hash: str | None
+
     # Metadata
     is_bipartite: bool
     is_planar: bool
@@ -86,6 +109,8 @@ class GraphRecord:
             self.nbl_eigenvalues_re.tolist(),
             self.nbl_eigenvalues_im.tolist(),
             self.nbl_spectral_hash,
+            self.dist_eigenvalues.tolist() if self.dist_eigenvalues is not None else None,
+            self.dist_spectral_hash,
             self.is_bipartite,
             self.is_planar,
             self.is_regular,
@@ -116,6 +141,7 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
     L_normalized = laplacian_matrix(G)
     B = nonbacktracking_matrix(G)
     L_NB = nonbacktracking_laplacian(G)
+    D_dist = distance_matrix(G)  # None for disconnected graphs
 
     # Compute eigenvalues
     adj_eigs = compute_real_eigenvalues(A)
@@ -132,6 +158,14 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
     lap_hash = spectral_hash_real(lap_eigs)
     nb_hash = spectral_hash_complex(nb_eigs)
     nbl_hash = spectral_hash_complex(nbl_eigs)
+
+    # Distance spectrum is only defined for connected graphs.
+    if D_dist is not None:
+        dist_eigs = compute_real_eigenvalues(D_dist)
+        dist_hash = spectral_hash_real(dist_eigs)
+    else:
+        dist_eigs = None
+        dist_hash = None
 
     # Compute metadata
     meta = compute_metadata(G)
@@ -154,6 +188,8 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
         nbl_eigenvalues_re=nbl_eigs.real,
         nbl_eigenvalues_im=nbl_eigs.imag,
         nbl_spectral_hash=nbl_hash,
+        dist_eigenvalues=dist_eigs,
+        dist_spectral_hash=dist_hash,
         is_bipartite=meta["is_bipartite"],
         is_planar=meta["is_planar"],
         is_regular=meta["is_regular"],

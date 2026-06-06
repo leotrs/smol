@@ -25,7 +25,7 @@ from typing import Iterator
 
 sys.path.insert(0, str(__file__).rsplit("/", 2)[0])
 
-from db.graph_data import process_graph, graph_from_graph6
+from db.graph_data import process_graph, graph_from_graph6, INSERT_COLUMNS
 from db.database import connect, init_schema
 
 
@@ -206,17 +206,8 @@ def insert_batch_tuples(conn, tuples: list[tuple]) -> int:
 
     from psycopg2.extras import execute_values
 
-    sql = """
-    INSERT INTO graphs (
-        n, m, graph6,
-        adj_eigenvalues, adj_spectral_hash,
-        lap_eigenvalues, lap_spectral_hash,
-        nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
-        nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash,
-        is_bipartite, is_planar, is_regular,
-        diameter, girth, radius,
-        min_degree, max_degree, triangle_count
-    ) VALUES %s
+    sql = f"""
+    INSERT INTO graphs ({", ".join(INSERT_COLUMNS)}) VALUES %s
     ON CONFLICT (graph6) DO NOTHING
     """
 

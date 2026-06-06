@@ -40,9 +40,9 @@ CREATE TABLE IF NOT EXISTS graphs (
     is_bipartite        BOOLEAN NOT NULL,
     is_planar           BOOLEAN NOT NULL,
     is_regular          BOOLEAN NOT NULL,
-    diameter            SMALLINT NOT NULL,
+    diameter            SMALLINT,               -- NULL if disconnected
     girth               SMALLINT,               -- NULL if acyclic (tree)
-    radius              SMALLINT NOT NULL,
+    radius              SMALLINT,               -- NULL if disconnected
     min_degree          SMALLINT NOT NULL,
     max_degree          SMALLINT NOT NULL,
     triangle_count      INTEGER NOT NULL,
