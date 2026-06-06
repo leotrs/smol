@@ -55,7 +55,7 @@ class TestDegreeQueries:
         assert response.status_code == 200
         data = response.json()
         assert len(data) > 0
-        assert all(g["min_degree"] == 2 for g in data)
+        assert all(g["properties"]["min_degree"] == 2 for g in data)
 
     def test_query_by_max_degree(self):
         """Test filtering by max_degree."""
@@ -63,7 +63,7 @@ class TestDegreeQueries:
         assert response.status_code == 200
         data = response.json()
         assert len(data) > 0
-        assert all(g["max_degree"] == 3 for g in data)
+        assert all(g["properties"]["max_degree"] == 3 for g in data)
 
 
 class TestStructuralQueries:
@@ -75,7 +75,7 @@ class TestStructuralQueries:
         assert response.status_code == 200
         data = response.json()
         assert len(data) > 0
-        assert all(g["diameter"] == 2 for g in data)
+        assert all(g["properties"]["diameter"] == 2 for g in data)
 
     def test_query_by_diameter_range(self):
         """Test filtering by diameter range."""
@@ -83,7 +83,7 @@ class TestStructuralQueries:
         assert response.status_code == 200
         data = response.json()
         assert len(data) > 0
-        assert all(2 <= g["diameter"] <= 3 for g in data)
+        assert all(2 <= g["properties"]["diameter"] <= 3 for g in data)
 
     def test_query_by_radius(self):
         """Test filtering by exact radius."""
@@ -91,7 +91,7 @@ class TestStructuralQueries:
         assert response.status_code == 200
         data = response.json()
         assert len(data) > 0
-        assert all(g["radius"] == 2 for g in data)
+        assert all(g["properties"]["radius"] == 2 for g in data)
 
     def test_query_by_radius_range(self):
         """Test filtering by radius range."""
@@ -99,7 +99,7 @@ class TestStructuralQueries:
         assert response.status_code == 200
         data = response.json()
         assert len(data) > 0
-        assert all(1 <= g["radius"] <= 2 for g in data)
+        assert all(1 <= g["properties"]["radius"] <= 2 for g in data)
 
     def test_query_by_girth(self):
         """Test filtering by exact girth."""
@@ -107,7 +107,7 @@ class TestStructuralQueries:
         assert response.status_code == 200
         data = response.json()
         assert len(data) > 0
-        assert all(g["girth"] == 3 for g in data)
+        assert all(g["properties"]["girth"] == 3 for g in data)
 
     def test_query_by_girth_range(self):
         """Test filtering by girth range."""
@@ -115,7 +115,7 @@ class TestStructuralQueries:
         assert response.status_code == 200
         data = response.json()
         assert len(data) > 0
-        assert all(3 <= g["girth"] <= 5 for g in data if g["girth"] is not None)
+        assert all(3 <= g["properties"]["girth"] <= 5 for g in data if g["properties"]["girth"] is not None)
 
     def test_query_by_triangle_count(self):
         """Test filtering by exact triangle count."""
@@ -123,7 +123,7 @@ class TestStructuralQueries:
         assert response.status_code == 200
         data = response.json()
         assert len(data) > 0
-        assert all(g["triangle_count"] == 0 for g in data)
+        assert all(g["properties"]["triangle_count"] == 0 for g in data)
 
     def test_query_by_triangle_count_range(self):
         """Test filtering by triangle count range."""
@@ -131,14 +131,14 @@ class TestStructuralQueries:
         assert response.status_code == 200
         data = response.json()
         assert len(data) > 0
-        assert all(1 <= g["triangle_count"] <= 3 for g in data)
+        assert all(1 <= g["properties"]["triangle_count"] <= 3 for g in data)
 
 
 class TestBooleanQueries:
-    """Test boolean property queries (now via tags)."""
+    """Test boolean property queries (bipartite/planar/regular)."""
 
     def test_query_bipartite(self):
-        """Test filtering by bipartite tag."""
+        """Test filtering by the bipartite tag."""
         response = client.get("/search?n=6&tags=bipartite")
         assert response.status_code == 200
         data = response.json()
@@ -146,7 +146,7 @@ class TestBooleanQueries:
         assert all("bipartite" in g.get("tags", []) for g in data)
 
     def test_query_planar(self):
-        """Test filtering by planar tag."""
+        """Test filtering by the planar tag."""
         response = client.get("/search?n=5&tags=planar")
         assert response.status_code == 200
         data = response.json()
@@ -175,13 +175,13 @@ class TestTagQueries:
 
     def test_query_multiple_tags_or(self):
         """Test filtering by multiple tags with OR."""
-        response = client.get("/search?n=6&tags=bipartite&tags=planar&tag_mode=OR")
+        response = client.get("/search?n=6&tags=tree&tags=regular&tag_mode=OR")
         assert response.status_code == 200
         data = response.json()
         assert len(data) > 0
         # At least one tag should match
         assert all(
-            "bipartite" in g.get("tags", []) or "planar" in g.get("tags", [])
+            "tree" in g.get("tags", []) or "regular" in g.get("tags", [])
             for g in data
         )
 
@@ -260,7 +260,7 @@ class TestCombinedQueries:
         assert response.status_code == 200
         data = response.json()
         if len(data) > 0:
-            assert all(g["n"] == 6 and g["m"] >= 7 and g["diameter"] == 2 for g in data)
+            assert all(g["n"] == 6 and g["m"] >= 7 and g["properties"]["diameter"] == 2 for g in data)
 
     def test_combined_tags_and_properties(self):
         """Test combining tags with numeric properties."""
@@ -271,7 +271,7 @@ class TestCombinedQueries:
             assert all(
                 g["n"] == 6
                 and "bipartite" in g.get("tags", [])
-                and g["diameter"] <= 3
+                and g["properties"]["diameter"] <= 3
                 for g in data
             )
 

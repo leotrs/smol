@@ -323,26 +323,29 @@ async def search_graphs(
     sort_order: str = Query(default="asc"),
 ):
     """Query graphs with filters. Supports all graph properties via API."""
-    n = int(n) if n else None
-    n_min = int(n_min) if n_min else None
-    n_max = int(n_max) if n_max else None
-    m = int(m) if m else None
-    m_min = int(m_min) if m_min else None
-    m_max = int(m_max) if m_max else None
-    min_degree_val = int(min_degree) if min_degree else None
-    max_degree_val = int(max_degree) if max_degree else None
-    diameter_val = int(diameter) if diameter else None
-    diameter_min_val = int(diameter_min) if diameter_min else None
-    diameter_max_val = int(diameter_max) if diameter_max else None
-    radius_val = int(radius) if radius else None
-    radius_min_val = int(radius_min) if radius_min else None
-    radius_max_val = int(radius_max) if radius_max else None
-    girth_val = int(girth) if girth else None
-    girth_min_val = int(girth_min) if girth_min else None
-    girth_max_val = int(girth_max) if girth_max else None
-    triangle_count_val = int(triangle_count) if triangle_count else None
-    triangle_count_min_val = int(triangle_count_min) if triangle_count_min else None
-    triangle_count_max_val = int(triangle_count_max) if triangle_count_max else None
+    try:
+        n = int(n) if n else None
+        n_min = int(n_min) if n_min else None
+        n_max = int(n_max) if n_max else None
+        m = int(m) if m else None
+        m_min = int(m_min) if m_min else None
+        m_max = int(m_max) if m_max else None
+        min_degree_val = int(min_degree) if min_degree else None
+        max_degree_val = int(max_degree) if max_degree else None
+        diameter_val = int(diameter) if diameter else None
+        diameter_min_val = int(diameter_min) if diameter_min else None
+        diameter_max_val = int(diameter_max) if diameter_max else None
+        radius_val = int(radius) if radius else None
+        radius_min_val = int(radius_min) if radius_min else None
+        radius_max_val = int(radius_max) if radius_max else None
+        girth_val = int(girth) if girth else None
+        girth_min_val = int(girth_min) if girth_min else None
+        girth_max_val = int(girth_max) if girth_max else None
+        triangle_count_val = int(triangle_count) if triangle_count else None
+        triangle_count_min_val = int(triangle_count_min) if triangle_count_min else None
+        triangle_count_max_val = int(triangle_count_max) if triangle_count_max else None
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Numeric filter parameters must be integers")
     bipartite = bipartite == "true" if bipartite else None
     planar = planar == "true" if planar else None
     regular = regular == "true" if regular else None

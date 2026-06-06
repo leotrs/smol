@@ -106,7 +106,7 @@ class TestGraphEndpoint:
     def test_graph_with_kirchhoff_signless_eigenvalues(self):
         """All graphs should have Kirchhoff and signless eigenvalues computed."""
         # Test with a graph from n=9 (previously these were NULL)
-        response = client.get("/graphs?n=9&limit=1")
+        response = client.get("/search?n=9&limit=1")
         if response.status_code == 200:
             data = response.json()
             if len(data) > 0:
@@ -136,7 +136,7 @@ class TestGraphEndpoint:
 @needs_db
 class TestGraphsEndpoint:
     def test_graphs_query_by_n(self):
-        response = client.get("/graphs?n=5&limit=10")
+        response = client.get("/search?n=5&limit=10")
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
@@ -145,38 +145,38 @@ class TestGraphsEndpoint:
             assert g["n"] == 5
 
     def test_graphs_query_by_properties(self):
-        response = client.get("/graphs?n=5&bipartite=true&limit=10")
+        response = client.get("/search?n=5&bipartite=true&limit=10")
         assert response.status_code == 200
         data = response.json()
         for g in data:
             assert g["properties"]["is_bipartite"] is True
 
     def test_graphs_returns_html_for_htmx(self):
-        response = client.get("/graphs?n=5&limit=5", headers={"HX-Request": "true"})
+        response = client.get("/search?n=5&limit=5", headers={"HX-Request": "true"})
         assert response.status_code == 200
         assert "text/html" in response.headers["content-type"]
         assert "<table" in response.text
 
     def test_graphs_direct_lookup(self):
-        response = client.get("/graphs?graph6=D%3F%7B")
+        response = client.get("/search?graph6=D%3F%7B")
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 1
         assert data[0]["graph6"] == "D?{"
 
     def test_graphs_direct_lookup_not_found(self):
-        response = client.get("/graphs?graph6=INVALID")
+        response = client.get("/search?graph6=INVALID")
         assert response.status_code == 200
         data = response.json()
         assert data == []
 
     def test_graphs_limit(self):
-        response = client.get("/graphs?n=7&limit=5")
+        response = client.get("/search?n=7&limit=5")
         data = response.json()
         assert len(data) <= 5
 
     def test_graphs_limit_max(self):
-        response = client.get("/graphs?limit=9999")
+        response = client.get("/search?limit=9999")
         assert response.status_code == 422  # Validation error, limit > 1000
 
 
@@ -334,14 +334,14 @@ class TestRandomEndpoints:
 class TestGraphsEdgeCases:
     def test_graphs_empty_params(self):
         # Empty string params should be treated as None
-        response = client.get("/graphs?n=&m=&bipartite=&limit=10")
+        response = client.get("/search?n=&m=&bipartite=&limit=10")
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
 
     def test_graphs_with_all_filters(self):
         response = client.get(
-            "/graphs?n=6&bipartite=true&planar=true&regular=true&limit=5"
+            "/search?n=6&bipartite=true&planar=true&regular=true&limit=5"
         )
         assert response.status_code == 200
         data = response.json()
@@ -352,7 +352,7 @@ class TestGraphsEdgeCases:
             assert g["properties"]["is_regular"] is True
 
     def test_graphs_by_edge_count(self):
-        response = client.get("/graphs?n=5&m=5&limit=10")
+        response = client.get("/search?n=5&m=5&limit=10")
         assert response.status_code == 200
         data = response.json()
         for g in data:
@@ -1336,7 +1336,8 @@ class TestMechanismsEndpoints:
         assert response.status_code == 200
         assert "Switching Mechanisms" in response.text
         assert "GM switching" in response.text
-        assert "Mechanism coverage by vertex count" in response.text
+        # The section renders a per-vertex-count coverage table.
+        assert "Graphs with Mates" in response.text
 
     def test_stats_page_shows_gm_coverage(self):
         """Test that stats page shows GM coverage percentages."""
