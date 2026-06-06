@@ -21,6 +21,7 @@ from itertools import combinations
 sys.path.insert(0, str(__file__).rsplit("/", 2)[0])
 
 from db.database import connect
+from db.matrix_types import MATRIX_KEYS
 
 
 def compute_for_matrix(conn, matrix: str, n_filter: int | None = None):
@@ -194,7 +195,7 @@ def main():
     parser = argparse.ArgumentParser(description="Compute cospectral tables")
     parser.add_argument(
         "--matrix",
-        choices=["adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"],
+        choices=list(MATRIX_KEYS),
         help="Compute only this matrix type (default: all)",
     )
     parser.add_argument(
@@ -215,7 +216,7 @@ def main():
     elif args.matrix:
         compute_for_matrix(conn, args.matrix, args.n)
     else:
-        for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"]:
+        for matrix in MATRIX_KEYS:
             compute_for_matrix(conn, matrix, args.n)
 
     conn.close()

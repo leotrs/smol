@@ -32,6 +32,7 @@ from .models import (
     CompareResult,
 )
 from .routes import mechanisms
+from db.matrix_types import MATRIX_KEYS, real_keys
 
 logging.basicConfig(
     level=logging.INFO,
@@ -250,7 +251,7 @@ async def cospectral_pairs(
     offset: int = 0,
 ):
     """Get cospectral pairs for a given matrix type."""
-    if matrix not in ("adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"):
+    if matrix not in MATRIX_KEYS:
         raise HTTPException(status_code=400, detail="Invalid matrix type")
 
     from api.database import fetch_cospectral_pairs
@@ -271,8 +272,8 @@ async def random_cospectral(matrix: str | None = None):
 
     # If no matrix specified, choose one uniformly at random
     if matrix is None:
-        matrix = random.choice(["adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"])
-    elif matrix not in ("adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"):
+        matrix = random.choice(MATRIX_KEYS)
+    elif matrix not in MATRIX_KEYS:
         raise HTTPException(status_code=400, detail="Invalid matrix type")
 
     graphs = await fetch_random_cospectral_class(matrix)
@@ -645,7 +646,7 @@ async def compare_graphs(
         raise HTTPException(status_code=400, detail="Maximum 10 graphs per comparison")
 
     full_graphs = []
-    all_hashes = {"adj": set(), "kirchhoff": set(), "signless": set(), "lap": set(), "nb": set(), "nbl": set(), "dist": set()}
+    all_hashes = {k: set() for k in MATRIX_KEYS}
 
     for g6 in graph6_list:
         row = await fetch_graph(g6)
@@ -680,8 +681,8 @@ async def compare_graphs(
         g2_row = await fetch_graph(graph6_list[1])
 
         comparison = {}
-        for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"]:
-            if matrix in ("adj", "kirchhoff", "signless", "lap", "dist"):
+        for matrix in MATRIX_KEYS:
+            if matrix in real_keys():
                 # 1D Wasserstein for real eigenvalues
                 eigs1 = g1_row[f"{matrix}_eigenvalues"]
                 eigs2 = g2_row[f"{matrix}_eigenvalues"]
@@ -723,7 +724,7 @@ async def compare_graphs(
         n = len(graph6_list)
 
         distance_matrix_data = {}
-        for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"]:
+        for matrix in MATRIX_KEYS:
             dist_matrix = [[0.0 for _ in range(n)] for _ in range(n)]
 
             for i in range(n):
@@ -731,7 +732,7 @@ async def compare_graphs(
                     g1_row = graph_rows[i]
                     g2_row = graph_rows[j]
 
-                    if matrix in ("adj", "kirchhoff", "signless", "lap", "dist"):
+                    if matrix in real_keys():
                         # 1D Wasserstein for real eigenvalues
                         eigs1 = g1_row[f"{matrix}_eigenvalues"]
                         eigs2 = g2_row[f"{matrix}_eigenvalues"]
@@ -871,7 +872,7 @@ async def similar_graphs(
     """Find graphs with similar spectrum (by Earth Mover's Distance)."""
     t0 = time.perf_counter()
 
-    if matrix not in ("adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"):
+    if matrix not in MATRIX_KEYS:
         raise HTTPException(status_code=400, detail="Invalid matrix type")
 
     results = await fetch_similar_graphs(graph6, matrix=matrix, limit=limit)

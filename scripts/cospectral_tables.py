@@ -11,7 +11,13 @@ Usage:
 
 import argparse
 import os
+import sys
+from pathlib import Path
+
 import psycopg2
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from db.matrix_types import MATRIX_KEYS
 
 PG_DATABASE_URL = os.environ.get("DATABASE_URL", "dbname=smol")
 
@@ -33,7 +39,7 @@ def table1(conn, max_n: int) -> dict:
 
     # Cospectral counts by matrix type
     results = {}
-    for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"]:
+    for matrix in MATRIX_KEYS:
         cur.execute(
             """
             WITH all_graphs AS (
@@ -70,7 +76,7 @@ def table2(conn, max_n: int) -> dict:
 
     # Cospectral counts by matrix type (both graphs in pair must have min_degree >= 2)
     results = {}
-    for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"]:
+    for matrix in MATRIX_KEYS:
         cur.execute(
             """
             WITH valid_pairs AS (

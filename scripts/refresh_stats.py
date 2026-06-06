@@ -3,7 +3,13 @@
 
 import json
 import os
+import sys
+from pathlib import Path
+
 import psycopg2
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from db.matrix_types import MATRIX_KEYS
 
 
 def get_conn():
@@ -43,7 +49,7 @@ def compute_stats(conn) -> dict:
 
     # Cospectral counts from pre-computed pairs table
     cospectral = {}
-    for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"]:
+    for matrix in MATRIX_KEYS:
         cur.execute(
             """
             WITH all_graphs AS (
@@ -63,7 +69,7 @@ def compute_stats(conn) -> dict:
 
     # Cospectral counts for min_degree >= 2
     cospectral_mindeg2 = {}
-    for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"]:
+    for matrix in MATRIX_KEYS:
         cur.execute(
             """
             WITH all_graphs AS (

@@ -11,6 +11,8 @@ import os
 from contextlib import asynccontextmanager
 from typing import Any
 
+from db.matrix_types import MATRIX_KEYS, complex_keys
+
 DATABASE_URL = os.environ.get("DATABASE_URL", "dbname=smol")
 
 IS_SQLITE = DATABASE_URL.startswith("sqlite:")
@@ -177,7 +179,7 @@ async def fetch_cospectral_mates(
     """Fetch cospectral mates for each matrix type using pre-computed pairs."""
     ph = _placeholder()
     # Always initialize with all matrix types (for Pydantic model compatibility)
-    mates = {"adj": [], "kirchhoff": [], "signless": [], "lap": [], "nb": [], "nbl": [], "dist": []}
+    mates = {k: [] for k in MATRIX_KEYS}
 
     async with get_db() as conn:
         if IS_SQLITE:
@@ -774,7 +776,7 @@ async def fetch_similar_graphs(
         return []
 
     n = target["n"]
-    is_complex = matrix in ("nb", "nbl")
+    is_complex = matrix in complex_keys()
 
     if not is_complex:
         target_eigs = target[f"{matrix}_eigenvalues"]
