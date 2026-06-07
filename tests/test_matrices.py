@@ -10,7 +10,24 @@ from db.matrices import (
     laplacian_matrix,
     nonbacktracking_matrix,
     nonbacktracking_laplacian,
+    seidel_matrix,
 )
+
+
+def test_seidel_matrix_path():
+    """Seidel S = J - I - 2A: 0 on diagonal, -1 if adjacent, +1 if not."""
+    G = nx.path_graph(3)  # 0-1-2
+    S = seidel_matrix(G)
+    expected = np.array([
+        [0.0, -1.0, 1.0],
+        [-1.0, 0.0, -1.0],
+        [1.0, -1.0, 0.0],
+    ])
+    assert np.array_equal(S, expected)
+    # Symmetric, zero diagonal, entries in {-1, 0, 1}.
+    assert np.array_equal(S, S.T)
+    assert np.all(np.diag(S) == 0)
+    assert set(np.unique(S)).issubset({-1.0, 0.0, 1.0})
 
 
 def test_adjacency_matrix_path():

@@ -12,6 +12,7 @@ from .matrices import (
     nonbacktracking_matrix,
     nonbacktracking_laplacian,
     distance_matrix,
+    seidel_matrix,
 )
 from .spectrum import (
     compute_real_eigenvalues,
@@ -34,6 +35,7 @@ INSERT_COLUMNS = (
     "nb_eigenvalues_re", "nb_eigenvalues_im", "nb_spectral_hash",
     "nbl_eigenvalues_re", "nbl_eigenvalues_im", "nbl_spectral_hash",
     "dist_eigenvalues", "dist_spectral_hash",
+    "seidel_eigenvalues", "seidel_spectral_hash",
     "is_bipartite", "is_planar", "is_regular",
     "diameter", "girth", "radius",
     "min_degree", "max_degree", "triangle_count",
@@ -78,6 +80,10 @@ class GraphRecord:
     dist_eigenvalues: np.ndarray | None
     dist_spectral_hash: str | None
 
+    # Seidel spectrum (real)
+    seidel_eigenvalues: np.ndarray
+    seidel_spectral_hash: str
+
     # Metadata
     is_bipartite: bool
     is_planar: bool
@@ -111,6 +117,8 @@ class GraphRecord:
             self.nbl_spectral_hash,
             self.dist_eigenvalues.tolist() if self.dist_eigenvalues is not None else None,
             self.dist_spectral_hash,
+            self.seidel_eigenvalues.tolist(),
+            self.seidel_spectral_hash,
             self.is_bipartite,
             self.is_planar,
             self.is_regular,
@@ -142,6 +150,7 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
     B = nonbacktracking_matrix(G)
     L_NB = nonbacktracking_laplacian(G)
     D_dist = distance_matrix(G)  # None for disconnected graphs
+    S_seidel = seidel_matrix(G)
 
     # Compute eigenvalues
     adj_eigs = compute_real_eigenvalues(A)
@@ -167,6 +176,9 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
         dist_eigs = None
         dist_hash = None
 
+    seidel_eigs = compute_real_eigenvalues(S_seidel)
+    seidel_hash = spectral_hash_real(seidel_eigs)
+
     # Compute metadata
     meta = compute_metadata(G)
 
@@ -190,6 +202,8 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
         nbl_spectral_hash=nbl_hash,
         dist_eigenvalues=dist_eigs,
         dist_spectral_hash=dist_hash,
+        seidel_eigenvalues=seidel_eigs,
+        seidel_spectral_hash=seidel_hash,
         is_bipartite=meta["is_bipartite"],
         is_planar=meta["is_planar"],
         is_regular=meta["is_regular"],

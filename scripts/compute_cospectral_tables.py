@@ -23,11 +23,21 @@ sys.path.insert(0, str(__file__).rsplit("/", 2)[0])
 from db.database import connect
 from db.matrix_types import MATRIX_KEYS
 
+# Some matrices have graph-level cospectrality that explodes: Seidel switching
+# makes nearly every graph Seidel-cospectral, so n=9 alone is ~28M pairs. Cap
+# which n get materialized into cospectral_mates for those matrices.
+MAX_COSPECTRAL_N = {"seidel": 8}
+
 
 def compute_for_matrix(conn, matrix: str, n_filter: int | None = None):
     """Compute cospectral_mates for a single matrix type."""
     cur = conn.cursor()
     hash_col = f"{matrix}_spectral_hash"
+    cap = MAX_COSPECTRAL_N.get(matrix)
+    if n_filter is not None and cap is not None and n_filter > cap:
+        print(f"{matrix} (n={n_filter}): skipped (capped at n<={cap})")
+        return
+    cap_clause = f" AND n <= {cap}" if cap is not None else ""
     label = f"{matrix}" if n_filter is None else f"{matrix} (n={n_filter})"
 
     # Check if already computed
@@ -62,7 +72,7 @@ def compute_for_matrix(conn, matrix: str, n_filter: int | None = None):
         cur.execute(f"""
             SELECT id, n, {hash_col}
             FROM graphs
-            WHERE {hash_col} IS NOT NULL
+            WHERE {hash_col} IS NOT NULL{cap_clause}
             ORDER BY n, {hash_col}, id
         """)
 

@@ -17,11 +17,13 @@ from db.matrix_types import (
 
 
 def test_canonical_keys_and_order():
-    assert MATRIX_KEYS == ("adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist")
+    assert MATRIX_KEYS == (
+        "adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist", "seidel",
+    )
 
 
 def test_real_vs_complex_partition():
-    assert real_keys() == ("adj", "kirchhoff", "signless", "lap", "dist")
+    assert real_keys() == ("adj", "kirchhoff", "signless", "lap", "dist", "seidel")
     assert complex_keys() == ("nb", "nbl")
     # Partition is exhaustive and disjoint.
     assert set(real_keys()) | set(complex_keys()) == set(MATRIX_KEYS)
