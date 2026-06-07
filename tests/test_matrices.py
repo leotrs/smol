@@ -82,6 +82,53 @@ def test_kblocking_size_distinguishes_same_spectrum():
     assert a[1] != b[1]   # different once M_k size is folded in
 
 
+def test_yoon2_matches_remark_6_1():
+    """yoon2 must equal Remark 6.1: D' - A' with A' = (16A - A^2 + D)/12."""
+    from db.matrices import yoon2_matrix
+    for G in [nx.path_graph(5), nx.cycle_graph(6), nx.complete_graph(5),
+              nx.complete_bipartite_graph(2, 3)]:
+        A = nx.to_numpy_array(G)
+        D = np.diag(A.sum(axis=1))
+        Ap = (16 * A - A @ A + D) / 12.0
+        remark = np.diag(Ap.sum(axis=1)) - Ap
+        assert np.allclose(yoon2_matrix(G), remark)
+
+
+def test_yoon2_regular_graph_eigenvalues():
+    """Prop 6.2: for k-regular G, yoon2 eigenvalues are (g^2 - 16g + 16k - k^2)/12."""
+    from db.matrices import yoon2_matrix
+    for G in [nx.cycle_graph(5), nx.complete_graph(4), nx.petersen_graph()]:
+        k = dict(G.degree())[next(iter(G))]
+        gam = np.linalg.eigvalsh(nx.to_numpy_array(G))
+        expected = np.sort((gam ** 2 - 16 * gam + 16 * k - k ** 2) / 12.0)
+        got = np.sort(np.linalg.eigvalsh(yoon2_matrix(G)))
+        assert np.allclose(expected, got)
+
+
+def test_yoon_undefined_for_small_n():
+    """m-Laplacian is defined only for n > m."""
+    from db.matrices import yoon2_matrix, yoon3_matrix
+    assert yoon2_matrix(nx.complete_graph(2)) is None       # n=2, m=2
+    assert yoon2_matrix(nx.complete_graph(3)) is not None    # n=3, m=2
+    assert yoon3_matrix(nx.complete_graph(3)) is None        # n=3, m=3
+    assert yoon3_matrix(nx.complete_graph(4)) is not None    # n=4, m=3
+
+
+def test_open_path_matrix_counts_simple_paths():
+    """P_{G,3} closed form matches brute-force open-path enumeration."""
+    from db.matrices import open_path_matrix
+    G = nx.gnp_random_graph(7, 0.5, seed=3)
+    n = G.number_of_nodes()
+    brute = np.zeros((n, n))
+    for s in G:
+        for t in G:
+            if s != t:
+                brute[s, t] = sum(
+                    1 for p in nx.all_simple_paths(G, s, t, cutoff=3) if len(p) == 4
+                )
+    assert np.allclose(open_path_matrix(G, 3), brute)
+
+
 def test_distance_laplacians_disconnected_none():
     """Distance-based matrices are None for disconnected graphs."""
     G = nx.Graph()

@@ -19,6 +19,8 @@ from .matrices import (
     kblock4_matrix,
     kblock3_size,
     kblock4_size,
+    yoon2_matrix,
+    yoon3_matrix,
 )
 from .spectrum import (
     compute_real_eigenvalues,
@@ -27,6 +29,15 @@ from .spectrum import (
     spectral_hash_complex,
 )
 from .metadata import compute_metadata
+
+
+def _real_spectrum_or_none(M):
+    """Real eigenvalues and hash, or (None, None) when the matrix is None
+    (e.g. a Yoon m-Laplacian on a graph with n <= m)."""
+    if M is None:
+        return None, None
+    eigs = compute_real_eigenvalues(M)
+    return eigs, spectral_hash_real(eigs)
 
 
 def _complex_spectrum_or_none(M, size=None):
@@ -61,6 +72,8 @@ INSERT_COLUMNS = (
     "seidel_eigenvalues", "seidel_spectral_hash",
     "kblock3_eigenvalues_re", "kblock3_eigenvalues_im", "kblock3_spectral_hash",
     "kblock4_eigenvalues_re", "kblock4_eigenvalues_im", "kblock4_spectral_hash",
+    "yoon2_eigenvalues", "yoon2_spectral_hash",
+    "yoon3_eigenvalues", "yoon3_spectral_hash",
     "is_bipartite", "is_planar", "is_regular",
     "diameter", "girth", "radius",
     "min_degree", "max_degree", "triangle_count",
@@ -123,6 +136,12 @@ class GraphRecord:
     kblock4_eigenvalues_im: np.ndarray | None
     kblock4_spectral_hash: str | None
 
+    # Yoon m-Laplacian spectra (real; None when n <= m)
+    yoon2_eigenvalues: np.ndarray | None
+    yoon2_spectral_hash: str | None
+    yoon3_eigenvalues: np.ndarray | None
+    yoon3_spectral_hash: str | None
+
     # Metadata
     is_bipartite: bool
     is_planar: bool
@@ -168,6 +187,10 @@ class GraphRecord:
             self.kblock4_eigenvalues_re.tolist() if self.kblock4_eigenvalues_re is not None else None,
             self.kblock4_eigenvalues_im.tolist() if self.kblock4_eigenvalues_im is not None else None,
             self.kblock4_spectral_hash,
+            self.yoon2_eigenvalues.tolist() if self.yoon2_eigenvalues is not None else None,
+            self.yoon2_spectral_hash,
+            self.yoon3_eigenvalues.tolist() if self.yoon3_eigenvalues is not None else None,
+            self.yoon3_spectral_hash,
             self.is_bipartite,
             self.is_planar,
             self.is_regular,
@@ -236,6 +259,9 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
     kb3_re, kb3_im, kb3_hash = _complex_spectrum_or_none(kblock3_matrix(G), size=kblock3_size(G))
     kb4_re, kb4_im, kb4_hash = _complex_spectrum_or_none(kblock4_matrix(G), size=kblock4_size(G))
 
+    yoon2_eigs, yoon2_hash = _real_spectrum_or_none(yoon2_matrix(G))
+    yoon3_eigs, yoon3_hash = _real_spectrum_or_none(yoon3_matrix(G))
+
     # Compute metadata
     meta = compute_metadata(G)
 
@@ -271,6 +297,10 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
         kblock4_eigenvalues_re=kb4_re,
         kblock4_eigenvalues_im=kb4_im,
         kblock4_spectral_hash=kb4_hash,
+        yoon2_eigenvalues=yoon2_eigs,
+        yoon2_spectral_hash=yoon2_hash,
+        yoon3_eigenvalues=yoon3_eigs,
+        yoon3_spectral_hash=yoon3_hash,
         is_bipartite=meta["is_bipartite"],
         is_planar=meta["is_planar"],
         is_regular=meta["is_regular"],

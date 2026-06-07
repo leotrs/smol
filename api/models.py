@@ -59,6 +59,10 @@ class Spectra(BaseModel):
     kblock4_eigenvalues_re: list[float] | None
     kblock4_eigenvalues_im: list[float] | None
     kblock4_hash: str | None
+    yoon2_eigenvalues: list[float] | None
+    yoon2_hash: str | None
+    yoon3_eigenvalues: list[float] | None
+    yoon3_hash: str | None
 
 
 class CospectralMates(BaseModel):
@@ -74,6 +78,8 @@ class CospectralMates(BaseModel):
     seidel: list[str]
     kblock3: list[str]
     kblock4: list[str]
+    yoon2: list[str]
+    yoon3: list[str]
 
 
 class GraphFull(BaseModel):

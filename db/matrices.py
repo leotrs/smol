@@ -245,6 +245,62 @@ def kblock4_size(G: nx.Graph) -> int:
     return kblocking_size(G, 4)
 
 
+def open_path_matrix(G: nx.Graph, k: int) -> np.ndarray:
+    """
+    Yoon's length-k open path matrix P_{G,k}: (i,j) entry is the number of
+    open (simple) paths of length k from v_i to v_j, with zero diagonal.
+
+    P_{G,1} = A. For k=2,3 the validated closed forms are used (diag(A^2)=D):
+      P_{G,2} = A^2 with zeroed diagonal (= common-neighbor counts),
+      P_{G,3} = A^3 - (d_i + d_j - 1) A_{ij}, zeroed diagonal.
+    """
+    A = adjacency_matrix(G)
+    if k == 1:
+        return A
+    if k == 2:
+        P = A @ A
+        np.fill_diagonal(P, 0.0)
+        return P
+    if k == 3:
+        d = A.sum(axis=1)
+        P = A @ A @ A - (d[:, None] + d[None, :] - 1.0) * A
+        np.fill_diagonal(P, 0.0)
+        return P
+    raise ValueError("open_path_matrix is only implemented for k <= 3")
+
+
+def _yoon_coefficient(k: int, m: int) -> float:
+    """a_{k,m} = (-1)^{k+1} * 2 C(2m, m-k) / (k^2 C(2m, m))  (Yoon, Thm 2.2)."""
+    return (-1) ** (k + 1) * 2 * comb(2 * m, m - k) / (k ** 2 * comb(2 * m, m))
+
+
+def m_laplacian(G: nx.Graph, m: int) -> np.ndarray | None:
+    """
+    Yoon's m-Laplacian L^{(m)}_G: the Laplacian of the reweighted (signed)
+    graph whose adjacency is sum_{k=1}^m a_{k,m} P_{G,k}. Real symmetric.
+
+    Defined only for n > m (returns None otherwise); m=1 is the Kirchhoff
+    Laplacian. Cross-checked against Remark 6.1 (m=2) and Prop 6.2.
+    """
+    n = G.number_of_nodes()
+    if n <= m:
+        return None
+    W = np.zeros((n, n), dtype=np.float64)
+    for k in range(1, m + 1):
+        W += _yoon_coefficient(k, m) * open_path_matrix(G, k)
+    return np.diag(W.sum(axis=1)) - W
+
+
+def yoon2_matrix(G: nx.Graph) -> np.ndarray | None:
+    """Yoon 2-Laplacian (2m=4th-order accuracy). None for n <= 2."""
+    return m_laplacian(G, 2)
+
+
+def yoon3_matrix(G: nx.Graph) -> np.ndarray | None:
+    """Yoon 3-Laplacian (2m=6th-order accuracy). None for n <= 3."""
+    return m_laplacian(G, 3)
+
+
 def distance_laplacian(G: nx.Graph) -> np.ndarray | None:
     """
     Return the distance Laplacian D_L = Tr - Dist.

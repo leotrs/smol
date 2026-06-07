@@ -70,6 +70,8 @@ const spectraData = {
     distlap: ({{ graph.spectra.distlap_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
     distsign: ({{ graph.spectra.distsign_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
     seidel: ({{ graph.spectra.seidel_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
+    yoon2: ({{ graph.spectra.yoon2_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
+    yoon3: ({{ graph.spectra.yoon3_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
     nb: {{ graph.spectra.nb_eigenvalues_re | tojson }}.map((re, i) => ({
         re: re,
         im: {{ graph.spectra.nb_eigenvalues_im | tojson }}[i]
@@ -91,17 +93,10 @@ function renderGraphDetailRealPlot() {
     if (!container) return;
     container.innerHTML = '';
 
-    const matrices = ['adj', 'kirchhoff', 'signless', 'lap', 'dist', 'distlap', 'distsign', 'seidel'];
-    const graphSpectra = {
-        adj: spectraData.adj,
-        kirchhoff: spectraData.kirchhoff,
-        signless: spectraData.signless,
-        lap: spectraData.lap,
-        dist: spectraData.dist,
-        distlap: spectraData.distlap,
-        distsign: spectraData.distsign,
-        seidel: spectraData.seidel
-    };
+    const allReal = ['adj', 'kirchhoff', 'signless', 'lap', 'dist', 'distlap', 'distsign', 'seidel', 'yoon2', 'yoon3'];
+    // yoon2/yoon3 are undefined for n<=m -> empty; only show lanes that have data.
+    const matrices = allReal.filter(m => spectraData[m].length > 0);
+    const graphSpectra = Object.fromEntries(allReal.map(m => [m, spectraData[m]]));
 
     const width = container.clientWidth || 500;
     const height = 280;
@@ -180,10 +175,12 @@ function renderGraphDetailRealPlot() {
         dist: style.getPropertyValue('--spectrum-dist').trim() || '#9333EA',
         distlap: style.getPropertyValue('--spectrum-distlap').trim() || '#0E7490',
         distsign: style.getPropertyValue('--spectrum-distsign').trim() || '#4D7C0F',
-        seidel: style.getPropertyValue('--spectrum-seidel').trim() || '#DB2777'
+        seidel: style.getPropertyValue('--spectrum-seidel').trim() || '#DB2777',
+        yoon2: style.getPropertyValue('--spectrum-yoon2').trim() || '#A21CAF',
+        yoon3: style.getPropertyValue('--spectrum-yoon3').trim() || '#047857'
     };
 
-    const labels = {adj: 'adj', kirchhoff: 'kir', signless: 'sgl', lap: 'lap', dist: 'dist', distlap: 'dlp', distsign: 'dsg', seidel: 'sei'};
+    const labels = {adj: 'adj', kirchhoff: 'kir', signless: 'sgl', lap: 'lap', dist: 'dist', distlap: 'dlp', distsign: 'dsg', seidel: 'sei', yoon2: 'yn2', yoon3: 'yn3'};
 
     matrices.forEach((matrix, i) => {
         const laneY = i * laneHeight;
@@ -660,7 +657,7 @@ function renderGraph() {
 <details open>
     <summary><h3>Cospectral Mates</h3></summary>
     <p style="margin: 0 0 0.75rem 0; color: var(--pico-muted-color);">Graphs with the same spectrum</p>
-    {% if graph.cospectral_mates.adj or graph.cospectral_mates.kirchhoff or graph.cospectral_mates.signless or graph.cospectral_mates.lap or graph.cospectral_mates.nb or graph.cospectral_mates.nbl or graph.cospectral_mates.dist or graph.cospectral_mates.distlap or graph.cospectral_mates.distsign or graph.cospectral_mates.seidel or graph.cospectral_mates.kblock3 or graph.cospectral_mates.kblock4 %}
+    {% if graph.cospectral_mates.adj or graph.cospectral_mates.kirchhoff or graph.cospectral_mates.signless or graph.cospectral_mates.lap or graph.cospectral_mates.nb or graph.cospectral_mates.nbl or graph.cospectral_mates.dist or graph.cospectral_mates.distlap or graph.cospectral_mates.distsign or graph.cospectral_mates.seidel or graph.cospectral_mates.kblock3 or graph.cospectral_mates.kblock4 or graph.cospectral_mates.yoon2 or graph.cospectral_mates.yoon3 %}
     <table>
         <thead>
             <tr>
@@ -816,7 +813,7 @@ function renderGraph() {
                 </td>
             </tr>
             {% endif %}
-            {% for mt, mt_name in [('distlap', 'Distance Laplacian'), ('distsign', 'Distance Signless Laplacian'), ('seidel', 'Seidel'), ('kblock3', '3-blocking operator'), ('kblock4', '4-blocking operator')] %}
+            {% for mt, mt_name in [('distlap', 'Distance Laplacian'), ('distsign', 'Distance Signless Laplacian'), ('seidel', 'Seidel'), ('kblock3', '3-blocking operator'), ('kblock4', '4-blocking operator'), ('yoon2', 'Yoon 2-Laplacian'), ('yoon3', 'Yoon 3-Laplacian')] %}
             {% set mates = graph.cospectral_mates[mt] %}
             {% if mates %}
             <tr>
@@ -862,6 +859,8 @@ function renderGraph() {
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'seidel')">Seidel</button>
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'kblock3')">3-block</button>
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'kblock4')">4-block</button>
+        <button class="code-tab-btn" onclick="switchCodeTab(event, 'yoon2')">Yoon-2</button>
+        <button class="code-tab-btn" onclick="switchCodeTab(event, 'yoon3')">Yoon-3</button>
         {% if graph.properties.diameter is not none %}
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'dist')">Distance</button>
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'distlap')">Dist Laplacian</button>
@@ -1097,6 +1096,34 @@ Hk = nx.k_core(Gk, 2)
         </div>
     </div>
     {% endfor %}
+
+    {% for ym in [2, 3] %}
+    <div id="code-yoon{{ ym }}" class="code-tab-content">
+        <div class="code-block">
+            <span class="code-lang-label">Python</span>
+            <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+<pre><code class="language-python">import networkx as nx
+import numpy as np
+from math import comb
+
+G = nx.from_graph6_bytes(b"{{ graph.graph6 }}")
+m = {{ ym }}
+A = nx.to_numpy_array(G)
+d = A.sum(1)
+# Open-path matrices P_{G,k} (number of simple length-k paths; zero diagonal)
+P = {1: A}
+P[2] = A @ A;            np.fill_diagonal(P[2], 0)
+P[3] = A @ A @ A - (d[:, None] + d[None, :] - 1) * A; np.fill_diagonal(P[3], 0)
+# Coefficients a_{k,m} = (-1)^{k+1} 2 C(2m,m-k) / (k^2 C(2m,m))
+a = lambda k: (-1)**(k+1) * 2*comb(2*m, m-k) / (k**2 * comb(2*m, m))
+W = sum(a(k) * P[k] for k in range(1, m+1))     # adjacency of the reweighted graph
+L = np.diag(W.sum(1)) - W                        # Yoon m-Laplacian
+eigenvalues = np.linalg.eigvalsh(L)</code></pre>
+        </div>
+    </div>
+    {% endfor %}
 </div>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css" id="prism-light">
@@ -1204,6 +1231,18 @@ function copyCode(btn) {
     <button class="outline" onclick="downloadEigenvaluesCSV('kblock4')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         4-block
+    </button>
+    {% endif %}
+    {% if graph.spectra.yoon2_hash %}
+    <button class="outline" onclick="downloadEigenvaluesCSV('yoon2')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Yoon-2
+    </button>
+    {% endif %}
+    {% if graph.spectra.yoon3_hash %}
+    <button class="outline" onclick="downloadEigenvaluesCSV('yoon3')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Yoon-3
     </button>
     {% endif %}
 </div>
@@ -1363,6 +1402,11 @@ function downloadEigenvaluesCSV(matrixType) {
         eigenvalues = graphData.spectra.seidel_eigenvalues;
         filename = `${graphData.graph6}_seidel_eigenvalues.csv`;
         header = '# Seidel matrix eigenvalues';
+    } else if (matrixType === 'yoon2' || matrixType === 'yoon3') {
+        const m = matrixType === 'yoon2' ? 2 : 3;
+        eigenvalues = graphData.spectra[`${matrixType}_eigenvalues`];
+        filename = `${graphData.graph6}_${matrixType}_eigenvalues.csv`;
+        header = `# Yoon ${m}-Laplacian eigenvalues`;
     } else if (matrixType === 'kblock3' || matrixType === 'kblock4') {
         const k = matrixType === 'kblock3' ? 3 : 4;
         const re = graphData.spectra[`${matrixType}_eigenvalues_re`] || [];

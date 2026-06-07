@@ -20,12 +20,14 @@ def test_canonical_keys_and_order():
     assert MATRIX_KEYS == (
         "adj", "kirchhoff", "signless", "lap", "nb", "nbl",
         "dist", "distlap", "distsign", "seidel", "kblock3", "kblock4",
+        "yoon2", "yoon3",
     )
 
 
 def test_real_vs_complex_partition():
     assert real_keys() == (
-        "adj", "kirchhoff", "signless", "lap", "dist", "distlap", "distsign", "seidel",
+        "adj", "kirchhoff", "signless", "lap", "dist", "distlap", "distsign",
+        "seidel", "yoon2", "yoon3",
     )
     assert complex_keys() == ("nb", "nbl", "kblock3", "kblock4")
     # Partition is exhaustive and disjoint.
@@ -62,7 +64,9 @@ def test_builders_callable_on_path_graph():
     P3 = nx.path_graph(3)
     for key, m in MATRIX_TYPES.items():
         result = m.builder(P3)
-        assert isinstance(result, np.ndarray), key
+        # Some matrices are conditionally defined (e.g. yoon3 needs n > 3),
+        # in which case the builder returns None.
+        assert result is None or isinstance(result, np.ndarray), key
 
 
 def test_adjacency_builder_matches_networkx():

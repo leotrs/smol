@@ -158,6 +158,10 @@ def row_to_graph_full(row: dict, mates: dict[str, list[str]]) -> GraphFull:
             kblock4_eigenvalues_re=row["kblock4_eigenvalues_re"],
             kblock4_eigenvalues_im=row["kblock4_eigenvalues_im"],
             kblock4_hash=row["kblock4_spectral_hash"],
+            yoon2_eigenvalues=row["yoon2_eigenvalues"],
+            yoon2_hash=row["yoon2_spectral_hash"],
+            yoon3_eigenvalues=row["yoon3_eigenvalues"],
+            yoon3_hash=row["yoon3_spectral_hash"],
         ),
         cospectral_mates=CospectralMates(**mates),
         tags=row.get("tags") or [],
@@ -226,6 +230,8 @@ async def get_graph_by_id(graph6: str, request: Request):
         "seidel": row["seidel_spectral_hash"] or "",
         "kblock3": row["kblock3_spectral_hash"] or "",
         "kblock4": row["kblock4_spectral_hash"] or "",
+        "yoon2": row["yoon2_spectral_hash"] or "",
+        "yoon3": row["yoon3_spectral_hash"] or "",
     }
     mates = await fetch_cospectral_mates(graph6, row["n"], hashes)
     t2 = time.perf_counter()
@@ -394,6 +400,8 @@ async def search_graphs(
             "seidel": row["seidel_spectral_hash"] or "",
             "kblock3": row["kblock3_spectral_hash"] or "",
             "kblock4": row["kblock4_spectral_hash"] or "",
+            "yoon2": row["yoon2_spectral_hash"] or "",
+            "yoon3": row["yoon3_spectral_hash"] or "",
         }
         mates = await fetch_cospectral_mates(graph6, row["n"], hashes)
         graph = row_to_graph_full(row, mates)
@@ -693,6 +701,8 @@ async def compare_graphs(
             "seidel": row["seidel_spectral_hash"] or "",
             "kblock3": row["kblock3_spectral_hash"] or "",
             "kblock4": row["kblock4_spectral_hash"] or "",
+            "yoon2": row["yoon2_spectral_hash"] or "",
+            "yoon3": row["yoon3_spectral_hash"] or "",
         }
         for matrix, h in hashes.items():
             all_hashes[matrix].add(h)

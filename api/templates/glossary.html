@@ -94,6 +94,17 @@
             Has the same eigenvalues as the random walk Laplacian $I - D^{-1} A$.
         </dd>
 
+        <dt id="yoon"><strong>Yoon $m$-Laplacian</strong></dt>
+        <dd>
+            $L^{(m)}_G$ is the Laplacian of a reweighted (signed) graph whose adjacency is
+            $\sum_{k=1}^{m} a_{k,m}\,P_{G,k}$, where $P_{G,k}$ is the open-path matrix
+            (number of length-$k$ simple paths between vertices, zero diagonal) and
+            $a_{k,m}=(-1)^{k+1}\,2\binom{2m}{m-k}/(k^2\binom{2m}{m})$. Real symmetric,
+            defined for $n>m$; $m=1$ is the Kirchhoff Laplacian. We store $m=2,3$. It is
+            a graph analogue of higher-accuracy-order discrete Laplacians
+            (Yoon, <em>Graph Laplacians with Higher Accuracy</em>, 2025).
+        </dd>
+
 </dl>
 
 <h3 id="N">N</h3>

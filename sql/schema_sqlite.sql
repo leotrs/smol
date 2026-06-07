@@ -54,6 +54,12 @@ CREATE TABLE IF NOT EXISTS graphs (
     kblock4_eigenvalues_im TEXT,
     kblock4_spectral_hash  TEXT,
 
+    -- Yoon m-Laplacian spectra (real; NULL when n <= m)
+    yoon2_eigenvalues   TEXT,
+    yoon2_spectral_hash TEXT,
+    yoon3_eigenvalues   TEXT,
+    yoon3_spectral_hash TEXT,
+
     -- Structural properties
     is_bipartite        INTEGER NOT NULL,  -- 0/1 boolean
     is_planar           INTEGER NOT NULL,
@@ -120,6 +126,10 @@ CREATE INDEX IF NOT EXISTS idx_graphs_kblock3_hash ON graphs(kblock3_spectral_ha
 CREATE INDEX IF NOT EXISTS idx_n_kblock3_hash ON graphs(n, kblock3_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_graphs_kblock4_hash ON graphs(kblock4_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_kblock4_hash ON graphs(n, kblock4_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_graphs_yoon2_hash ON graphs(yoon2_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_n_yoon2_hash ON graphs(n, yoon2_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_graphs_yoon3_hash ON graphs(yoon3_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_n_yoon3_hash ON graphs(n, yoon3_spectral_hash);
 
 -- Pre-computed cospectral mates table
 -- Stores all pairs of graphs that share the same spectrum for a given matrix type.
@@ -132,7 +142,7 @@ CREATE TABLE IF NOT EXISTS cospectral_mates (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     graph1_id   INTEGER NOT NULL REFERENCES graphs(id),
     graph2_id   INTEGER NOT NULL REFERENCES graphs(id),
-    matrix_type TEXT NOT NULL CHECK (matrix_type IN ('adj', 'kirchhoff', 'signless', 'lap', 'nb', 'nbl', 'dist', 'seidel', 'distlap', 'distsign', 'kblock3', 'kblock4')),
+    matrix_type TEXT NOT NULL CHECK (matrix_type IN ('adj', 'kirchhoff', 'signless', 'lap', 'nb', 'nbl', 'dist', 'seidel', 'distlap', 'distsign', 'kblock3', 'kblock4', 'yoon2', 'yoon3')),
     UNIQUE (graph1_id, graph2_id, matrix_type),
     CHECK (graph1_id < graph2_id)
 );

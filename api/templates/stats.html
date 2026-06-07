@@ -19,7 +19,7 @@
     </div>
     <div class="stat-card">
         <div class="stat-label">Matrix Types</div>
-        <div class="stat-value">12</div>
+        <div class="stat-value">14</div>
     </div>
     {% if stats.tag_counts %}
     <div class="stat-card">
@@ -58,6 +58,8 @@
                             <th>Seidel</th>
                             <th>kb3</th>
                             <th>kb4</th>
+                            <th>yn2</th>
+                            <th>yn3</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -77,6 +79,8 @@
                             <td>{{ "{:,}".format(stats.cospectral_counts.seidel.get(n, 0)) if stats.cospectral_counts.seidel.get(n, 0) else "—" }}</td>
                             <td>{{ "{:,}".format(stats.cospectral_counts.kblock3.get(n, 0)) if stats.cospectral_counts.kblock3.get(n, 0) else "—" }}</td>
                             <td>{{ "{:,}".format(stats.cospectral_counts.kblock4.get(n, 0)) if stats.cospectral_counts.kblock4.get(n, 0) else "—" }}</td>
+                            <td>{{ "{:,}".format(stats.cospectral_counts.yoon2.get(n, 0)) if stats.cospectral_counts.yoon2.get(n, 0) else "—" }}</td>
+                            <td>{{ "{:,}".format(stats.cospectral_counts.yoon3.get(n, 0)) if stats.cospectral_counts.yoon3.get(n, 0) else "—" }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -107,6 +111,8 @@
                             <th>Seidel</th>
                             <th>kb3</th>
                             <th>kb4</th>
+                            <th>yn2</th>
+                            <th>yn3</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -126,6 +132,8 @@
                             <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.seidel.get(n, 0)) if stats.cospectral_counts_mindeg2.seidel.get(n, 0) else "—" }}</td>
                             <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.kblock3.get(n, 0)) if stats.cospectral_counts_mindeg2.kblock3.get(n, 0) else "—" }}</td>
                             <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.kblock4.get(n, 0)) if stats.cospectral_counts_mindeg2.kblock4.get(n, 0) else "—" }}</td>
+                            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.yoon2.get(n, 0)) if stats.cospectral_counts_mindeg2.yoon2.get(n, 0) else "—" }}</td>
+                            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.yoon3.get(n, 0)) if stats.cospectral_counts_mindeg2.yoon3.get(n, 0) else "—" }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
