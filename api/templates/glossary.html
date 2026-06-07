@@ -69,6 +69,13 @@
 
 <h3 id="S">S</h3>
 <dl>
+        <dt id="seidel"><strong>Seidel matrix</strong></dt>
+        <dd>
+            $S = J - I - 2A$: $0$ on the diagonal, $-1$ between adjacent vertices and $+1$ between
+            non-adjacent vertices. Real symmetric. Its spectrum is invariant under Seidel switching,
+            so it is a switching-class (two-graph) invariant.
+        </dd>
+
         <dt id="signless"><strong>Signless Laplacian</strong></dt>
         <dd>
             $Q = D + A$, where $D$ is the diagonal degree matrix and $A$ is the adjacency matrix.
@@ -114,6 +121,19 @@
             The $n \times n$ matrix $D$ where $D_{ij}$ is the shortest path length between vertices $i$ and $j$.
             Only defined for connected graphs. Eigenvalues are real. The distance spectrum captures
             structural information about graph diameter and centrality.
+        </dd>
+
+        <dt id="distlap"><strong>Distance Laplacian</strong></dt>
+        <dd>
+            $D_L = \mathrm{Tr} - D$, where $D$ is the distance matrix and $\mathrm{Tr}$ is the diagonal
+            matrix of vertex transmissions (the row sums of $D$). Real symmetric and positive
+            semidefinite, with smallest eigenvalue $0$. Only defined for connected graphs.
+        </dd>
+
+        <dt id="distsign"><strong>Distance signless Laplacian</strong></dt>
+        <dd>
+            $D_Q = \mathrm{Tr} + D$, the signless counterpart of the distance Laplacian. Real symmetric.
+            Only defined for connected graphs.
         </dd>
     </dl>
 

@@ -67,6 +67,9 @@ const spectraData = {
     signless: {{ graph.spectra.signless_eigenvalues | tojson }}.map(x => ({re: x, im: 0})),
     lap: {{ graph.spectra.lap_eigenvalues | tojson }}.map(x => ({re: x, im: 0})),
     dist: ({{ graph.spectra.dist_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
+    distlap: ({{ graph.spectra.distlap_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
+    distsign: ({{ graph.spectra.distsign_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
+    seidel: ({{ graph.spectra.seidel_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
     nb: {{ graph.spectra.nb_eigenvalues_re | tojson }}.map((re, i) => ({
         re: re,
         im: {{ graph.spectra.nb_eigenvalues_im | tojson }}[i]
@@ -82,13 +85,16 @@ function renderGraphDetailRealPlot() {
     if (!container) return;
     container.innerHTML = '';
 
-    const matrices = ['adj', 'kirchhoff', 'signless', 'lap', 'dist'];
+    const matrices = ['adj', 'kirchhoff', 'signless', 'lap', 'dist', 'distlap', 'distsign', 'seidel'];
     const graphSpectra = {
         adj: spectraData.adj,
         kirchhoff: spectraData.kirchhoff,
         signless: spectraData.signless,
         lap: spectraData.lap,
-        dist: spectraData.dist
+        dist: spectraData.dist,
+        distlap: spectraData.distlap,
+        distsign: spectraData.distsign,
+        seidel: spectraData.seidel
     };
 
     const width = container.clientWidth || 500;
@@ -165,10 +171,13 @@ function renderGraphDetailRealPlot() {
         kirchhoff: style.getPropertyValue('--spectrum-kirchhoff').trim() || '#8B4513',
         signless: style.getPropertyValue('--spectrum-signless').trim() || '#F97316',
         lap: style.getPropertyValue('--spectrum-lap').trim(),
-        dist: style.getPropertyValue('--spectrum-dist').trim() || '#9333EA'
+        dist: style.getPropertyValue('--spectrum-dist').trim() || '#9333EA',
+        distlap: style.getPropertyValue('--spectrum-distlap').trim() || '#0E7490',
+        distsign: style.getPropertyValue('--spectrum-distsign').trim() || '#4D7C0F',
+        seidel: style.getPropertyValue('--spectrum-seidel').trim() || '#DB2777'
     };
 
-    const labels = {adj: 'adj', kirchhoff: 'kir', signless: 'sgl', lap: 'lap', dist: 'dist'};
+    const labels = {adj: 'adj', kirchhoff: 'kir', signless: 'sgl', lap: 'lap', dist: 'dist', distlap: 'dlp', distsign: 'dsg', seidel: 'sei'};
 
     matrices.forEach((matrix, i) => {
         const laneY = i * laneHeight;
@@ -636,7 +645,7 @@ function renderGraph() {
 <details open>
     <summary><h3>Cospectral Mates</h3></summary>
     <p style="margin: 0 0 0.75rem 0; color: var(--pico-muted-color);">Graphs with the same spectrum</p>
-    {% if graph.cospectral_mates.adj or graph.cospectral_mates.kirchhoff or graph.cospectral_mates.signless or graph.cospectral_mates.lap or graph.cospectral_mates.nb or graph.cospectral_mates.nbl or graph.cospectral_mates.dist %}
+    {% if graph.cospectral_mates.adj or graph.cospectral_mates.kirchhoff or graph.cospectral_mates.signless or graph.cospectral_mates.lap or graph.cospectral_mates.nb or graph.cospectral_mates.nbl or graph.cospectral_mates.dist or graph.cospectral_mates.distlap or graph.cospectral_mates.distsign or graph.cospectral_mates.seidel %}
     <table>
         <thead>
             <tr>
@@ -792,6 +801,27 @@ function renderGraph() {
                 </td>
             </tr>
             {% endif %}
+            {% for mt, mt_name in [('distlap', 'Distance Laplacian'), ('distsign', 'Distance Signless Laplacian'), ('seidel', 'Seidel')] %}
+            {% set mates = graph.cospectral_mates[mt] %}
+            {% if mates %}
+            <tr>
+                <td>{{ mt_name }}</td>
+                <td>
+                    {% for mate in mates %}
+                        <a href="/graph/{{ mate | urlencode }}"><code>{{ mate }}</code></a>{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </td>
+                <td><span style="color: var(--pico-muted-color);">—</span></td>
+                <td>
+                    {% if mates | length < 10 %}
+                    <a href="/compare?graphs={{ graph.graph6 | urlencode }},{{ mates | join(',') | urlencode }}" role="button" class="outline">Compare</a>
+                    {% else %}
+                    <span class="compare-disabled" data-tooltip="Can only compare up to 10 graphs">Compare</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
         </tbody>
     </table>
     {% else %}
@@ -814,8 +844,11 @@ function renderGraph() {
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'lap')">Laplacian</button>
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'nb')">NB</button>
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'nbl')">NBL</button>
+        <button class="code-tab-btn" onclick="switchCodeTab(event, 'seidel')">Seidel</button>
         {% if graph.properties.diameter is not none %}
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'dist')">Distance</button>
+        <button class="code-tab-btn" onclick="switchCodeTab(event, 'distlap')">Dist Laplacian</button>
+        <button class="code-tab-btn" onclick="switchCodeTab(event, 'distsign')">Dist Signless</button>
         {% endif %}
     </div>
 
@@ -968,7 +1001,62 @@ eigenvalues = np.linalg.eigvalsh(D)
 print(eigenvalues)</code></pre>
         </div>
     </div>
+
+    <div id="code-distlap" class="code-tab-content">
+        <div class="code-block">
+            <span class="code-lang-label">Python</span>
+            <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+<pre><code class="language-python">import networkx as nx
+import numpy as np
+
+G = nx.from_graph6_bytes(b"{{ graph.graph6 }}")
+D = nx.floyd_warshall_numpy(G)
+# Distance Laplacian: Tr - D (Tr = diagonal of vertex transmissions)
+Tr = np.diag(D.sum(axis=1))
+eigenvalues = np.linalg.eigvalsh(Tr - D)
+print(eigenvalues)</code></pre>
+        </div>
+    </div>
+
+    <div id="code-distsign" class="code-tab-content">
+        <div class="code-block">
+            <span class="code-lang-label">Python</span>
+            <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+<pre><code class="language-python">import networkx as nx
+import numpy as np
+
+G = nx.from_graph6_bytes(b"{{ graph.graph6 }}")
+D = nx.floyd_warshall_numpy(G)
+# Distance signless Laplacian: Tr + D
+Tr = np.diag(D.sum(axis=1))
+eigenvalues = np.linalg.eigvalsh(Tr + D)
+print(eigenvalues)</code></pre>
+        </div>
+    </div>
     {% endif %}
+
+    <div id="code-seidel" class="code-tab-content">
+        <div class="code-block">
+            <span class="code-lang-label">Python</span>
+            <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+<pre><code class="language-python">import networkx as nx
+import numpy as np
+
+G = nx.from_graph6_bytes(b"{{ graph.graph6 }}")
+A = nx.to_numpy_array(G)
+n = A.shape[0]
+# Seidel matrix: S = J - I - 2A
+S = np.ones((n, n)) - np.eye(n) - 2 * A
+eigenvalues = np.linalg.eigvalsh(S)
+print(eigenvalues)</code></pre>
+        </div>
+    </div>
 </div>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css" id="prism-light">
@@ -1053,7 +1141,19 @@ function copyCode(btn) {
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Distance
     </button>
+    <button class="outline" onclick="downloadEigenvaluesCSV('distlap')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Dist Laplacian
+    </button>
+    <button class="outline" onclick="downloadEigenvaluesCSV('distsign')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Dist Signless
+    </button>
     {% endif %}
+    <button class="outline" onclick="downloadEigenvaluesCSV('seidel')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Seidel
+    </button>
 </div>
 
 <p style="font-size: 0.875rem; color: var(--pico-muted-color); margin-bottom: 0.5rem; margin-top: 1.5rem;">Graph structure</p>
@@ -1199,9 +1299,21 @@ function downloadEigenvaluesCSV(matrixType) {
         eigenvalues = graphData.spectra.dist_eigenvalues;
         filename = `${graphData.graph6}_dist_eigenvalues.csv`;
         header = '# Distance matrix eigenvalues';
+    } else if (matrixType === 'distlap') {
+        eigenvalues = graphData.spectra.distlap_eigenvalues;
+        filename = `${graphData.graph6}_distlap_eigenvalues.csv`;
+        header = '# Distance Laplacian eigenvalues';
+    } else if (matrixType === 'distsign') {
+        eigenvalues = graphData.spectra.distsign_eigenvalues;
+        filename = `${graphData.graph6}_distsign_eigenvalues.csv`;
+        header = '# Distance signless Laplacian eigenvalues';
+    } else if (matrixType === 'seidel') {
+        eigenvalues = graphData.spectra.seidel_eigenvalues;
+        filename = `${graphData.graph6}_seidel_eigenvalues.csv`;
+        header = '# Seidel matrix eigenvalues';
     }
 
-    // For real eigenvalues (adj, kirchhoff, signless, lap, dist)
+    // For real eigenvalues (adj, kirchhoff, signless, lap, dist, distlap, distsign, seidel)
     const lines = ['eigenvalue'];
     eigenvalues.forEach(e => lines.push(e.toString()));
     const content = `${header}\n# ${graphData.graph6}\n` + lines.join('\n');
