@@ -27,6 +27,8 @@ from .matrices import (
     seidel_matrix,
     kblock3_matrix,
     kblock4_matrix,
+    kblock3_size,
+    kblock4_size,
 )
 
 
@@ -40,6 +42,10 @@ class MatrixType:
     # When True, an empty or all-zero spectrum is stored as NULL (not hashed),
     # so such graphs are not grouped together as cospectral.
     null_if_trivial: bool = False
+    # Optional invariant beyond the stored spectrum, folded into the hash. The
+    # k-blocking operators use this for M_k's size |states(M_k)|, since two
+    # graphs can share the D_k B_k spectrum but differ in M_k's kernel.
+    size_fn: Optional[Callable[[nx.Graph], int]] = None
 
     @property
     def eigenvalue_columns(self) -> tuple[str, ...]:
@@ -71,8 +77,8 @@ MATRIX_TYPES: dict[str, MatrixType] = {
         MatrixType("distlap", "Distance Laplacian", distance_laplacian, is_complex=False, connected_only=True),
         MatrixType("distsign", "Distance Signless Laplacian", distance_signless_laplacian, is_complex=False, connected_only=True),
         MatrixType("seidel", "Seidel", seidel_matrix, is_complex=False),
-        MatrixType("kblock3", "3-blocking operator", kblock3_matrix, is_complex=True, null_if_trivial=True),
-        MatrixType("kblock4", "4-blocking operator", kblock4_matrix, is_complex=True, null_if_trivial=True),
+        MatrixType("kblock3", "3-blocking operator", kblock3_matrix, is_complex=True, null_if_trivial=True, size_fn=kblock3_size),
+        MatrixType("kblock4", "4-blocking operator", kblock4_matrix, is_complex=True, null_if_trivial=True, size_fn=kblock4_size),
     )
 }
 

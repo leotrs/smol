@@ -222,6 +222,29 @@ def kblock4_matrix(G: nx.Graph) -> np.ndarray:
     return kblocking_matrix(G, 4)
 
 
+def kblocking_size(G: nx.Graph, k: int) -> int:
+    """
+    Number of states of the k-blocking operator M_k, i.e. its dimension:
+    |states(M_k)| = sum over directed edges (u,v) of H_k of C(d_G(v)-1, k-2).
+
+    Two graphs can share the D_k B_k spectrum but differ here (M_k's kernel
+    dimension), so this is folded into the k-blocking hash for exact M_k
+    cospectrality.
+    """
+    Hk = cycle_core(G, k)
+    if Hk.number_of_edges() == 0:
+        return 0
+    return sum(comb(G.degree(v) - 1, k - 2) for (_, v) in _build_directed_edges(Hk))
+
+
+def kblock3_size(G: nx.Graph) -> int:
+    return kblocking_size(G, 3)
+
+
+def kblock4_size(G: nx.Graph) -> int:
+    return kblocking_size(G, 4)
+
+
 def distance_laplacian(G: nx.Graph) -> np.ndarray | None:
     """
     Return the distance Laplacian D_L = Tr - Dist.

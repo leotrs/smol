@@ -17,6 +17,8 @@ from .matrices import (
     seidel_matrix,
     kblock3_matrix,
     kblock4_matrix,
+    kblock3_size,
+    kblock4_size,
 )
 from .spectrum import (
     compute_real_eigenvalues,
@@ -27,16 +29,19 @@ from .spectrum import (
 from .metadata import compute_metadata
 
 
-def _complex_spectrum_or_none(M):
+def _complex_spectrum_or_none(M, size=None):
     """Complex eigenvalues (real, imag) and hash for a matrix.
 
     Returns (None, None, None) when the spectrum is empty or all-zero, so the
-    graph is stored with a NULL hash and not grouped as cospectral.
+    graph is stored with a NULL hash and not grouped as cospectral. ``size``,
+    when given, is folded into the hash as an exact-integer tag (used for the
+    k-blocking operator's |states(M_k)|).
     """
     eigs = compute_complex_eigenvalues(M)
     if eigs.size == 0 or np.allclose(eigs, 0.0):
         return None, None, None
-    return eigs.real, eigs.imag, spectral_hash_complex(eigs)
+    extra = "" if size is None else f"|states={size}"
+    return eigs.real, eigs.imag, spectral_hash_complex(eigs, extra=extra)
 
 
 # Canonical column order for inserting a GraphRecord. to_db_tuple() emits values
@@ -228,8 +233,8 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
     seidel_eigs = compute_real_eigenvalues(S_seidel)
     seidel_hash = spectral_hash_real(seidel_eigs)
 
-    kb3_re, kb3_im, kb3_hash = _complex_spectrum_or_none(kblock3_matrix(G))
-    kb4_re, kb4_im, kb4_hash = _complex_spectrum_or_none(kblock4_matrix(G))
+    kb3_re, kb3_im, kb3_hash = _complex_spectrum_or_none(kblock3_matrix(G), size=kblock3_size(G))
+    kb4_re, kb4_im, kb4_hash = _complex_spectrum_or_none(kblock4_matrix(G), size=kblock4_size(G))
 
     # Compute metadata
     meta = compute_metadata(G)

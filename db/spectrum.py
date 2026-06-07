@@ -158,7 +158,7 @@ def _half_spectrum(eigenvalues: np.ndarray) -> np.ndarray:
     return eigenvalues[eigenvalues.imag >= 0]
 
 
-def spectral_hash_real(eigenvalues: np.ndarray) -> str:
+def spectral_hash_real(eigenvalues: np.ndarray, extra: str = "") -> str:
     """
     Compute a hash of real eigenvalues for co-spectral detection.
 
@@ -167,18 +167,19 @@ def spectral_hash_real(eigenvalues: np.ndarray) -> str:
 
     Args:
         eigenvalues: Sorted array of real eigenvalues (pre-rounded, no -0.0)
+        extra: optional exact tag folded into the hash (see spectral_hash_complex)
 
     Returns:
         16-character hex hash
     """
     if eigenvalues.size == 0:
-        return hashlib.sha256(b"empty").hexdigest()[:16]
+        return hashlib.sha256(("empty" + extra).encode()).hexdigest()[:16]
 
-    canonical = ",".join(f"{x:.{PRECISION}f}" for x in eigenvalues)
+    canonical = ",".join(f"{x:.{PRECISION}f}" for x in eigenvalues) + extra
     return hashlib.sha256(canonical.encode()).hexdigest()[:16]
 
 
-def spectral_hash_complex(eigenvalues: np.ndarray) -> str:
+def spectral_hash_complex(eigenvalues: np.ndarray, extra: str = "") -> str:
     """
     Compute a hash of complex eigenvalues for co-spectral detection.
 
@@ -191,12 +192,16 @@ def spectral_hash_complex(eigenvalues: np.ndarray) -> str:
 
     Args:
         eigenvalues: Array of complex eigenvalues (full spectrum, pre-rounded)
+        extra: optional exact (e.g. integer) tag folded into the hash, for
+            invariants beyond the nonzero spectrum (e.g. the k-blocking operator
+            stores its size |states(M_k)| here, since two graphs can share the
+            D_k B_k spectrum but differ in M_k's kernel dimension)
 
     Returns:
         16-character hex hash
     """
     if eigenvalues.size == 0:
-        return hashlib.sha256(b"empty").hexdigest()[:16]
+        return hashlib.sha256(("empty" + extra).encode()).hexdigest()[:16]
 
     # Filter to half-spectrum for hashing (one from each conjugate pair)
     half = _half_spectrum(eigenvalues)
@@ -204,5 +209,5 @@ def spectral_hash_complex(eigenvalues: np.ndarray) -> str:
     canonical = ",".join(
         f"({r:.{PRECISION}f},{i:.{PRECISION}f})"
         for r, i in zip(half.real, half.imag)
-    )
+    ) + extra
     return hashlib.sha256(canonical.encode()).hexdigest()[:16]

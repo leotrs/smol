@@ -56,6 +56,32 @@ def test_kblocking_empty_for_tree():
     assert kblock4_matrix(P5).size == 0
 
 
+def test_kblocking_size_distinguishes_same_spectrum():
+    """Two triangle cores with the same D_kB_k spectrum but different M_k size
+    must hash differently (the size folds into the k-blocking hash)."""
+    from math import comb
+    from db.matrices import nonbacktracking_matrix, _build_directed_edges
+    from db.spectrum import compute_complex_eigenvalues, spectral_hash_complex
+
+    tri = nx.cycle_graph(3)
+    B = nonbacktracking_matrix(tri)
+    edges = _build_directed_edges(tri)
+    # Both profiles have product of C(d-2,2) = 90 -> identical D_4 B_4 spectrum,
+    # but different |states| = sum C(d-1,2): (5,5,7)->54, (4,6,8)->68.
+    out = {}
+    for deg in [{0: 5, 1: 5, 2: 7}, {0: 4, 1: 6, 2: 8}]:
+        w = np.array([comb(deg[v] - 2, 2) for (_, v) in edges], dtype=float)
+        eigs = compute_complex_eigenvalues(w[:, None] * B)
+        size = sum(comb(deg[v] - 1, 2) for (_, v) in edges)
+        out[tuple(sorted(deg.values()))] = (
+            spectral_hash_complex(eigs),
+            spectral_hash_complex(eigs, extra=f"|states={size}"),
+        )
+    a, b = out[(5, 5, 7)], out[(4, 6, 8)]
+    assert a[0] == b[0]   # same D_kB_k spectrum
+    assert a[1] != b[1]   # different once M_k size is folded in
+
+
 def test_distance_laplacians_disconnected_none():
     """Distance-based matrices are None for disconnected graphs."""
     G = nx.Graph()
