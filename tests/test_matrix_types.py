@@ -60,6 +60,30 @@ def test_is_valid():
     assert not is_valid("bogus")
 
 
+def test_hash_only_keys():
+    """The large-spectrum matrices are hash-only: complex and null_if_trivial."""
+    from db.matrix_types import HASH_ONLY_KEYS
+    assert HASH_ONLY_KEYS == ("kblock3", "kblock4", "non3cyc", "non4cyc")
+    for k in HASH_ONLY_KEYS:
+        assert MATRIX_TYPES[k].is_complex
+        assert MATRIX_TYPES[k].null_if_trivial
+
+
+def test_export_nulls_only_hash_only_array_columns():
+    """The SQLite export blanks exactly the array columns of the hash-only
+    matrices (keeping their hash columns and all small-matrix arrays)."""
+    from scripts.export_to_sqlite import NULLED_COLUMNS
+    from db.matrix_types import HASH_ONLY_KEYS
+    expected = {
+        f"{k}_eigenvalues_re" for k in HASH_ONLY_KEYS
+    } | {f"{k}_eigenvalues_im" for k in HASH_ONLY_KEYS}
+    assert set(NULLED_COLUMNS) == expected
+    # Hash columns and small-matrix arrays are never nulled.
+    assert not any(c.endswith("_spectral_hash") for c in NULLED_COLUMNS)
+    assert "adj_eigenvalues" not in NULLED_COLUMNS
+    assert "nb_eigenvalues_re" not in NULLED_COLUMNS
+
+
 def test_builders_callable_on_path_graph():
     P3 = nx.path_graph(3)
     for key, m in MATRIX_TYPES.items():

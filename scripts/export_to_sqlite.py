@@ -16,7 +16,16 @@ import time
 
 import psycopg2
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from db.matrix_types import MATRIX_TYPES, HASH_ONLY_KEYS
+
 PG_DATABASE_URL = os.environ.get("DATABASE_URL", "dbname=smol")
+
+# Eigenvalue-array columns to NULL out in the export (kept in the schema, but
+# emptied) for the large-spectrum matrices, so the deployed SQLite stays small.
+NULLED_COLUMNS = frozenset(
+    col for k in HASH_ONLY_KEYS for col in MATRIX_TYPES[k].eigenvalue_columns
+)
 
 # Tables to export and their n-filtering (None = export all rows)
 TABLES = {
@@ -116,7 +125,11 @@ def export_table(
     batch = []
 
     for row in pg_cur:
-        converted = tuple(pg_to_sqlite_value(v, columns[i][1]) for i, v in enumerate(row))
+        converted = tuple(
+            None if col_names[i] in NULLED_COLUMNS
+            else pg_to_sqlite_value(v, columns[i][1])
+            for i, v in enumerate(row)
+        )
         batch.append(converted)
 
         if len(batch) >= batch_size:

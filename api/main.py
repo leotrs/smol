@@ -32,7 +32,7 @@ from .models import (
     CompareResult,
 )
 from .routes import mechanisms
-from db.matrix_types import MATRIX_KEYS, real_keys
+from db.matrix_types import MATRIX_KEYS, real_keys, HASH_ONLY_KEYS
 
 logging.basicConfig(
     level=logging.INFO,
@@ -928,6 +928,12 @@ async def similar_graphs(
 
     if matrix not in MATRIX_KEYS:
         raise HTTPException(status_code=400, detail="Invalid matrix type")
+    if matrix in HASH_ONLY_KEYS:
+        raise HTTPException(
+            status_code=400,
+            detail="Spectral similarity is not available for this matrix "
+            "(eigenvalues are not stored; cospectral mates only).",
+        )
 
     results = await fetch_similar_graphs(graph6, matrix=matrix, limit=limit)
     logger.info(f"  fetch_similar_graphs: {(time.perf_counter()-t0)*1000:.0f}ms")

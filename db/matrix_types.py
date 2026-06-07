@@ -93,6 +93,14 @@ MATRIX_TYPES: dict[str, MatrixType] = {
 # Ordered tuple of all matrix-type keys.
 MATRIX_KEYS: tuple[str, ...] = tuple(MATRIX_TYPES)
 
+# Large-spectrum matrices stored hash-only in the deployed SQLite: their
+# eigenvalue arrays (~5.8 GB at n<=9) are dropped from the export, since the
+# spectra are far too large to plot. Cospectral-mate detection uses the hash,
+# so it is unaffected; the spectrum can still be recomputed from graph6 on
+# demand. Eigenvalue-array features (plot, CSV, /similar) are not offered for
+# these in the deployed app.
+HASH_ONLY_KEYS: tuple[str, ...] = ("kblock3", "kblock4", "non3cyc", "non4cyc")
+
 
 def real_keys() -> tuple[str, ...]:
     """Keys of matrix types with a real spectrum, in canonical order."""

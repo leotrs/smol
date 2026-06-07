@@ -1263,13 +1263,13 @@ function copyCode(btn) {
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Seidel
     </button>
-    {% if graph.spectra.kblock3_hash %}
+    {% if graph.spectra.kblock3_eigenvalues_re %}
     <button class="outline" onclick="downloadEigenvaluesCSV('kblock3')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         3-block
     </button>
     {% endif %}
-    {% if graph.spectra.kblock4_hash %}
+    {% if graph.spectra.kblock4_eigenvalues_re %}
     <button class="outline" onclick="downloadEigenvaluesCSV('kblock4')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         4-block
@@ -1287,13 +1287,13 @@ function copyCode(btn) {
         Yoon-3
     </button>
     {% endif %}
-    {% if graph.spectra.non3cyc_hash %}
+    {% if graph.spectra.non3cyc_eigenvalues_re %}
     <button class="outline" onclick="downloadEigenvaluesCSV('non3cyc')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Non-3-cyc
     </button>
     {% endif %}
-    {% if graph.spectra.non4cyc_hash %}
+    {% if graph.spectra.non4cyc_eigenvalues_re %}
     <button class="outline" onclick="downloadEigenvaluesCSV('non4cyc')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Non-4-cyc

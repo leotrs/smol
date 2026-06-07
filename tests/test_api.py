@@ -493,6 +493,12 @@ class TestComparePropertyDiffs:
 
 @needs_db
 class TestSimilarEndpoint:
+    def test_similar_rejects_hash_only_matrices(self):
+        """No spectral similarity for hash-only (large-spectrum) matrices."""
+        for matrix in ("kblock3", "kblock4", "non3cyc", "non4cyc"):
+            response = client.get(f"/similar/D%3F%7B?matrix={matrix}")
+            assert response.status_code == 400, matrix
+
     def test_similar_returns_json(self):
         response = client.get("/similar/D%3F%7B")
         assert response.status_code == 200
