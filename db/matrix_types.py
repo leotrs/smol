@@ -22,6 +22,8 @@ from .matrices import (
     nonbacktracking_matrix,
     nonbacktracking_laplacian,
     distance_matrix,
+    distance_laplacian,
+    distance_signless_laplacian,
     seidel_matrix,
 )
 
@@ -61,6 +63,8 @@ MATRIX_TYPES: dict[str, MatrixType] = {
         MatrixType("nb", "Non-backtracking", nonbacktracking_matrix, is_complex=True),
         MatrixType("nbl", "Non-backtracking Laplacian", nonbacktracking_laplacian, is_complex=True),
         MatrixType("dist", "Distance", distance_matrix, is_complex=False, connected_only=True),
+        MatrixType("distlap", "Distance Laplacian", distance_laplacian, is_complex=False, connected_only=True),
+        MatrixType("distsign", "Distance Signless Laplacian", distance_signless_laplacian, is_complex=False, connected_only=True),
         MatrixType("seidel", "Seidel", seidel_matrix, is_complex=False),
     )
 }

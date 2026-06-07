@@ -18,12 +18,15 @@ from db.matrix_types import (
 
 def test_canonical_keys_and_order():
     assert MATRIX_KEYS == (
-        "adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist", "seidel",
+        "adj", "kirchhoff", "signless", "lap", "nb", "nbl",
+        "dist", "distlap", "distsign", "seidel",
     )
 
 
 def test_real_vs_complex_partition():
-    assert real_keys() == ("adj", "kirchhoff", "signless", "lap", "dist", "seidel")
+    assert real_keys() == (
+        "adj", "kirchhoff", "signless", "lap", "dist", "distlap", "distsign", "seidel",
+    )
     assert complex_keys() == ("nb", "nbl")
     # Partition is exhaustive and disjoint.
     assert set(real_keys()) | set(complex_keys()) == set(MATRIX_KEYS)
@@ -31,9 +34,12 @@ def test_real_vs_complex_partition():
 
 
 def test_connected_only_flag():
-    assert MATRIX_TYPES["dist"].connected_only is True
+    connected_only = {"dist", "distlap", "distsign"}
+    assert all(MATRIX_TYPES[k].connected_only for k in connected_only)
     assert all(
-        not m.connected_only for k, m in MATRIX_TYPES.items() if k != "dist"
+        not m.connected_only
+        for k, m in MATRIX_TYPES.items()
+        if k not in connected_only
     )
 
 

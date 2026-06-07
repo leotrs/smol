@@ -172,3 +172,32 @@ def distance_matrix(G: nx.Graph) -> np.ndarray | None:
             D[i, j] = lengths[u][v]
 
     return D
+
+
+def distance_laplacian(G: nx.Graph) -> np.ndarray | None:
+    """
+    Return the distance Laplacian D_L = Tr - Dist.
+
+    Tr is the diagonal matrix of vertex transmissions (row sums of the distance
+    matrix) and Dist is the distance matrix. Real symmetric, positive
+    semidefinite. Only defined for connected graphs (returns None otherwise).
+    """
+    Dist = distance_matrix(G)
+    if Dist is None:
+        return None
+    Tr = np.diag(Dist.sum(axis=1))
+    return Tr - Dist
+
+
+def distance_signless_laplacian(G: nx.Graph) -> np.ndarray | None:
+    """
+    Return the distance signless Laplacian D_Q = Tr + Dist.
+
+    The positive counterpart to the distance Laplacian. Real symmetric.
+    Only defined for connected graphs (returns None otherwise).
+    """
+    Dist = distance_matrix(G)
+    if Dist is None:
+        return None
+    Tr = np.diag(Dist.sum(axis=1))
+    return Tr + Dist

@@ -11,7 +11,33 @@ from db.matrices import (
     nonbacktracking_matrix,
     nonbacktracking_laplacian,
     seidel_matrix,
+    distance_matrix,
+    distance_laplacian,
+    distance_signless_laplacian,
 )
+
+
+def test_distance_laplacians_path():
+    """D_L = Tr - Dist and D_Q = Tr + Dist on P3."""
+    G = nx.path_graph(3)  # distances: 0-1=1, 0-2=2, 1-2=1
+    Dist = distance_matrix(G)
+    transmissions = Dist.sum(axis=1)  # [3, 2, 3]
+    DL = distance_laplacian(G)
+    DQ = distance_signless_laplacian(G)
+    assert np.array_equal(np.diag(DL), transmissions)
+    assert np.array_equal(DL + Dist, np.diag(transmissions))   # DL = Tr - Dist
+    assert np.array_equal(DQ - Dist, np.diag(transmissions))   # DQ = Tr + Dist
+    # Distance Laplacian is symmetric with zero row sums.
+    assert np.array_equal(DL, DL.T)
+    assert np.allclose(DL.sum(axis=1), 0)
+
+
+def test_distance_laplacians_disconnected_none():
+    """Distance-based matrices are None for disconnected graphs."""
+    G = nx.Graph()
+    G.add_nodes_from([0, 1, 2])  # no edges
+    assert distance_laplacian(G) is None
+    assert distance_signless_laplacian(G) is None
 
 
 def test_seidel_matrix_path():

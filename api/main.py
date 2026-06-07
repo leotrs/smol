@@ -146,6 +146,10 @@ def row_to_graph_full(row: dict, mates: dict[str, list[str]]) -> GraphFull:
             nbl_hash=row["nbl_spectral_hash"],
             dist_eigenvalues=row["dist_eigenvalues"],
             dist_hash=row["dist_spectral_hash"],
+            distlap_eigenvalues=row["distlap_eigenvalues"],
+            distlap_hash=row["distlap_spectral_hash"],
+            distsign_eigenvalues=row["distsign_eigenvalues"],
+            distsign_hash=row["distsign_spectral_hash"],
             seidel_eigenvalues=row["seidel_eigenvalues"] or [],
             seidel_hash=row["seidel_spectral_hash"] or "",
         ),
@@ -211,6 +215,8 @@ async def get_graph_by_id(graph6: str, request: Request):
         "nb": row["nb_spectral_hash"],
         "nbl": row["nbl_spectral_hash"],
         "dist": row["dist_spectral_hash"] or "",
+        "distlap": row["distlap_spectral_hash"] or "",
+        "distsign": row["distsign_spectral_hash"] or "",
         "seidel": row["seidel_spectral_hash"] or "",
     }
     mates = await fetch_cospectral_mates(graph6, row["n"], hashes)
@@ -375,6 +381,8 @@ async def search_graphs(
             "nb": row["nb_spectral_hash"],
             "nbl": row["nbl_spectral_hash"],
             "dist": row["dist_spectral_hash"] or "",
+            "distlap": row["distlap_spectral_hash"] or "",
+            "distsign": row["distsign_spectral_hash"] or "",
             "seidel": row["seidel_spectral_hash"] or "",
         }
         mates = await fetch_cospectral_mates(graph6, row["n"], hashes)
@@ -670,6 +678,8 @@ async def compare_graphs(
             "nb": row["nb_spectral_hash"],
             "nbl": row["nbl_spectral_hash"],
             "dist": row["dist_spectral_hash"] or "",
+            "distlap": row["distlap_spectral_hash"] or "",
+            "distsign": row["distsign_spectral_hash"] or "",
             "seidel": row["seidel_spectral_hash"] or "",
         }
         for matrix, h in hashes.items():

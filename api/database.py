@@ -83,7 +83,8 @@ def _parse_row(row: Any) -> dict[str, Any] | None:
             "adj_eigenvalues", "kirchhoff_eigenvalues", "signless_eigenvalues", "lap_eigenvalues",
             "nb_eigenvalues_re", "nb_eigenvalues_im",
             "nbl_eigenvalues_re", "nbl_eigenvalues_im",
-            "dist_eigenvalues", "seidel_eigenvalues",
+            "dist_eigenvalues", "distlap_eigenvalues", "distsign_eigenvalues",
+            "seidel_eigenvalues",
             "tags",
         ]
         for field in json_fields:
@@ -137,6 +138,8 @@ async def fetch_graph(graph6: str) -> dict[str, Any] | None:
                        nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
                        nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash,
                        dist_eigenvalues, dist_spectral_hash,
+                       distlap_eigenvalues, distlap_spectral_hash,
+                       distsign_eigenvalues, distsign_spectral_hash,
                        seidel_eigenvalues, seidel_spectral_hash
                        {tags_col}
                 FROM graphs
@@ -165,6 +168,8 @@ async def fetch_graph(graph6: str) -> dict[str, Any] | None:
                        nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
                        nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash,
                        dist_eigenvalues, dist_spectral_hash,
+                       distlap_eigenvalues, distlap_spectral_hash,
+                       distsign_eigenvalues, distsign_spectral_hash,
                        seidel_eigenvalues, seidel_spectral_hash
                        {tags_col}
                 FROM graphs
@@ -548,6 +553,8 @@ async def fetch_random_graph() -> dict[str, Any] | None:
                        nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
                        nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash,
                        dist_eigenvalues, dist_spectral_hash,
+                       distlap_eigenvalues, distlap_spectral_hash,
+                       distsign_eigenvalues, distsign_spectral_hash,
                        seidel_eigenvalues, seidel_spectral_hash
                        {tags_col}
                 FROM graphs
@@ -593,6 +600,8 @@ async def fetch_random_graph() -> dict[str, Any] | None:
                        nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
                        nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash,
                        dist_eigenvalues, dist_spectral_hash,
+                       distlap_eigenvalues, distlap_spectral_hash,
+                       distsign_eigenvalues, distsign_spectral_hash,
                        seidel_eigenvalues, seidel_spectral_hash
                        {tags_col}
                 FROM graphs

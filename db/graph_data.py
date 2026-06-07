@@ -12,6 +12,8 @@ from .matrices import (
     nonbacktracking_matrix,
     nonbacktracking_laplacian,
     distance_matrix,
+    distance_laplacian,
+    distance_signless_laplacian,
     seidel_matrix,
 )
 from .spectrum import (
@@ -35,6 +37,8 @@ INSERT_COLUMNS = (
     "nb_eigenvalues_re", "nb_eigenvalues_im", "nb_spectral_hash",
     "nbl_eigenvalues_re", "nbl_eigenvalues_im", "nbl_spectral_hash",
     "dist_eigenvalues", "dist_spectral_hash",
+    "distlap_eigenvalues", "distlap_spectral_hash",
+    "distsign_eigenvalues", "distsign_spectral_hash",
     "seidel_eigenvalues", "seidel_spectral_hash",
     "is_bipartite", "is_planar", "is_regular",
     "diameter", "girth", "radius",
@@ -80,6 +84,12 @@ class GraphRecord:
     dist_eigenvalues: np.ndarray | None
     dist_spectral_hash: str | None
 
+    # Distance Laplacian / distance signless Laplacian (real; None if disconnected)
+    distlap_eigenvalues: np.ndarray | None
+    distlap_spectral_hash: str | None
+    distsign_eigenvalues: np.ndarray | None
+    distsign_spectral_hash: str | None
+
     # Seidel spectrum (real)
     seidel_eigenvalues: np.ndarray
     seidel_spectral_hash: str
@@ -117,6 +127,10 @@ class GraphRecord:
             self.nbl_spectral_hash,
             self.dist_eigenvalues.tolist() if self.dist_eigenvalues is not None else None,
             self.dist_spectral_hash,
+            self.distlap_eigenvalues.tolist() if self.distlap_eigenvalues is not None else None,
+            self.distlap_spectral_hash,
+            self.distsign_eigenvalues.tolist() if self.distsign_eigenvalues is not None else None,
+            self.distsign_spectral_hash,
             self.seidel_eigenvalues.tolist(),
             self.seidel_spectral_hash,
             self.is_bipartite,
@@ -168,13 +182,18 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
     nb_hash = spectral_hash_complex(nb_eigs)
     nbl_hash = spectral_hash_complex(nbl_eigs)
 
-    # Distance spectrum is only defined for connected graphs.
+    # Distance-based spectra are only defined for connected graphs.
     if D_dist is not None:
         dist_eigs = compute_real_eigenvalues(D_dist)
         dist_hash = spectral_hash_real(dist_eigs)
+        distlap_eigs = compute_real_eigenvalues(distance_laplacian(G))
+        distlap_hash = spectral_hash_real(distlap_eigs)
+        distsign_eigs = compute_real_eigenvalues(distance_signless_laplacian(G))
+        distsign_hash = spectral_hash_real(distsign_eigs)
     else:
-        dist_eigs = None
-        dist_hash = None
+        dist_eigs = dist_hash = None
+        distlap_eigs = distlap_hash = None
+        distsign_eigs = distsign_hash = None
 
     seidel_eigs = compute_real_eigenvalues(S_seidel)
     seidel_hash = spectral_hash_real(seidel_eigs)
@@ -202,6 +221,10 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
         nbl_spectral_hash=nbl_hash,
         dist_eigenvalues=dist_eigs,
         dist_spectral_hash=dist_hash,
+        distlap_eigenvalues=distlap_eigs,
+        distlap_spectral_hash=distlap_hash,
+        distsign_eigenvalues=distsign_eigs,
+        distsign_spectral_hash=distsign_hash,
         seidel_eigenvalues=seidel_eigs,
         seidel_spectral_hash=seidel_hash,
         is_bipartite=meta["is_bipartite"],
