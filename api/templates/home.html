@@ -87,6 +87,9 @@
         <button type="button" role="tab" id="nb-tab" :aria-selected="matrix === 'nb'" aria-controls="nb-panel" :class="{ active: matrix === 'nb' }" @click="matrix = 'nb'">NB</button>
         <button type="button" role="tab" id="nbl-tab" :aria-selected="matrix === 'nbl'" aria-controls="nbl-panel" :class="{ active: matrix === 'nbl' }" @click="matrix = 'nbl'">NBL</button>
         <button type="button" role="tab" id="distance-tab" :aria-selected="matrix === 'distance'" aria-controls="distance-panel" :class="{ active: matrix === 'distance' }" @click="matrix = 'distance'">Distance</button>
+        <button type="button" role="tab" id="distlap-tab" :aria-selected="matrix === 'distlap'" aria-controls="distlap-panel" :class="{ active: matrix === 'distlap' }" @click="matrix = 'distlap'">Distance Laplacian</button>
+        <button type="button" role="tab" id="distsign-tab" :aria-selected="matrix === 'distsign'" aria-controls="distsign-panel" :class="{ active: matrix === 'distsign' }" @click="matrix = 'distsign'">Distance Signless Laplacian</button>
+        <button type="button" role="tab" id="seidel-tab" :aria-selected="matrix === 'seidel'" aria-controls="seidel-panel" :class="{ active: matrix === 'seidel' }" @click="matrix = 'seidel'">Seidel</button>
     </div>
 
     <div class="tab-content" role="tabpanel" id="examples-panel" aria-labelledby="examples-tab" x-show="category === 'examples'">
@@ -348,6 +351,108 @@
         </a>
         </div>
     </div>
+
+    <div class="tab-content" role="tabpanel" id="distlap-panel" aria-labelledby="distlap-tab" x-show="category === 'cospectral' && matrix === 'distlap'">
+        <p class="examples-subtitle">Graphs with identical Distance Laplacian spectra but different structure</p>
+        <div class="cospectral-families">
+        <a href="/compare?graphs=FCZvw,FCzfw" class="family-card">
+            <div class="family-graphs">
+                <div class="family-graph">
+                    <div id="ex-distlap1a" class="example-viz"></div>
+                    <code>FCZvw</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-distlap1b" class="example-viz"></div>
+                    <code>FCzfw</code>
+                </div>
+            </div>
+        </a>
+        <a href="/compare?graphs=FUxvw,FE~vo,FFzvg" class="family-card">
+            <div class="family-graphs">
+                <div class="family-graph">
+                    <div id="ex-distlap2a" class="example-viz"></div>
+                    <code>FUxvw</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-distlap2b" class="example-viz"></div>
+                    <code>FE~vo</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-distlap2c" class="example-viz"></div>
+                    <code>FFzvg</code>
+                </div>
+            </div>
+        </a>
+        </div>
+    </div>
+
+    <div class="tab-content" role="tabpanel" id="distsign-panel" aria-labelledby="distsign-tab" x-show="category === 'cospectral' && matrix === 'distsign'">
+        <p class="examples-subtitle">Graphs with identical Distance Signless Laplacian spectra but different structure</p>
+        <div class="cospectral-families">
+        <a href="/compare?graphs=ECfw,E%3Fzw" class="family-card">
+            <div class="family-graphs">
+                <div class="family-graph">
+                    <div id="ex-distsign1a" class="example-viz"></div>
+                    <code>ECfw</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-distsign1b" class="example-viz"></div>
+                    <code>E?zw</code>
+                </div>
+            </div>
+        </a>
+        <a href="/compare?graphs=FCxvo,FEzTg" class="family-card">
+            <div class="family-graphs">
+                <div class="family-graph">
+                    <div id="ex-distsign2a" class="example-viz"></div>
+                    <code>FCxvo</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-distsign2b" class="example-viz"></div>
+                    <code>FEzTg</code>
+                </div>
+            </div>
+        </a>
+        </div>
+    </div>
+
+    <div class="tab-content" role="tabpanel" id="seidel-panel" aria-labelledby="seidel-tab" x-show="category === 'cospectral' && matrix === 'seidel'">
+        <p class="examples-subtitle">Graphs with identical Seidel spectra but different structure</p>
+        <div class="cospectral-families">
+        <a href="/compare?graphs=E%3F~o,EFz_,E%3FBw" class="family-card">
+            <div class="family-graphs">
+                <div class="family-graph">
+                    <div id="ex-seidel1a" class="example-viz"></div>
+                    <code>E?~o</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-seidel1b" class="example-viz"></div>
+                    <code>EFz_</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-seidel1c" class="example-viz"></div>
+                    <code>E?Bw</code>
+                </div>
+            </div>
+        </a>
+        <a href="/compare?graphs=ECqg,EElw,EUZw" class="family-card">
+            <div class="family-graphs">
+                <div class="family-graph">
+                    <div id="ex-seidel2a" class="example-viz"></div>
+                    <code>ECqg</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-seidel2b" class="example-viz"></div>
+                    <code>EElw</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-seidel2c" class="example-viz"></div>
+                    <code>EUZw</code>
+                </div>
+            </div>
+        </a>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -413,7 +518,22 @@ const exampleGraphs = {
     'ex-dist1b': {n: 7, edges: [[0,3],[0,5],[0,6],[1,4],[1,5],[1,6],[2,5],[2,6],[3,6],[4,6]]},
     'ex-dist2a': {n: 8, edges: [[0,3],[0,5],[0,7],[1,4],[1,5],[1,6],[1,7],[2,4],[2,5],[2,6],[3,6],[3,7],[4,5],[4,6],[4,7],[5,6],[5,7],[6,7]]},
     'ex-dist2b': {n: 8, edges: [[0,3],[0,4],[0,5],[0,6],[0,7],[1,3],[1,7],[2,4],[2,5],[2,6],[2,7],[3,5],[3,7],[4,6],[4,7],[5,6],[5,7],[6,7]]},
-    'ex-dist2c': {n: 8, edges: [[0,2],[0,4],[0,5],[0,6],[0,7],[1,3],[1,5],[1,7],[2,4],[2,5],[2,6],[2,7],[3,6],[3,7],[4,7],[5,6],[5,7],[6,7]]}
+    'ex-dist2c': {n: 8, edges: [[0,2],[0,4],[0,5],[0,6],[0,7],[1,3],[1,5],[1,7],[2,4],[2,5],[2,6],[2,7],[3,6],[3,7],[4,7],[5,6],[5,7],[6,7]]},
+    'ex-distlap1a': {n: 7, edges: [[0, 3], [0, 5], [0, 6], [1, 4], [1, 5], [1, 6], [2, 4], [2, 5], [2, 6], [3, 5], [3, 6], [4, 6], [5, 6]]},
+    'ex-distlap1b': {n: 7, edges: [[0, 3], [0, 4], [0, 5], [0, 6], [1, 4], [1, 5], [1, 6], [2, 4], [2, 5], [2, 6], [3, 6], [4, 6], [5, 6]]},
+    'ex-distlap2a': {n: 7, edges: [[0, 2], [0, 3], [0, 4], [0, 6], [1, 3], [1, 4], [1, 5], [1, 6], [2, 4], [2, 5], [2, 6], [3, 5], [3, 6], [4, 6], [5, 6]]},
+    'ex-distlap2b': {n: 7, edges: [[0, 3], [0, 4], [0, 5], [0, 6], [1, 3], [1, 4], [1, 5], [1, 6], [2, 4], [2, 5], [2, 6], [3, 4], [3, 5], [3, 6], [4, 6]]},
+    'ex-distlap2c': {n: 7, edges: [[0, 3], [0, 4], [0, 5], [0, 6], [1, 3], [1, 4], [1, 5], [1, 6], [2, 3], [2, 4], [2, 5], [2, 6], [3, 5], [3, 6], [5, 6]]},
+    'ex-distsign1a': {n: 6, edges: [[0, 3], [0, 4], [0, 5], [1, 5], [2, 5], [3, 4], [3, 5], [4, 5]]},
+    'ex-distsign1b': {n: 6, edges: [[0, 4], [0, 5], [1, 4], [1, 5], [2, 4], [2, 5], [3, 5], [4, 5]]},
+    'ex-distsign2a': {n: 7, edges: [[0, 3], [0, 4], [0, 6], [1, 4], [1, 5], [1, 6], [2, 4], [2, 5], [2, 6], [3, 5], [3, 6], [4, 6]]},
+    'ex-distsign2b': {n: 7, edges: [[0, 3], [0, 4], [0, 5], [0, 6], [1, 3], [1, 4], [1, 5], [2, 4], [2, 6], [3, 5], [3, 6], [5, 6]]},
+    'ex-seidel1a': {n: 6, edges: [[0, 4], [0, 5], [1, 4], [1, 5], [2, 4], [2, 5], [3, 4], [3, 5]]},
+    'ex-seidel1b': {n: 6, edges: [[0, 3], [0, 4], [0, 5], [1, 3], [1, 4], [1, 5], [2, 3], [2, 4], [2, 5]]},
+    'ex-seidel1c': {n: 6, edges: [[0, 5], [1, 5], [2, 5], [3, 5], [4, 5]]},
+    'ex-seidel2a': {n: 6, edges: [[0, 3], [0, 4], [0, 5], [1, 4], [2, 5], [4, 5]]},
+    'ex-seidel2b': {n: 6, edges: [[0, 3], [0, 4], [1, 3], [1, 5], [2, 4], [2, 5], [3, 4], [3, 5], [4, 5]]},
+    'ex-seidel2c': {n: 6, edges: [[0, 2], [0, 3], [0, 5], [1, 3], [1, 4], [1, 5], [2, 4], [2, 5], [3, 5], [4, 5]]},
 };
 
 function renderExamples() {
