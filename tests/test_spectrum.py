@@ -316,3 +316,21 @@ def test_compute_complex_eigenvalues_nb_matrix_size():
     B = nonbacktracking_matrix(G)
     eigs = compute_complex_eigenvalues(B)
     assert len(eigs) == 8, f"S4: expected 8 eigenvalues, got {len(eigs)}"
+
+
+def test_spectral_hash_extra_tag():
+    """The optional `extra` tag folds an exact invariant into the hash, used by
+    the k-blocking operator to carry |states(M_k)| beyond the D_kB_k spectrum."""
+    eigs = compute_complex_eigenvalues(np.array([[0.0, 1.0], [-1.0, 0.0]]))
+    base = spectral_hash_complex(eigs)
+    assert spectral_hash_complex(eigs, extra="|states=10") != base
+    assert spectral_hash_complex(eigs, extra="|states=10") == spectral_hash_complex(eigs, extra="|states=10")
+    assert spectral_hash_complex(eigs, extra="|states=10") != spectral_hash_complex(eigs, extra="|states=11")
+
+    re = compute_real_eigenvalues(np.diag([1.0, 2.0, 3.0]))
+    assert spectral_hash_real(re, extra="x") != spectral_hash_real(re)
+    assert spectral_hash_real(re, extra="x") == spectral_hash_real(re, extra="x")
+
+    # The tag distinguishes even empty spectra.
+    empty = np.array([], dtype=np.float64)
+    assert spectral_hash_complex(empty, extra="a") != spectral_hash_complex(empty, extra="b")

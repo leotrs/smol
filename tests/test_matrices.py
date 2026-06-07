@@ -118,6 +118,23 @@ def test_non3cyc_kills_triangles():
     assert M.size == 0 or np.allclose(np.linalg.eigvals(M), 0.0)
 
 
+def test_non_k_cycling_is_binary():
+    """P_k is a 0/1 matrix (the De Bruijn-style adjacency of non-cycling paths)."""
+    from db.matrices import non3cyc_matrix, non4cyc_matrix
+    for G in [nx.complete_graph(5), nx.cycle_graph(6), nx.complete_bipartite_graph(3, 3)]:
+        for M in (non3cyc_matrix(G), non4cyc_matrix(G)):
+            if M.size:
+                assert set(np.unique(M).tolist()).issubset({0.0, 1.0})
+
+
+def test_m_laplacian_m1_is_kirchhoff():
+    """Yoon's m-Laplacian at m=1 is the ordinary (Kirchhoff) Laplacian."""
+    from db.matrices import m_laplacian, kirchhoff_laplacian
+    for G in [nx.cycle_graph(5), nx.complete_graph(4), nx.path_graph(6),
+              nx.complete_bipartite_graph(2, 3)]:
+        assert np.allclose(m_laplacian(G, 1), kirchhoff_laplacian(G))
+
+
 def test_yoon2_matches_remark_6_1():
     """yoon2 must equal Remark 6.1: D' - A' with A' = (16A - A^2 + D)/12."""
     from db.matrices import yoon2_matrix

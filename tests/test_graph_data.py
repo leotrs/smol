@@ -147,6 +147,36 @@ def test_dist_spectrum_connected_vs_disconnected():
     assert rec.dist_spectral_hash is None
 
 
+def test_process_graph_nilpotent_matrices_are_null():
+    """A tree has no cycles, so the cycle/non-cycling matrices are nilpotent or
+    empty and must round-trip to NULL hashes (not grouped as cospectral)."""
+    G = nx.path_graph(6)
+    g6 = nx.to_graph6_bytes(G, header=False).decode("ascii").strip()
+    rec = process_graph(G, g6)
+    assert rec.kblock3_spectral_hash is None
+    assert rec.kblock4_spectral_hash is None
+    assert rec.non3cyc_spectral_hash is None
+    assert rec.non4cyc_spectral_hash is None
+    # Always-defined matrices remain populated.
+    assert rec.adj_spectral_hash is not None
+    assert rec.nb_spectral_hash is not None
+    assert rec.seidel_spectral_hash is not None
+
+
+def test_process_graph_populates_cyclic_matrices():
+    """A graph rich in cycles populates every cycle-dependent matrix."""
+    G = nx.complete_graph(5)
+    g6 = nx.to_graph6_bytes(G, header=False).decode("ascii").strip()
+    rec = process_graph(G, g6)
+    for h in [rec.kblock3_spectral_hash, rec.kblock4_spectral_hash,
+              rec.non3cyc_spectral_hash, rec.non4cyc_spectral_hash,
+              rec.yoon2_spectral_hash, rec.yoon3_spectral_hash,
+              rec.seidel_spectral_hash]:
+        assert h is not None and len(h) == 16
+    # Complex matrices store paired real/imag arrays of equal length.
+    assert len(rec.non4cyc_eigenvalues_re) == len(rec.non4cyc_eigenvalues_im)
+
+
 def test_cospectral_graphs_same_hash():
     """Two co-spectral graphs should have the same adjacency hash."""
     # K1,4 and C4 + isolated vertex are co-spectral for adjacency
