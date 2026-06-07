@@ -63,6 +63,12 @@ class Spectra(BaseModel):
     yoon2_hash: str | None
     yoon3_eigenvalues: list[float] | None
     yoon3_hash: str | None
+    non3cyc_eigenvalues_re: list[float] | None
+    non3cyc_eigenvalues_im: list[float] | None
+    non3cyc_hash: str | None
+    non4cyc_eigenvalues_re: list[float] | None
+    non4cyc_eigenvalues_im: list[float] | None
+    non4cyc_hash: str | None
 
 
 class CospectralMates(BaseModel):
@@ -80,6 +86,8 @@ class CospectralMates(BaseModel):
     kblock4: list[str]
     yoon2: list[str]
     yoon3: list[str]
+    non3cyc: list[str]
+    non4cyc: list[str]
 
 
 class GraphFull(BaseModel):

@@ -21,6 +21,8 @@ from .matrices import (
     kblock4_size,
     yoon2_matrix,
     yoon3_matrix,
+    non3cyc_matrix,
+    non4cyc_matrix,
 )
 from .spectrum import (
     compute_real_eigenvalues,
@@ -74,6 +76,8 @@ INSERT_COLUMNS = (
     "kblock4_eigenvalues_re", "kblock4_eigenvalues_im", "kblock4_spectral_hash",
     "yoon2_eigenvalues", "yoon2_spectral_hash",
     "yoon3_eigenvalues", "yoon3_spectral_hash",
+    "non3cyc_eigenvalues_re", "non3cyc_eigenvalues_im", "non3cyc_spectral_hash",
+    "non4cyc_eigenvalues_re", "non4cyc_eigenvalues_im", "non4cyc_spectral_hash",
     "is_bipartite", "is_planar", "is_regular",
     "diameter", "girth", "radius",
     "min_degree", "max_degree", "triangle_count",
@@ -142,6 +146,14 @@ class GraphRecord:
     yoon3_eigenvalues: np.ndarray | None
     yoon3_spectral_hash: str | None
 
+    # Non-k-cycling spectra (complex; None when nilpotent / all-zero spectrum)
+    non3cyc_eigenvalues_re: np.ndarray | None
+    non3cyc_eigenvalues_im: np.ndarray | None
+    non3cyc_spectral_hash: str | None
+    non4cyc_eigenvalues_re: np.ndarray | None
+    non4cyc_eigenvalues_im: np.ndarray | None
+    non4cyc_spectral_hash: str | None
+
     # Metadata
     is_bipartite: bool
     is_planar: bool
@@ -191,6 +203,12 @@ class GraphRecord:
             self.yoon2_spectral_hash,
             self.yoon3_eigenvalues.tolist() if self.yoon3_eigenvalues is not None else None,
             self.yoon3_spectral_hash,
+            self.non3cyc_eigenvalues_re.tolist() if self.non3cyc_eigenvalues_re is not None else None,
+            self.non3cyc_eigenvalues_im.tolist() if self.non3cyc_eigenvalues_im is not None else None,
+            self.non3cyc_spectral_hash,
+            self.non4cyc_eigenvalues_re.tolist() if self.non4cyc_eigenvalues_re is not None else None,
+            self.non4cyc_eigenvalues_im.tolist() if self.non4cyc_eigenvalues_im is not None else None,
+            self.non4cyc_spectral_hash,
             self.is_bipartite,
             self.is_planar,
             self.is_regular,
@@ -262,6 +280,9 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
     yoon2_eigs, yoon2_hash = _real_spectrum_or_none(yoon2_matrix(G))
     yoon3_eigs, yoon3_hash = _real_spectrum_or_none(yoon3_matrix(G))
 
+    n3_re, n3_im, n3_hash = _complex_spectrum_or_none(non3cyc_matrix(G))
+    n4_re, n4_im, n4_hash = _complex_spectrum_or_none(non4cyc_matrix(G))
+
     # Compute metadata
     meta = compute_metadata(G)
 
@@ -301,6 +322,12 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
         yoon2_spectral_hash=yoon2_hash,
         yoon3_eigenvalues=yoon3_eigs,
         yoon3_spectral_hash=yoon3_hash,
+        non3cyc_eigenvalues_re=n3_re,
+        non3cyc_eigenvalues_im=n3_im,
+        non3cyc_spectral_hash=n3_hash,
+        non4cyc_eigenvalues_re=n4_re,
+        non4cyc_eigenvalues_im=n4_im,
+        non4cyc_spectral_hash=n4_hash,
         is_bipartite=meta["is_bipartite"],
         is_planar=meta["is_planar"],
         is_regular=meta["is_regular"],

@@ -56,6 +56,10 @@ def main():
     ap.add_argument("--matrix", required=True, choices=list(MATRIX_KEYS))
     ap.add_argument("--max-n", type=int, default=None)
     ap.add_argument("--batch-size", type=int, default=2000)
+    # Sharding: split work across processes by id, for parallel backfills of
+    # expensive matrices. Each shard handles rows where id %% num-shards == shard.
+    ap.add_argument("--shard", type=int, default=None)
+    ap.add_argument("--num-shards", type=int, default=None)
     args = ap.parse_args()
 
     mt = MATRIX_TYPES[args.matrix]
@@ -64,6 +68,8 @@ def main():
 
     conn = psycopg2.connect(os.environ.get("DATABASE_URL", "dbname=smol"))
     where_n = "" if args.max_n is None else f" AND n <= {int(args.max_n)}"
+    if args.shard is not None and args.num_shards:
+        where_n += f" AND (id % {int(args.num_shards)}) = {int(args.shard)}"
 
     with conn.cursor() as cur:
         cur.execute(

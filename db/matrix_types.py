@@ -31,6 +31,8 @@ from .matrices import (
     kblock4_size,
     yoon2_matrix,
     yoon3_matrix,
+    non3cyc_matrix,
+    non4cyc_matrix,
 )
 
 
@@ -83,6 +85,8 @@ MATRIX_TYPES: dict[str, MatrixType] = {
         MatrixType("kblock4", "4-blocking operator", kblock4_matrix, is_complex=True, null_if_trivial=True, size_fn=kblock4_size),
         MatrixType("yoon2", "Yoon 2-Laplacian", yoon2_matrix, is_complex=False),
         MatrixType("yoon3", "Yoon 3-Laplacian", yoon3_matrix, is_complex=False),
+        MatrixType("non3cyc", "Non-3-cycling matrix", non3cyc_matrix, is_complex=True, null_if_trivial=True),
+        MatrixType("non4cyc", "Non-4-cycling matrix", non4cyc_matrix, is_complex=True, null_if_trivial=True),
     )
 }
 

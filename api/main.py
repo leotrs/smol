@@ -162,6 +162,12 @@ def row_to_graph_full(row: dict, mates: dict[str, list[str]]) -> GraphFull:
             yoon2_hash=row["yoon2_spectral_hash"],
             yoon3_eigenvalues=row["yoon3_eigenvalues"],
             yoon3_hash=row["yoon3_spectral_hash"],
+            non3cyc_eigenvalues_re=row["non3cyc_eigenvalues_re"],
+            non3cyc_eigenvalues_im=row["non3cyc_eigenvalues_im"],
+            non3cyc_hash=row["non3cyc_spectral_hash"],
+            non4cyc_eigenvalues_re=row["non4cyc_eigenvalues_re"],
+            non4cyc_eigenvalues_im=row["non4cyc_eigenvalues_im"],
+            non4cyc_hash=row["non4cyc_spectral_hash"],
         ),
         cospectral_mates=CospectralMates(**mates),
         tags=row.get("tags") or [],
@@ -232,6 +238,8 @@ async def get_graph_by_id(graph6: str, request: Request):
         "kblock4": row["kblock4_spectral_hash"] or "",
         "yoon2": row["yoon2_spectral_hash"] or "",
         "yoon3": row["yoon3_spectral_hash"] or "",
+        "non3cyc": row["non3cyc_spectral_hash"] or "",
+        "non4cyc": row["non4cyc_spectral_hash"] or "",
     }
     mates = await fetch_cospectral_mates(graph6, row["n"], hashes)
     t2 = time.perf_counter()
@@ -402,6 +410,8 @@ async def search_graphs(
             "kblock4": row["kblock4_spectral_hash"] or "",
             "yoon2": row["yoon2_spectral_hash"] or "",
             "yoon3": row["yoon3_spectral_hash"] or "",
+            "non3cyc": row["non3cyc_spectral_hash"] or "",
+            "non4cyc": row["non4cyc_spectral_hash"] or "",
         }
         mates = await fetch_cospectral_mates(graph6, row["n"], hashes)
         graph = row_to_graph_full(row, mates)
@@ -703,6 +713,8 @@ async def compare_graphs(
             "kblock4": row["kblock4_spectral_hash"] or "",
             "yoon2": row["yoon2_spectral_hash"] or "",
             "yoon3": row["yoon3_spectral_hash"] or "",
+            "non3cyc": row["non3cyc_spectral_hash"] or "",
+            "non4cyc": row["non4cyc_spectral_hash"] or "",
         }
         for matrix, h in hashes.items():
             all_hashes[matrix].add(h)

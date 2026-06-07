@@ -10,7 +10,7 @@
     {% endif %}
 {% endfor %}
 
-{% set matrix_labels = {'adj': 'adj', 'kirchhoff': 'kir', 'signless': 'sgl', 'lap': 'lap', 'nb': 'nb', 'nbl': 'nbl', 'dist': 'dist', 'distlap': 'dlp', 'distsign': 'dsg', 'seidel': 'sei', 'kblock3': 'kb3', 'kblock4': 'kb4', 'yoon2': 'yn2', 'yoon3': 'yn3'} %}
+{% set matrix_labels = {'adj': 'adj', 'kirchhoff': 'kir', 'signless': 'sgl', 'lap': 'lap', 'nb': 'nb', 'nbl': 'nbl', 'dist': 'dist', 'distlap': 'dlp', 'distsign': 'dsg', 'seidel': 'sei', 'kblock3': 'kb3', 'kblock4': 'kb4', 'yoon2': 'yn2', 'yoon3': 'yn3', 'non3cyc': 'n3c', 'non4cyc': 'n4c'} %}
 
 <hgroup>
     <h1 style="display: flex; justify-content: space-between; align-items: baseline; gap: 1rem;">
@@ -66,7 +66,7 @@
 
 <h3>{% if result.graphs|length == 2 %}Spectral Distance{% else %}Spectral Comparison{% endif %}</h3>
 {% if result.distance_matrix %}
-{% set matrix_labels = {'adj': 'adj', 'kirchhoff': 'kir', 'signless': 'sgl', 'lap': 'lap', 'nb': 'nb', 'nbl': 'nbl', 'dist': 'dist', 'distlap': 'dlp', 'distsign': 'dsg', 'seidel': 'sei', 'kblock3': 'kb3', 'kblock4': 'kb4', 'yoon2': 'yn2', 'yoon3': 'yn3'} %}
+{% set matrix_labels = {'adj': 'adj', 'kirchhoff': 'kir', 'signless': 'sgl', 'lap': 'lap', 'nb': 'nb', 'nbl': 'nbl', 'dist': 'dist', 'distlap': 'dlp', 'distsign': 'dsg', 'seidel': 'sei', 'kblock3': 'kb3', 'kblock4': 'kb4', 'yoon2': 'yn2', 'yoon3': 'yn3', 'non3cyc': 'n3c', 'non4cyc': 'n4c'} %}
 {% set graph_labels = result.graphs | map(attribute='graph6') | list %}
 {% set n = graph_labels|length %}
 
@@ -716,7 +716,9 @@ function renderCompareSpectrumComplexPlot() {
             nb: g.spectra.nb_eigenvalues_re.map((re, i) => ({re, im: g.spectra.nb_eigenvalues_im[i]})),
             nbl: g.spectra.nbl_eigenvalues_re.map((re, i) => ({re, im: g.spectra.nbl_eigenvalues_im[i]})),
             kblock3: (g.spectra.kblock3_eigenvalues_re || []).map((re, i) => ({re, im: (g.spectra.kblock3_eigenvalues_im || [])[i]})),
-            kblock4: (g.spectra.kblock4_eigenvalues_re || []).map((re, i) => ({re, im: (g.spectra.kblock4_eigenvalues_im || [])[i]}))
+            kblock4: (g.spectra.kblock4_eigenvalues_re || []).map((re, i) => ({re, im: (g.spectra.kblock4_eigenvalues_im || [])[i]})),
+            non3cyc: (g.spectra.non3cyc_eigenvalues_re || []).map((re, i) => ({re, im: (g.spectra.non3cyc_eigenvalues_im || [])[i]})),
+            non4cyc: (g.spectra.non4cyc_eigenvalues_re || []).map((re, i) => ({re, im: (g.spectra.non4cyc_eigenvalues_im || [])[i]}))
         }
     }));
 
@@ -926,14 +928,16 @@ function renderCompareSpectrumComplexPlot() {
         nb: style.getPropertyValue('--spectrum-nb').trim(),
         nbl: style.getPropertyValue('--spectrum-nbl').trim(),
         kblock3: style.getPropertyValue('--spectrum-kblock3').trim() || '#B45309',
-        kblock4: style.getPropertyValue('--spectrum-kblock4').trim() || '#1D4ED8'
+        kblock4: style.getPropertyValue('--spectrum-kblock4').trim() || '#1D4ED8',
+        non3cyc: style.getPropertyValue('--spectrum-non3cyc').trim() || '#9333EA',
+        non4cyc: style.getPropertyValue('--spectrum-non4cyc').trim() || '#C2410C'
     };
 
-    const labels = {nb: 'NB', nbl: 'NBL', kblock3: 'kb3', kblock4: 'kb4'};
+    const labels = {nb: 'NB', nbl: 'NBL', kblock3: 'kb3', kblock4: 'kb4', non3cyc: 'n3c', non4cyc: 'n4c'};
 
-    // k-blocking lanes only when at least one graph has a non-empty cycle core.
+    // k-blocking and non-cycling lanes only when at least one graph has a non-trivial spectrum.
     const complexMatrices = ['nb', 'nbl'].concat(
-        ['kblock3', 'kblock4'].filter(m => plotData.some(pd => pd.plotSpectra[m].length > 0))
+        ['kblock3', 'kblock4', 'non3cyc', 'non4cyc'].filter(m => plotData.some(pd => pd.plotSpectra[m].length > 0))
     );
 
     // Draw unit circle (in content so it pans, but scales with zoom)

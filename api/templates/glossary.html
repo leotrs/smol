@@ -123,6 +123,17 @@
             Eigenvalues are generally complex.
         </dd>
 
+        <dt id="noncycling"><strong>Non-$k$-cycling matrix</strong></dt>
+        <dd>
+            $P_k$ generalizes the non-backtracking matrix ($P_2 = B$) by counting walks that neither
+            backtrack nor close any cycle of length up to $k$. Built recursively (Arrigo-Noferini): from
+            the source/target matrices $L, R$ of $P_{k-1}$, form $W = R L^{\mathsf T}$ and
+            $P_k = W - W \circ (W^{\mathsf T})^{k-1}$, where $\circ$ is the entrywise product. Indexed by
+            open paths of length $k-1$; eigenvalues are generally complex. We store $k = 3, 4$. Trees and
+            graphs whose cycles are all shorter than $k$ give a nilpotent (all-zero) spectrum
+            (Arrigo, Higham, Noferini, <em>Beyond non-backtracking</em>, Proc. R. Soc. A, 2020).
+        </dd>
+
         <dt id="kblock"><strong>$k$-blocking operator</strong></dt>
         <dd>
             $\mathbf{M}_k$ generalizes the non-backtracking matrix by blocking $k-1$ directions at each

@@ -82,6 +82,42 @@ def test_kblocking_size_distinguishes_same_spectrum():
     assert a[1] != b[1]   # different once M_k size is folded in
 
 
+def test_non_k_cycling_k2_is_nonbacktracking():
+    """P_2 (non-2-cycling) must have the same spectrum as the NB matrix."""
+    from db.matrices import non_k_cycling_matrix, nonbacktracking_matrix
+    for G in [nx.cycle_graph(5), nx.complete_graph(5), nx.path_graph(4),
+              nx.complete_bipartite_graph(2, 3)]:
+        p2 = np.sort_complex(np.linalg.eigvals(non_k_cycling_matrix(G, 2)))
+        nb = np.sort_complex(np.linalg.eigvals(nonbacktracking_matrix(G)))
+        assert np.allclose(p2, nb)
+
+
+def test_non_k_cycling_theorem_5_5():
+    """Theorem 5.5 (k=2, r=1): L_1^T P_2 R_1 = A^2 - D (NB walks of length 2)."""
+    from db.matrices import non_k_cycling_matrix, _source_target
+    G = nx.gnp_random_graph(7, 0.5, seed=1)
+    A = nx.to_numpy_array(G)
+    L1, R1 = _source_target(A)
+    P2 = non_k_cycling_matrix(G, 2)
+    assert np.allclose(L1.T @ P2 @ R1, A @ A - np.diag(A.sum(axis=1)))
+
+
+def test_non_k_cycling_nilpotent_for_tree():
+    """A tree has no cycles, so its non-k-cycling matrices are nilpotent."""
+    from db.matrices import non3cyc_matrix, non4cyc_matrix
+    T = nx.path_graph(6)
+    for M in (non3cyc_matrix(T), non4cyc_matrix(T)):
+        if M.size:
+            assert np.allclose(np.linalg.eigvals(M), 0.0)
+
+
+def test_non3cyc_kills_triangles():
+    """Non-3-cycling removes triangles: a triangle's P_3 has all-zero spectrum."""
+    from db.matrices import non3cyc_matrix
+    M = non3cyc_matrix(nx.complete_graph(3))
+    assert M.size == 0 or np.allclose(np.linalg.eigvals(M), 0.0)
+
+
 def test_yoon2_matches_remark_6_1():
     """yoon2 must equal Remark 6.1: D' - A' with A' = (16A - A^2 + D)/12."""
     from db.matrices import yoon2_matrix

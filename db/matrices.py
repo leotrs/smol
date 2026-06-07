@@ -301,6 +301,54 @@ def yoon3_matrix(G: nx.Graph) -> np.ndarray | None:
     return m_laplacian(G, 3)
 
 
+def _source_target(M: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Source (L) and target (R) matrices of the directed graph with adjacency M
+    (Arrigo-Noferini Def. 2.2): rows index the edges (nonzeros of M), columns
+    index nodes. L[e, a] = 1 if a is the source of edge e, R[e, b] = 1 if b is
+    its target.
+    """
+    E = np.argwhere(M != 0)
+    m, N = len(E), M.shape[0]
+    L = np.zeros((m, N))
+    R = np.zeros((m, N))
+    if m:
+        L[np.arange(m), E[:, 0]] = 1.0
+        R[np.arange(m), E[:, 1]] = 1.0
+    return L, R
+
+
+def non_k_cycling_matrix(G: nx.Graph, k: int) -> np.ndarray:
+    """
+    Arrigo-Noferini non-k-cycling matrix P_k (Def. 5.2 / Thm 5.3), built by the
+    recursion P_1 = A and, at each level, W = R L^T, Delta = W o (W^T)^{level-1},
+    P = W - Delta, where L,R are the source/target matrices of the previous P and
+    'o' is the entrywise (Hadamard) product. k=2 is the Hashimoto matrix.
+
+    Rows/columns are indexed by open paths of length k-1; the spectrum is complex
+    (non-symmetric). Trees and graphs whose cycles are all shorter than k give a
+    nilpotent (all-zero spectrum) matrix.
+    """
+    P = adjacency_matrix(G).astype(np.float64)
+    for level in range(2, k + 1):
+        if P.shape[0] == 0:
+            break
+        L, R = _source_target(P)
+        W = R @ L.T
+        P = W - W * np.linalg.matrix_power(W.T, level - 1)
+    return P
+
+
+def non3cyc_matrix(G: nx.Graph) -> np.ndarray:
+    """Non-3-cycling matrix P_3 (removes backtracking and triangles)."""
+    return non_k_cycling_matrix(G, 3)
+
+
+def non4cyc_matrix(G: nx.Graph) -> np.ndarray:
+    """Non-4-cycling matrix P_4 (removes backtracking, triangles, squares)."""
+    return non_k_cycling_matrix(G, 4)
+
+
 def distance_laplacian(G: nx.Graph) -> np.ndarray | None:
     """
     Return the distance Laplacian D_L = Tr - Dist.
