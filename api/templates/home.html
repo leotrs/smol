@@ -96,6 +96,8 @@
         <button type="button" role="tab" id="seidel-tab" :aria-selected="matrix === 'seidel'" aria-controls="seidel-panel" :class="{ active: matrix === 'seidel' }" @click="matrix = 'seidel'">Seidel</button>
         <button type="button" role="tab" id="kblock3-tab" :aria-selected="matrix === 'kblock3'" aria-controls="kblock3-panel" :class="{ active: matrix === 'kblock3' }" @click="matrix = 'kblock3'">3-blocking</button>
         <button type="button" role="tab" id="kblock4-tab" :aria-selected="matrix === 'kblock4'" aria-controls="kblock4-panel" :class="{ active: matrix === 'kblock4' }" @click="matrix = 'kblock4'">4-blocking</button>
+        <button type="button" role="tab" id="yoon2-tab" :aria-selected="matrix === 'yoon2'" aria-controls="yoon2-panel" :class="{ active: matrix === 'yoon2' }" @click="matrix = 'yoon2'">Yoon 2-Laplacian</button>
+        <button type="button" role="tab" id="yoon3-tab" :aria-selected="matrix === 'yoon3'" aria-controls="yoon3-panel" :class="{ active: matrix === 'yoon3' }" @click="matrix = 'yoon3'">Yoon 3-Laplacian</button>
     </div>
 
     <div class="tab-content" role="tabpanel" id="examples-panel" aria-labelledby="examples-tab" x-show="category === 'examples'">
@@ -531,6 +533,40 @@
         </a>
         </div>
     </div>
+
+    <div class="tab-content" role="tabpanel" id="yoon2-panel" aria-labelledby="yoon2-tab" x-show="category === 'cospectral' && matrix === 'yoon2'">
+        <p class="examples-subtitle">Graphs with identical Yoon 2-Laplacian spectra but different structure (only a handful exist up to n=9, all disconnected)</p>
+        <div class="cospectral-families">
+        <a href="/compare?graphs=F%3FaJ_,F%3Fqb%3F" class="family-card">
+            <div class="family-graphs">
+                <div class="family-graph">
+                    <div id="ex-yoon21a" class="example-viz"></div>
+                    <code>F?aJ_</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-yoon21b" class="example-viz"></div>
+                    <code>F?qb?</code>
+                </div>
+            </div>
+        </a>
+        <a href="/compare?graphs=G%3FBDB%3F,G%3FACJ_" class="family-card">
+            <div class="family-graphs">
+                <div class="family-graph">
+                    <div id="ex-yoon22a" class="example-viz"></div>
+                    <code>G?BDB?</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-yoon22b" class="example-viz"></div>
+                    <code>G?ACJ_</code>
+                </div>
+            </div>
+        </a>
+        </div>
+    </div>
+
+    <div class="tab-content" role="tabpanel" id="yoon3-panel" aria-labelledby="yoon3-tab" x-show="category === 'cospectral' && matrix === 'yoon3'">
+        <p class="examples-subtitle">The Yoon 3-Laplacian distinguishes every graph up to 9 vertices: no cospectral families exist in this range.</p>
+    </div>
 </div>
 
 <script>
@@ -623,6 +659,10 @@ const exampleGraphs = {
     'ex-kblock42a': {n: 7, edges: [[0, 3], [0, 4], [0, 5], [0, 6], [1, 3], [1, 4], [1, 5], [2, 4], [3, 5], [3, 6], [4, 6], [5, 6]]},
     'ex-kblock42b': {n: 7, edges: [[0, 2], [0, 3], [0, 4], [0, 6], [1, 3], [1, 4], [1, 5], [1, 6], [2, 4], [2, 5], [2, 6], [3, 5], [4, 6]]},
     'ex-kblock42c': {n: 7, edges: [[0, 3], [0, 4], [0, 5], [0, 6], [1, 3], [1, 5], [2, 4], [2, 5], [3, 4], [3, 6], [4, 6], [5, 6]]},
+    'ex-yoon21a': {n: 7, edges: [[0, 4], [0, 5], [1, 6], [2, 6], [3, 6], [4, 5]]},
+    'ex-yoon21b': {n: 7, edges: [[0, 4], [0, 5], [1, 4], [1, 6], [2, 5], [2, 6]]},
+    'ex-yoon22a': {n: 8, edges: [[0, 5], [0, 6], [1, 5], [1, 7], [2, 6], [2, 7]]},
+    'ex-yoon22b': {n: 8, edges: [[0, 5], [0, 6], [1, 7], [2, 7], [3, 7], [5, 6]]},
 };
 
 function renderExamples() {
