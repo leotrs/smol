@@ -25,6 +25,8 @@ from .matrices import (
     distance_laplacian,
     distance_signless_laplacian,
     seidel_matrix,
+    kblock3_matrix,
+    kblock4_matrix,
 )
 
 
@@ -35,6 +37,9 @@ class MatrixType:
     builder: Callable[[nx.Graph], Optional[np.ndarray]]
     is_complex: bool
     connected_only: bool = False
+    # When True, an empty or all-zero spectrum is stored as NULL (not hashed),
+    # so such graphs are not grouped together as cospectral.
+    null_if_trivial: bool = False
 
     @property
     def eigenvalue_columns(self) -> tuple[str, ...]:
@@ -66,6 +71,8 @@ MATRIX_TYPES: dict[str, MatrixType] = {
         MatrixType("distlap", "Distance Laplacian", distance_laplacian, is_complex=False, connected_only=True),
         MatrixType("distsign", "Distance Signless Laplacian", distance_signless_laplacian, is_complex=False, connected_only=True),
         MatrixType("seidel", "Seidel", seidel_matrix, is_complex=False),
+        MatrixType("kblock3", "3-blocking operator", kblock3_matrix, is_complex=True, null_if_trivial=True),
+        MatrixType("kblock4", "4-blocking operator", kblock4_matrix, is_complex=True, null_if_trivial=True),
     )
 }
 

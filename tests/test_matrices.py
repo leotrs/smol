@@ -32,6 +32,30 @@ def test_distance_laplacians_path():
     assert np.allclose(DL.sum(axis=1), 0)
 
 
+def test_cycle_core_and_kblocking():
+    from db.matrices import (
+        cycle_core, kblocking_matrix, kblock3_matrix, kblock4_matrix,
+    )
+    K4 = nx.complete_graph(4)
+    # Cycle core at k=3 is all of K4 (every vertex has degree 3 and lies on cycles).
+    H3 = cycle_core(K4, 3)
+    assert H3.number_of_nodes() == 4 and H3.number_of_edges() == 6
+    # No vertex has degree >= 4, so the k=4 cycle core (and matrix) is empty.
+    assert cycle_core(K4, 4).number_of_nodes() == 0
+    assert kblock4_matrix(K4).size == 0
+    assert kblock3_matrix(K4).size > 0
+    # k=2 reduces to the ordinary non-backtracking matrix.
+    assert np.allclose(kblocking_matrix(K4, 2), nonbacktracking_matrix(K4))
+
+
+def test_kblocking_empty_for_tree():
+    """A tree has no cycle core, so the k-blocking matrices are empty."""
+    from db.matrices import kblock3_matrix, kblock4_matrix
+    P5 = nx.path_graph(5)
+    assert kblock3_matrix(P5).size == 0
+    assert kblock4_matrix(P5).size == 0
+
+
 def test_distance_laplacians_disconnected_none():
     """Distance-based matrices are None for disconnected graphs."""
     G = nx.Graph()

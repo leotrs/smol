@@ -85,6 +85,8 @@ def _parse_row(row: Any) -> dict[str, Any] | None:
             "nbl_eigenvalues_re", "nbl_eigenvalues_im",
             "dist_eigenvalues", "distlap_eigenvalues", "distsign_eigenvalues",
             "seidel_eigenvalues",
+            "kblock3_eigenvalues_re", "kblock3_eigenvalues_im",
+            "kblock4_eigenvalues_re", "kblock4_eigenvalues_im",
             "tags",
         ]
         for field in json_fields:
@@ -140,7 +142,9 @@ async def fetch_graph(graph6: str) -> dict[str, Any] | None:
                        dist_eigenvalues, dist_spectral_hash,
                        distlap_eigenvalues, distlap_spectral_hash,
                        distsign_eigenvalues, distsign_spectral_hash,
-                       seidel_eigenvalues, seidel_spectral_hash
+                       seidel_eigenvalues, seidel_spectral_hash,
+                       kblock3_eigenvalues_re, kblock3_eigenvalues_im, kblock3_spectral_hash,
+                       kblock4_eigenvalues_re, kblock4_eigenvalues_im, kblock4_spectral_hash
                        {tags_col}
                 FROM graphs
                 WHERE graph6 = {ph}
@@ -170,7 +174,9 @@ async def fetch_graph(graph6: str) -> dict[str, Any] | None:
                        dist_eigenvalues, dist_spectral_hash,
                        distlap_eigenvalues, distlap_spectral_hash,
                        distsign_eigenvalues, distsign_spectral_hash,
-                       seidel_eigenvalues, seidel_spectral_hash
+                       seidel_eigenvalues, seidel_spectral_hash,
+                       kblock3_eigenvalues_re, kblock3_eigenvalues_im, kblock3_spectral_hash,
+                       kblock4_eigenvalues_re, kblock4_eigenvalues_im, kblock4_spectral_hash
                        {tags_col}
                 FROM graphs
                 WHERE graph6 = {ph}
@@ -555,7 +561,9 @@ async def fetch_random_graph() -> dict[str, Any] | None:
                        dist_eigenvalues, dist_spectral_hash,
                        distlap_eigenvalues, distlap_spectral_hash,
                        distsign_eigenvalues, distsign_spectral_hash,
-                       seidel_eigenvalues, seidel_spectral_hash
+                       seidel_eigenvalues, seidel_spectral_hash,
+                       kblock3_eigenvalues_re, kblock3_eigenvalues_im, kblock3_spectral_hash,
+                       kblock4_eigenvalues_re, kblock4_eigenvalues_im, kblock4_spectral_hash
                        {tags_col}
                 FROM graphs
                 WHERE n = {ph}
@@ -602,7 +610,9 @@ async def fetch_random_graph() -> dict[str, Any] | None:
                        dist_eigenvalues, dist_spectral_hash,
                        distlap_eigenvalues, distlap_spectral_hash,
                        distsign_eigenvalues, distsign_spectral_hash,
-                       seidel_eigenvalues, seidel_spectral_hash
+                       seidel_eigenvalues, seidel_spectral_hash,
+                       kblock3_eigenvalues_re, kblock3_eigenvalues_im, kblock3_spectral_hash,
+                       kblock4_eigenvalues_re, kblock4_eigenvalues_im, kblock4_spectral_hash
                        {tags_col}
                 FROM graphs
                 WHERE n = {ph}

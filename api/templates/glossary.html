@@ -112,6 +112,17 @@
             Eigenvalues are generally complex.
         </dd>
 
+        <dt id="kblock"><strong>$k$-blocking operator</strong></dt>
+        <dd>
+            $\mathbf{M}_k$ generalizes the non-backtracking matrix by blocking $k-1$ directions at each
+            node, defined on the <em>cycle core</em> $H_k = \operatorname{2\text{-}core}(G_k)$ (the $2$-core
+            of the subgraph induced on vertices of degree $\geq k$). Its spectrum equals that of the
+            degree-weighted non-backtracking matrix $\mathbf{D}_k \mathbf{B}_k$ on $H_k$, with weights
+            $\binom{d(v)-2}{k-2}$. $k=2$ recovers the non-backtracking matrix; eigenvalues are generally
+            complex. We store $k=3$ and $k=4$; graphs with an empty cycle core have no $k$-blocking spectrum.
+            See Torres, <em>The rich are loopy</em> (2026).
+        </dd>
+
 </dl>
 
 <h3 id="D">D</h3>

@@ -26,7 +26,7 @@ from db.matrix_types import MATRIX_KEYS
 # Some matrices have graph-level cospectrality that explodes: Seidel switching
 # makes nearly every graph Seidel-cospectral, so n=9 alone is ~28M pairs. Cap
 # which n get materialized into cospectral_mates for those matrices.
-MAX_COSPECTRAL_N = {"seidel": 8}
+MAX_COSPECTRAL_N = {"seidel": 8, "kblock4": 8}
 
 
 def compute_for_matrix(conn, matrix: str, n_filter: int | None = None):

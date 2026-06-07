@@ -15,6 +15,8 @@ from .matrices import (
     distance_laplacian,
     distance_signless_laplacian,
     seidel_matrix,
+    kblock3_matrix,
+    kblock4_matrix,
 )
 from .spectrum import (
     compute_real_eigenvalues,
@@ -23,6 +25,18 @@ from .spectrum import (
     spectral_hash_complex,
 )
 from .metadata import compute_metadata
+
+
+def _complex_spectrum_or_none(M):
+    """Complex eigenvalues (real, imag) and hash for a matrix.
+
+    Returns (None, None, None) when the spectrum is empty or all-zero, so the
+    graph is stored with a NULL hash and not grouped as cospectral.
+    """
+    eigs = compute_complex_eigenvalues(M)
+    if eigs.size == 0 or np.allclose(eigs, 0.0):
+        return None, None, None
+    return eigs.real, eigs.imag, spectral_hash_complex(eigs)
 
 
 # Canonical column order for inserting a GraphRecord. to_db_tuple() emits values
@@ -40,6 +54,8 @@ INSERT_COLUMNS = (
     "distlap_eigenvalues", "distlap_spectral_hash",
     "distsign_eigenvalues", "distsign_spectral_hash",
     "seidel_eigenvalues", "seidel_spectral_hash",
+    "kblock3_eigenvalues_re", "kblock3_eigenvalues_im", "kblock3_spectral_hash",
+    "kblock4_eigenvalues_re", "kblock4_eigenvalues_im", "kblock4_spectral_hash",
     "is_bipartite", "is_planar", "is_regular",
     "diameter", "girth", "radius",
     "min_degree", "max_degree", "triangle_count",
@@ -94,6 +110,14 @@ class GraphRecord:
     seidel_eigenvalues: np.ndarray
     seidel_spectral_hash: str
 
+    # k-blocking spectra (complex; None when the cycle core is empty/trivial)
+    kblock3_eigenvalues_re: np.ndarray | None
+    kblock3_eigenvalues_im: np.ndarray | None
+    kblock3_spectral_hash: str | None
+    kblock4_eigenvalues_re: np.ndarray | None
+    kblock4_eigenvalues_im: np.ndarray | None
+    kblock4_spectral_hash: str | None
+
     # Metadata
     is_bipartite: bool
     is_planar: bool
@@ -133,6 +157,12 @@ class GraphRecord:
             self.distsign_spectral_hash,
             self.seidel_eigenvalues.tolist(),
             self.seidel_spectral_hash,
+            self.kblock3_eigenvalues_re.tolist() if self.kblock3_eigenvalues_re is not None else None,
+            self.kblock3_eigenvalues_im.tolist() if self.kblock3_eigenvalues_im is not None else None,
+            self.kblock3_spectral_hash,
+            self.kblock4_eigenvalues_re.tolist() if self.kblock4_eigenvalues_re is not None else None,
+            self.kblock4_eigenvalues_im.tolist() if self.kblock4_eigenvalues_im is not None else None,
+            self.kblock4_spectral_hash,
             self.is_bipartite,
             self.is_planar,
             self.is_regular,
@@ -198,6 +228,9 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
     seidel_eigs = compute_real_eigenvalues(S_seidel)
     seidel_hash = spectral_hash_real(seidel_eigs)
 
+    kb3_re, kb3_im, kb3_hash = _complex_spectrum_or_none(kblock3_matrix(G))
+    kb4_re, kb4_im, kb4_hash = _complex_spectrum_or_none(kblock4_matrix(G))
+
     # Compute metadata
     meta = compute_metadata(G)
 
@@ -227,6 +260,12 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
         distsign_spectral_hash=distsign_hash,
         seidel_eigenvalues=seidel_eigs,
         seidel_spectral_hash=seidel_hash,
+        kblock3_eigenvalues_re=kb3_re,
+        kblock3_eigenvalues_im=kb3_im,
+        kblock3_spectral_hash=kb3_hash,
+        kblock4_eigenvalues_re=kb4_re,
+        kblock4_eigenvalues_im=kb4_im,
+        kblock4_spectral_hash=kb4_hash,
         is_bipartite=meta["is_bipartite"],
         is_planar=meta["is_planar"],
         is_regular=meta["is_regular"],

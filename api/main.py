@@ -152,6 +152,12 @@ def row_to_graph_full(row: dict, mates: dict[str, list[str]]) -> GraphFull:
             distsign_hash=row["distsign_spectral_hash"],
             seidel_eigenvalues=row["seidel_eigenvalues"] or [],
             seidel_hash=row["seidel_spectral_hash"] or "",
+            kblock3_eigenvalues_re=row["kblock3_eigenvalues_re"],
+            kblock3_eigenvalues_im=row["kblock3_eigenvalues_im"],
+            kblock3_hash=row["kblock3_spectral_hash"],
+            kblock4_eigenvalues_re=row["kblock4_eigenvalues_re"],
+            kblock4_eigenvalues_im=row["kblock4_eigenvalues_im"],
+            kblock4_hash=row["kblock4_spectral_hash"],
         ),
         cospectral_mates=CospectralMates(**mates),
         tags=row.get("tags") or [],
@@ -218,6 +224,8 @@ async def get_graph_by_id(graph6: str, request: Request):
         "distlap": row["distlap_spectral_hash"] or "",
         "distsign": row["distsign_spectral_hash"] or "",
         "seidel": row["seidel_spectral_hash"] or "",
+        "kblock3": row["kblock3_spectral_hash"] or "",
+        "kblock4": row["kblock4_spectral_hash"] or "",
     }
     mates = await fetch_cospectral_mates(graph6, row["n"], hashes)
     t2 = time.perf_counter()
@@ -384,6 +392,8 @@ async def search_graphs(
             "distlap": row["distlap_spectral_hash"] or "",
             "distsign": row["distsign_spectral_hash"] or "",
             "seidel": row["seidel_spectral_hash"] or "",
+            "kblock3": row["kblock3_spectral_hash"] or "",
+            "kblock4": row["kblock4_spectral_hash"] or "",
         }
         mates = await fetch_cospectral_mates(graph6, row["n"], hashes)
         graph = row_to_graph_full(row, mates)
@@ -681,6 +691,8 @@ async def compare_graphs(
             "distlap": row["distlap_spectral_hash"] or "",
             "distsign": row["distsign_spectral_hash"] or "",
             "seidel": row["seidel_spectral_hash"] or "",
+            "kblock3": row["kblock3_spectral_hash"] or "",
+            "kblock4": row["kblock4_spectral_hash"] or "",
         }
         for matrix, h in hashes.items():
             all_hashes[matrix].add(h)

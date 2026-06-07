@@ -77,6 +77,12 @@ const spectraData = {
     nbl: {{ graph.spectra.nbl_eigenvalues_re | tojson }}.map((re, i) => ({
         re: re,
         im: {{ graph.spectra.nbl_eigenvalues_im | tojson }}[i]
+    })),
+    kblock3: ({{ graph.spectra.kblock3_eigenvalues_re | tojson }} || []).map((re, i) => ({
+        re: re, im: ({{ graph.spectra.kblock3_eigenvalues_im | tojson }} || [])[i]
+    })),
+    kblock4: ({{ graph.spectra.kblock4_eigenvalues_re | tojson }} || []).map((re, i) => ({
+        re: re, im: ({{ graph.spectra.kblock4_eigenvalues_im | tojson }} || [])[i]
     }))
 };
 
@@ -266,11 +272,18 @@ function renderGraphDetailComplexPlot() {
 
     const plotData = {
         nb: withConjugates(spectraData.nb),
-        nbl: withConjugates(spectraData.nbl)
+        nbl: withConjugates(spectraData.nbl),
+        kblock3: withConjugates(spectraData.kblock3),
+        kblock4: withConjugates(spectraData.kblock4)
     };
 
+    // k-blocking lanes only appear when the graph has a (non-empty) cycle core.
+    const complexMatrices = ['nb', 'nbl'].concat(
+        ['kblock3', 'kblock4'].filter(m => spectraData[m].length > 0)
+    );
+
     const allPoints = [];
-    ['nb', 'nbl'].forEach(matrix => {
+    complexMatrices.forEach(matrix => {
         plotData[matrix].forEach(p => allPoints.push(p));
     });
 
@@ -391,10 +404,12 @@ function renderGraphDetailComplexPlot() {
 
     const colors = {
         nb: style.getPropertyValue('--spectrum-nb').trim(),
-        nbl: style.getPropertyValue('--spectrum-nbl').trim()
+        nbl: style.getPropertyValue('--spectrum-nbl').trim(),
+        kblock3: style.getPropertyValue('--spectrum-kblock3').trim() || '#B45309',
+        kblock4: style.getPropertyValue('--spectrum-kblock4').trim() || '#1D4ED8'
     };
 
-    const labels = {nb: 'nb', nbl: 'nbl'};
+    const labels = {nb: 'nb', nbl: 'nbl', kblock3: 'kb3', kblock4: 'kb4'};
 
     function formatEig(d) {
         const re = d.re.toFixed(4);
@@ -404,7 +419,7 @@ function renderGraphDetailComplexPlot() {
         return `${re}${sign}${im}i`;
     }
 
-    ['nb', 'nbl'].forEach(matrix => {
+    complexMatrices.forEach(matrix => {
         const points = plotData[matrix];
         const baseRadius = 3.5;
 
@@ -645,7 +660,7 @@ function renderGraph() {
 <details open>
     <summary><h3>Cospectral Mates</h3></summary>
     <p style="margin: 0 0 0.75rem 0; color: var(--pico-muted-color);">Graphs with the same spectrum</p>
-    {% if graph.cospectral_mates.adj or graph.cospectral_mates.kirchhoff or graph.cospectral_mates.signless or graph.cospectral_mates.lap or graph.cospectral_mates.nb or graph.cospectral_mates.nbl or graph.cospectral_mates.dist or graph.cospectral_mates.distlap or graph.cospectral_mates.distsign or graph.cospectral_mates.seidel %}
+    {% if graph.cospectral_mates.adj or graph.cospectral_mates.kirchhoff or graph.cospectral_mates.signless or graph.cospectral_mates.lap or graph.cospectral_mates.nb or graph.cospectral_mates.nbl or graph.cospectral_mates.dist or graph.cospectral_mates.distlap or graph.cospectral_mates.distsign or graph.cospectral_mates.seidel or graph.cospectral_mates.kblock3 or graph.cospectral_mates.kblock4 %}
     <table>
         <thead>
             <tr>
@@ -801,7 +816,7 @@ function renderGraph() {
                 </td>
             </tr>
             {% endif %}
-            {% for mt, mt_name in [('distlap', 'Distance Laplacian'), ('distsign', 'Distance Signless Laplacian'), ('seidel', 'Seidel')] %}
+            {% for mt, mt_name in [('distlap', 'Distance Laplacian'), ('distsign', 'Distance Signless Laplacian'), ('seidel', 'Seidel'), ('kblock3', '3-blocking operator'), ('kblock4', '4-blocking operator')] %}
             {% set mates = graph.cospectral_mates[mt] %}
             {% if mates %}
             <tr>
@@ -845,6 +860,8 @@ function renderGraph() {
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'nb')">NB</button>
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'nbl')">NBL</button>
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'seidel')">Seidel</button>
+        <button class="code-tab-btn" onclick="switchCodeTab(event, 'kblock3')">3-block</button>
+        <button class="code-tab-btn" onclick="switchCodeTab(event, 'kblock4')">4-block</button>
         {% if graph.properties.diameter is not none %}
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'dist')">Distance</button>
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'distlap')">Dist Laplacian</button>
@@ -1057,6 +1074,29 @@ eigenvalues = np.linalg.eigvalsh(S)
 print(eigenvalues)</code></pre>
         </div>
     </div>
+
+    {% for kb, kk in [('kblock3', 3), ('kblock4', 4)] %}
+    <div id="code-{{ kb }}" class="code-tab-content">
+        <div class="code-block">
+            <span class="code-lang-label">Python</span>
+            <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+<pre><code class="language-python">import networkx as nx
+import numpy as np
+from math import comb
+
+G = nx.from_graph6_bytes(b"{{ graph.graph6 }}")
+k = {{ kk }}
+# Cycle core H_k = 2-core of the subgraph on vertices with degree >= k
+Gk = G.subgraph([v for v in G if G.degree(v) >= k])
+Hk = nx.k_core(Gk, 2)
+# Spectrum of the k-blocking operator = spectrum of D_k @ B_k on H_k,
+# where B_k is the non-backtracking matrix and D_k[(u,v)] = C(d_G(v)-2, k-2).
+# (empty cycle core => no k-blocking spectrum)</code></pre>
+        </div>
+    </div>
+    {% endfor %}
 </div>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css" id="prism-light">
@@ -1154,6 +1194,18 @@ function copyCode(btn) {
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Seidel
     </button>
+    {% if graph.spectra.kblock3_hash %}
+    <button class="outline" onclick="downloadEigenvaluesCSV('kblock3')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        3-block
+    </button>
+    {% endif %}
+    {% if graph.spectra.kblock4_hash %}
+    <button class="outline" onclick="downloadEigenvaluesCSV('kblock4')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        4-block
+    </button>
+    {% endif %}
 </div>
 
 <p style="font-size: 0.875rem; color: var(--pico-muted-color); margin-bottom: 0.5rem; margin-top: 1.5rem;">Graph structure</p>
@@ -1311,6 +1363,15 @@ function downloadEigenvaluesCSV(matrixType) {
         eigenvalues = graphData.spectra.seidel_eigenvalues;
         filename = `${graphData.graph6}_seidel_eigenvalues.csv`;
         header = '# Seidel matrix eigenvalues';
+    } else if (matrixType === 'kblock3' || matrixType === 'kblock4') {
+        const k = matrixType === 'kblock3' ? 3 : 4;
+        const re = graphData.spectra[`${matrixType}_eigenvalues_re`] || [];
+        const im = graphData.spectra[`${matrixType}_eigenvalues_im`] || [];
+        const lines = ['real,imaginary'];
+        for (let i = 0; i < re.length; i++) lines.push(`${re[i]},${im[i]}`);
+        const content = `# ${k}-blocking operator eigenvalues\n# ${graphData.graph6}\n` + lines.join('\n');
+        downloadFile(content, `${graphData.graph6}_${matrixType}_eigenvalues.csv`, 'text/csv');
+        return;
     }
 
     // For real eigenvalues (adj, kirchhoff, signless, lap, dist, distlap, distsign, seidel)

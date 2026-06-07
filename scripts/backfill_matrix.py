@@ -32,14 +32,21 @@ from db.spectrum import (
 
 def compute_columns(mt, g6):
     """Return (eigenvalue_column_values, hash) for one graph and matrix type."""
+    import numpy as np
+
     G = nx.from_graph6_bytes(g6.encode("ascii"))
     M = mt.builder(G)
+    null = [None] * len(mt.eigenvalue_columns), None
     if M is None:  # connected-only matrix on a disconnected graph
-        return [None] * len(mt.eigenvalue_columns), None
+        return null
     if mt.is_complex:
         eigs = compute_complex_eigenvalues(M)
+        if mt.null_if_trivial and (eigs.size == 0 or np.allclose(eigs, 0.0)):
+            return null
         return [eigs.real.tolist(), eigs.imag.tolist()], spectral_hash_complex(eigs)
     eigs = compute_real_eigenvalues(M)
+    if mt.null_if_trivial and (eigs.size == 0 or np.allclose(eigs, 0.0)):
+        return null
     return [eigs.tolist()], spectral_hash_real(eigs)
 
 

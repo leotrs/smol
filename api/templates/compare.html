@@ -709,7 +709,9 @@ function renderCompareSpectrumComplexPlot() {
         graph6: g.graph6,
         spectra: {
             nb: g.spectra.nb_eigenvalues_re.map((re, i) => ({re, im: g.spectra.nb_eigenvalues_im[i]})),
-            nbl: g.spectra.nbl_eigenvalues_re.map((re, i) => ({re, im: g.spectra.nbl_eigenvalues_im[i]}))
+            nbl: g.spectra.nbl_eigenvalues_re.map((re, i) => ({re, im: g.spectra.nbl_eigenvalues_im[i]})),
+            kblock3: (g.spectra.kblock3_eigenvalues_re || []).map((re, i) => ({re, im: (g.spectra.kblock3_eigenvalues_im || [])[i]})),
+            kblock4: (g.spectra.kblock4_eigenvalues_re || []).map((re, i) => ({re, im: (g.spectra.kblock4_eigenvalues_im || [])[i]}))
         }
     }));
 
@@ -736,7 +738,9 @@ function renderCompareSpectrumComplexPlot() {
         ...gs,
         plotSpectra: {
             nb: withConjugates(gs.spectra.nb),
-            nbl: withConjugates(gs.spectra.nbl)
+            nbl: withConjugates(gs.spectra.nbl),
+            kblock3: withConjugates(gs.spectra.kblock3),
+            kblock4: withConjugates(gs.spectra.kblock4)
         }
     }));
 
@@ -915,10 +919,17 @@ function renderCompareSpectrumComplexPlot() {
 
     const colors = {
         nb: style.getPropertyValue('--spectrum-nb').trim(),
-        nbl: style.getPropertyValue('--spectrum-nbl').trim()
+        nbl: style.getPropertyValue('--spectrum-nbl').trim(),
+        kblock3: style.getPropertyValue('--spectrum-kblock3').trim() || '#B45309',
+        kblock4: style.getPropertyValue('--spectrum-kblock4').trim() || '#1D4ED8'
     };
 
-    const labels = {nb: 'NB', nbl: 'NBL'};
+    const labels = {nb: 'NB', nbl: 'NBL', kblock3: 'kb3', kblock4: 'kb4'};
+
+    // k-blocking lanes only when at least one graph has a non-empty cycle core.
+    const complexMatrices = ['nb', 'nbl'].concat(
+        ['kblock3', 'kblock4'].filter(m => plotData.some(pd => pd.plotSpectra[m].length > 0))
+    );
 
     // Draw unit circle (in content so it pans, but scales with zoom)
     const circleRadius = Math.abs(xScale(1) - xScale(0));
@@ -952,7 +963,7 @@ function renderCompareSpectrumComplexPlot() {
     ];
 
     // Draw points for each matrix type and graph (only complex matrices)
-    ['nb', 'nbl'].forEach(matrix => {
+    complexMatrices.forEach(matrix => {
         plotData.forEach((gs, graphIdx) => {
             const markerInfo = markerShapes[graphIdx % markerShapes.length];
             const points = gs.plotSpectra[matrix];

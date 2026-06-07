@@ -1,5 +1,7 @@
 """Matrix computation for graphs."""
 
+from math import comb
+
 import numpy as np
 import networkx as nx
 
@@ -172,6 +174,52 @@ def distance_matrix(G: nx.Graph) -> np.ndarray | None:
             D[i, j] = lengths[u][v]
 
     return D
+
+
+def cycle_core(G: nx.Graph, k: int) -> nx.Graph:
+    """
+    Return the cycle core H_k = 2-core(G_k), where G_k is the subgraph of G
+    induced on vertices with (global) degree at least k.
+
+    Torres (2026), "The rich are loopy". Strips to the high-degree vertices,
+    then keeps only the cyclic part (iteratively remove degree < 2). May be
+    empty.
+    """
+    Gk = G.subgraph([v for v in G.nodes() if G.degree(v) >= k]).copy()
+    if Gk.number_of_nodes() == 0:
+        return nx.Graph()
+    return nx.k_core(Gk, k=2)
+
+
+def kblocking_matrix(G: nx.Graph, k: int) -> np.ndarray:
+    """
+    Return the degree-weighted non-backtracking matrix D_k B_k whose spectrum
+    equals that of the k-blocking operator M_k (Torres 2026, trace formula).
+
+    B_k is the non-backtracking matrix of the cycle core H_k, indexed by its
+    directed edges (u, v); D_k is diagonal with D_k[(u,v)] = C(d_G(v) - 2, k - 2)
+    using the *global* degree of v in G. Returns a 0x0 array when H_k is empty.
+    For k = 2 this reduces to the ordinary non-backtracking matrix.
+    """
+    Hk = cycle_core(G, k)
+    if Hk.number_of_edges() == 0:
+        return np.array([]).reshape(0, 0)
+    B = nonbacktracking_matrix(Hk)
+    edges = _build_directed_edges(Hk)
+    weights = np.array(
+        [comb(G.degree(v) - 2, k - 2) for (_, v) in edges], dtype=np.float64
+    )
+    return weights[:, None] * B  # diag(weights) @ B
+
+
+def kblock3_matrix(G: nx.Graph) -> np.ndarray:
+    """3-blocking operator companion matrix (blocks 2 directions per node)."""
+    return kblocking_matrix(G, 3)
+
+
+def kblock4_matrix(G: nx.Graph) -> np.ndarray:
+    """4-blocking operator companion matrix (blocks 3 directions per node)."""
+    return kblocking_matrix(G, 4)
 
 
 def distance_laplacian(G: nx.Graph) -> np.ndarray | None:

@@ -46,6 +46,14 @@ CREATE TABLE IF NOT EXISTS graphs (
     seidel_eigenvalues   TEXT,
     seidel_spectral_hash TEXT,
 
+    -- k-blocking operator spectra (complex; NULL when cycle core empty/trivial)
+    kblock3_eigenvalues_re TEXT,
+    kblock3_eigenvalues_im TEXT,
+    kblock3_spectral_hash  TEXT,
+    kblock4_eigenvalues_re TEXT,
+    kblock4_eigenvalues_im TEXT,
+    kblock4_spectral_hash  TEXT,
+
     -- Structural properties
     is_bipartite        INTEGER NOT NULL,  -- 0/1 boolean
     is_planar           INTEGER NOT NULL,
@@ -108,6 +116,10 @@ CREATE INDEX IF NOT EXISTS idx_graphs_distlap_hash ON graphs(distlap_spectral_ha
 CREATE INDEX IF NOT EXISTS idx_n_distlap_hash ON graphs(n, distlap_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_graphs_distsign_hash ON graphs(distsign_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_distsign_hash ON graphs(n, distsign_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_graphs_kblock3_hash ON graphs(kblock3_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_n_kblock3_hash ON graphs(n, kblock3_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_graphs_kblock4_hash ON graphs(kblock4_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_n_kblock4_hash ON graphs(n, kblock4_spectral_hash);
 
 -- Pre-computed cospectral mates table
 -- Stores all pairs of graphs that share the same spectrum for a given matrix type.
@@ -120,7 +132,7 @@ CREATE TABLE IF NOT EXISTS cospectral_mates (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     graph1_id   INTEGER NOT NULL REFERENCES graphs(id),
     graph2_id   INTEGER NOT NULL REFERENCES graphs(id),
-    matrix_type TEXT NOT NULL CHECK (matrix_type IN ('adj', 'kirchhoff', 'signless', 'lap', 'nb', 'nbl', 'dist', 'seidel', 'distlap', 'distsign')),
+    matrix_type TEXT NOT NULL CHECK (matrix_type IN ('adj', 'kirchhoff', 'signless', 'lap', 'nb', 'nbl', 'dist', 'seidel', 'distlap', 'distsign', 'kblock3', 'kblock4')),
     UNIQUE (graph1_id, graph2_id, matrix_type),
     CHECK (graph1_id < graph2_id)
 );
