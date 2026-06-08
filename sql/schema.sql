@@ -11,29 +11,29 @@ CREATE TABLE IF NOT EXISTS graphs (
     graph6          VARCHAR(32) NOT NULL,       -- canonical graph6 encoding
 
     -- Adjacency matrix spectrum (real eigenvalues)
-    adj_eigenvalues         DOUBLE PRECISION[] NOT NULL,
+    adj_eigenvalues         DOUBLE PRECISION[],
     adj_spectral_hash       CHAR(16) NOT NULL,
 
     -- Kirchhoff (combinatorial) Laplacian spectrum (real eigenvalues)
-    kirchhoff_eigenvalues   DOUBLE PRECISION[] NOT NULL,
+    kirchhoff_eigenvalues   DOUBLE PRECISION[],
     kirchhoff_spectral_hash CHAR(16) NOT NULL,
 
     -- Signless Laplacian spectrum (real eigenvalues)
-    signless_eigenvalues    DOUBLE PRECISION[] NOT NULL,
+    signless_eigenvalues    DOUBLE PRECISION[],
     signless_spectral_hash  CHAR(16) NOT NULL,
 
     -- Normalized Laplacian spectrum (real eigenvalues)
-    lap_eigenvalues         DOUBLE PRECISION[] NOT NULL,
+    lap_eigenvalues         DOUBLE PRECISION[],
     lap_spectral_hash       CHAR(16) NOT NULL,
 
     -- Non-backtracking spectrum (complex eigenvalues)
-    nb_eigenvalues_re   DOUBLE PRECISION[] NOT NULL,
-    nb_eigenvalues_im   DOUBLE PRECISION[] NOT NULL,
+    nb_eigenvalues_re   DOUBLE PRECISION[],
+    nb_eigenvalues_im   DOUBLE PRECISION[],
     nb_spectral_hash    CHAR(16) NOT NULL,
 
     -- NB Laplacian spectrum (complex eigenvalues)
-    nbl_eigenvalues_re  DOUBLE PRECISION[] NOT NULL,
-    nbl_eigenvalues_im  DOUBLE PRECISION[] NOT NULL,
+    nbl_eigenvalues_re  DOUBLE PRECISION[],
+    nbl_eigenvalues_im  DOUBLE PRECISION[],
     nbl_spectral_hash   CHAR(16) NOT NULL,
 
     -- Structural metadata
