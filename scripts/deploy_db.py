@@ -214,13 +214,19 @@ def reassemble_remote(manifest: dict) -> None:
     remote_dir = f"{REMOTE_DATA_DIR}/chunks"
     temp_db = f"{REMOTE_DATA_DIR}/smol_new.db"
 
-    # Build cat command for all chunks in order
-    chunk_files = " ".join(f"{remote_dir}/{c['name']}" for c in chunks)
+    # Stream chunks into the new DB one at a time, deleting each as it is
+    # appended. A plain `cat *chunks > new` would need the chunks AND the
+    # reassembled DB to coexist at full size, which overflows a small volume;
+    # streaming keeps the transient footprint ~= old_db + new_db.
+    append_cmds = "\n        ".join(
+        f"cat {remote_dir}/{c['name']} >> {temp_db} && rm {remote_dir}/{c['name']}"
+        for c in chunks
+    )
 
-    # Reassemble and swap
     commands = f"""
-        echo "Concatenating chunks..."
-        cat {chunk_files} > {temp_db}
+        echo "Reassembling (streaming)..."
+        rm -f {temp_db}
+        {append_cmds}
 
         echo "Checking file size..."
         ls -lh {temp_db}
