@@ -1,8 +1,15 @@
 """Graph data processing - combines all computations for a single graph."""
 
+import os
 from dataclasses import dataclass
 import numpy as np
 import networkx as nx
+
+# When set, process_graph skips the k-blocking and non-cycling matrices, whose
+# per-graph cost dwarfs everything else (~1000x). Used to generate n=10 (12M
+# graphs) for the cheap matrices in hours rather than weeks; the expensive
+# matrices can be backfilled separately later.
+SKIP_EXPENSIVE = os.environ.get("SMOL_SKIP_EXPENSIVE") == "1"
 
 from .matrices import (
     adjacency_matrix,
@@ -274,14 +281,22 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
     seidel_eigs = compute_real_eigenvalues(S_seidel)
     seidel_hash = spectral_hash_real(seidel_eigs)
 
-    kb3_re, kb3_im, kb3_hash = _complex_spectrum_or_none(kblock3_matrix(G), size=kblock3_size(G))
-    kb4_re, kb4_im, kb4_hash = _complex_spectrum_or_none(kblock4_matrix(G), size=kblock4_size(G))
+    # The k-blocking and non-cycling matrices are ~1000x slower per graph than
+    # all the others combined (large De Bruijn-style operators), so at n=10
+    # scale they are skipped during generation and can be backfilled later.
+    if SKIP_EXPENSIVE:
+        kb3_re = kb3_im = kb3_hash = None
+        kb4_re = kb4_im = kb4_hash = None
+        n3_re = n3_im = n3_hash = None
+        n4_re = n4_im = n4_hash = None
+    else:
+        kb3_re, kb3_im, kb3_hash = _complex_spectrum_or_none(kblock3_matrix(G), size=kblock3_size(G))
+        kb4_re, kb4_im, kb4_hash = _complex_spectrum_or_none(kblock4_matrix(G), size=kblock4_size(G))
+        n3_re, n3_im, n3_hash = _complex_spectrum_or_none(non3cyc_matrix(G))
+        n4_re, n4_im, n4_hash = _complex_spectrum_or_none(non4cyc_matrix(G))
 
     yoon2_eigs, yoon2_hash = _real_spectrum_or_none(yoon2_matrix(G))
     yoon3_eigs, yoon3_hash = _real_spectrum_or_none(yoon3_matrix(G))
-
-    n3_re, n3_im, n3_hash = _complex_spectrum_or_none(non3cyc_matrix(G))
-    n4_re, n4_im, n4_hash = _complex_spectrum_or_none(non4cyc_matrix(G))
 
     # Compute metadata
     meta = compute_metadata(G)
