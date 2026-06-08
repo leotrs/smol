@@ -100,6 +100,8 @@
         <button type="button" role="tab" id="kblock4-tab" :aria-selected="matrix === 'kblock4'" aria-controls="kblock4-panel" :class="{ active: matrix === 'kblock4' }" @click="matrix = 'kblock4'">4-blocking</button>
         <button type="button" role="tab" id="yoon2-tab" :aria-selected="matrix === 'yoon2'" aria-controls="yoon2-panel" :class="{ active: matrix === 'yoon2' }" @click="matrix = 'yoon2'">Yoon 2-Laplacian</button>
         <button type="button" role="tab" id="yoon3-tab" :aria-selected="matrix === 'yoon3'" aria-controls="yoon3-panel" :class="{ active: matrix === 'yoon3' }" @click="matrix = 'yoon3'">Yoon 3-Laplacian</button>
+        <button type="button" role="tab" id="non3cyc-tab" :aria-selected="matrix === 'non3cyc'" aria-controls="non3cyc-panel" :class="{ active: matrix === 'non3cyc' }" @click="matrix = 'non3cyc'">Non-3-cycling</button>
+        <button type="button" role="tab" id="non4cyc-tab" :aria-selected="matrix === 'non4cyc'" aria-controls="non4cyc-panel" :class="{ active: matrix === 'non4cyc' }" @click="matrix = 'non4cyc'">Non-4-cycling</button>
     </div>
 
     <div class="tab-content" role="tabpanel" id="examples-panel" aria-labelledby="examples-tab" x-show="category === 'examples'">
@@ -569,6 +571,74 @@
     <div class="tab-content" role="tabpanel" id="yoon3-panel" aria-labelledby="yoon3-tab" x-show="category === 'cospectral' && matrix === 'yoon3'">
         <p class="examples-subtitle">The Yoon 3-Laplacian distinguishes every graph up to 9 vertices: no cospectral families exist in this range.</p>
     </div>
+
+    <div class="tab-content" role="tabpanel" id="non3cyc-panel" aria-labelledby="non3cyc-tab" x-show="category === 'cospectral' && matrix === 'non3cyc'">
+        <p class="examples-subtitle">Graphs with identical non-3-cycling spectra but different structure</p>
+        <div class="cospectral-families">
+        <a href="/compare?graphs=E%3Frw,EQjo" class="family-card">
+            <div class="family-graphs">
+                <div class="family-graph">
+                    <div id="ex-non3cyc1a" class="example-viz"></div>
+                    <code>E?rw</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-non3cyc1b" class="example-viz"></div>
+                    <code>EQjo</code>
+                </div>
+            </div>
+        </a>
+        <a href="/compare?graphs=F%3FovW,FCQVo,FCQfW" class="family-card">
+            <div class="family-graphs">
+                <div class="family-graph">
+                    <div id="ex-non3cyc2a" class="example-viz"></div>
+                    <code>F?ovW</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-non3cyc2b" class="example-viz"></div>
+                    <code>FCQVo</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-non3cyc2c" class="example-viz"></div>
+                    <code>FCQfW</code>
+                </div>
+            </div>
+        </a>
+        </div>
+    </div>
+
+    <div class="tab-content" role="tabpanel" id="non4cyc-panel" aria-labelledby="non4cyc-tab" x-show="category === 'cospectral' && matrix === 'non4cyc'">
+        <p class="examples-subtitle">Graphs with identical non-4-cycling spectra but different structure</p>
+        <div class="cospectral-families">
+        <a href="/compare?graphs=EEio,ECro" class="family-card">
+            <div class="family-graphs">
+                <div class="family-graph">
+                    <div id="ex-non4cyc1a" class="example-viz"></div>
+                    <code>EEio</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-non4cyc1b" class="example-viz"></div>
+                    <code>ECro</code>
+                </div>
+            </div>
+        </a>
+        <a href="/compare?graphs=F%3FrFo,F%3Fqlo,FCXn_" class="family-card">
+            <div class="family-graphs">
+                <div class="family-graph">
+                    <div id="ex-non4cyc2a" class="example-viz"></div>
+                    <code>F?rFo</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-non4cyc2b" class="example-viz"></div>
+                    <code>F?qlo</code>
+                </div>
+                <div class="family-graph">
+                    <div id="ex-non4cyc2c" class="example-viz"></div>
+                    <code>FCXn_</code>
+                </div>
+            </div>
+        </a>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -665,6 +735,16 @@ const exampleGraphs = {
     'ex-yoon21b': {n: 7, edges: [[0, 4], [0, 5], [1, 4], [1, 6], [2, 5], [2, 6]]},
     'ex-yoon22a': {n: 8, edges: [[0, 5], [0, 6], [1, 5], [1, 7], [2, 6], [2, 7]]},
     'ex-yoon22b': {n: 8, edges: [[0, 5], [0, 6], [1, 7], [2, 7], [3, 7], [5, 6]]},
+    'ex-non3cyc1a': {n: 6, edges: [[0, 4], [0, 5], [1, 4], [1, 5], [2, 5], [3, 5], [4, 5]]},
+    'ex-non3cyc1b': {n: 6, edges: [[0, 2], [0, 4], [0, 5], [1, 3], [1, 5], [2, 4], [2, 5], [3, 5]]},
+    'ex-non3cyc2a': {n: 7, edges: [[0, 4], [0, 6], [1, 4], [1, 6], [2, 5], [2, 6], [3, 5], [4, 6], [5, 6]]},
+    'ex-non3cyc2b': {n: 7, edges: [[0, 3], [0, 5], [0, 6], [1, 4], [1, 6], [2, 6], [3, 5], [3, 6], [4, 6]]},
+    'ex-non3cyc2c': {n: 7, edges: [[0, 3], [0, 5], [0, 6], [1, 4], [1, 6], [2, 5], [2, 6], [4, 6], [5, 6]]},
+    'ex-non4cyc1a': {n: 6, edges: [[0, 3], [0, 4], [0, 5], [1, 3], [2, 4], [2, 5], [3, 5]]},
+    'ex-non4cyc1b': {n: 6, edges: [[0, 3], [0, 4], [0, 5], [1, 4], [1, 5], [2, 5], [3, 5]]},
+    'ex-non4cyc2a': {n: 7, edges: [[0, 4], [0, 5], [0, 6], [1, 4], [1, 5], [1, 6], [2, 6], [3, 6], [4, 6]]},
+    'ex-non4cyc2b': {n: 7, edges: [[0, 4], [0, 5], [0, 6], [1, 4], [2, 5], [2, 6], [3, 6], [4, 5], [4, 6]]},
+    'ex-non4cyc2c': {n: 7, edges: [[0, 3], [0, 6], [1, 4], [1, 5], [1, 6], [2, 4], [2, 5], [2, 6], [3, 6], [4, 5]]},
 };
 
 function renderExamples() {
