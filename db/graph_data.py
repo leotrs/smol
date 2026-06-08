@@ -1,7 +1,7 @@
 """Graph data processing - combines all computations for a single graph."""
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, fields, replace
 import numpy as np
 import networkx as nx
 
@@ -10,6 +10,13 @@ import networkx as nx
 # graphs) for the cheap matrices in hours rather than weeks; the expensive
 # matrices can be backfilled separately later.
 SKIP_EXPENSIVE = os.environ.get("SMOL_SKIP_EXPENSIVE") == "1"
+
+# When set, store only the spectral hashes (+ metadata), not the eigenvalue
+# arrays. The hash is all cospectrality needs; this makes generation
+# compute-bound instead of insert-bound (~20x faster at n=10) and keeps the
+# database small. Used for n=10, which is local-only and never browsed
+# graph-by-graph at 12M scale.
+HASH_ONLY = os.environ.get("SMOL_HASH_ONLY") == "1"
 
 from .matrices import (
     adjacency_matrix,
@@ -178,19 +185,19 @@ class GraphRecord:
             self.n,
             self.m,
             self.graph6,
-            self.adj_eigenvalues.tolist(),
+            self.adj_eigenvalues.tolist() if self.adj_eigenvalues is not None else None,
             self.adj_spectral_hash,
-            self.kirchhoff_eigenvalues.tolist(),
+            self.kirchhoff_eigenvalues.tolist() if self.kirchhoff_eigenvalues is not None else None,
             self.kirchhoff_spectral_hash,
-            self.signless_eigenvalues.tolist(),
+            self.signless_eigenvalues.tolist() if self.signless_eigenvalues is not None else None,
             self.signless_spectral_hash,
-            self.lap_eigenvalues.tolist(),
+            self.lap_eigenvalues.tolist() if self.lap_eigenvalues is not None else None,
             self.lap_spectral_hash,
-            self.nb_eigenvalues_re.tolist(),
-            self.nb_eigenvalues_im.tolist(),
+            self.nb_eigenvalues_re.tolist() if self.nb_eigenvalues_re is not None else None,
+            self.nb_eigenvalues_im.tolist() if self.nb_eigenvalues_im is not None else None,
             self.nb_spectral_hash,
-            self.nbl_eigenvalues_re.tolist(),
-            self.nbl_eigenvalues_im.tolist(),
+            self.nbl_eigenvalues_re.tolist() if self.nbl_eigenvalues_re is not None else None,
+            self.nbl_eigenvalues_im.tolist() if self.nbl_eigenvalues_im is not None else None,
             self.nbl_spectral_hash,
             self.dist_eigenvalues.tolist() if self.dist_eigenvalues is not None else None,
             self.dist_spectral_hash,
@@ -198,7 +205,7 @@ class GraphRecord:
             self.distlap_spectral_hash,
             self.distsign_eigenvalues.tolist() if self.distsign_eigenvalues is not None else None,
             self.distsign_spectral_hash,
-            self.seidel_eigenvalues.tolist(),
+            self.seidel_eigenvalues.tolist() if self.seidel_eigenvalues is not None else None,
             self.seidel_spectral_hash,
             self.kblock3_eigenvalues_re.tolist() if self.kblock3_eigenvalues_re is not None else None,
             self.kblock3_eigenvalues_im.tolist() if self.kblock3_eigenvalues_im is not None else None,
@@ -301,7 +308,7 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
     # Compute metadata
     meta = compute_metadata(G)
 
-    return GraphRecord(
+    record = GraphRecord(
         graph6=graph6_str,
         n=meta["n"],
         m=meta["m"],
@@ -353,6 +360,14 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
         max_degree=meta["max_degree"],
         triangle_count=meta["triangle_count"],
     )
+
+    if HASH_ONLY:
+        # Keep the spectral hashes (cospectrality); drop the eigenvalue arrays.
+        record = replace(record, **{
+            f.name: None for f in fields(record)
+            if f.name.endswith(("_eigenvalues", "_eigenvalues_re", "_eigenvalues_im"))
+        })
+    return record
 
 
 def graph_from_graph6(graph6_str: str) -> nx.Graph:
