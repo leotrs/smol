@@ -218,26 +218,34 @@ def reassemble_remote(manifest: dict) -> None:
     # appended. A plain `cat *chunks > new` would need the chunks AND the
     # reassembled DB to coexist at full size, which overflows a small volume;
     # streaming keeps the transient footprint ~= old_db + new_db.
+    expected_size = manifest["source_size"]
     append_cmds = "\n        ".join(
-        f"cat {remote_dir}/{c['name']} >> {temp_db} && rm {remote_dir}/{c['name']}"
+        f"cat {remote_dir}/{c['name']} >> {temp_db} && rm -f {remote_dir}/{c['name']}"
         for c in chunks
     )
 
+    # set -e: stop on the first failed append (e.g. disk full) instead of
+    # building a corrupt DB. The size check then guarantees we only swap a
+    # complete file in, so a failed reassembly leaves the live DB untouched.
     commands = f"""
+        set -e
         echo "Reassembling (streaming)..."
         rm -f {temp_db}
         {append_cmds}
 
-        echo "Checking file size..."
-        ls -lh {temp_db}
+        actual=$(stat -c %s {temp_db})
+        echo "Reassembled size: $actual (expected {expected_size})"
+        if [ "$actual" != "{expected_size}" ]; then
+            echo "SIZE MISMATCH - aborting, live DB left untouched"
+            rm -f {temp_db}
+            exit 1
+        fi
 
         echo "Swapping database files..."
         mv {REMOTE_DB_PATH} {REMOTE_DB_PATH}.bak 2>/dev/null || true
         mv {temp_db} {REMOTE_DB_PATH}
-
-        echo "Cleaning up chunks..."
-        rm -rf {remote_dir}
         rm -f {REMOTE_DB_PATH}.bak
+        rm -rf {remote_dir}
 
         echo "Done!"
     """
