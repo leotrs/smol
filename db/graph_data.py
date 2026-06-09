@@ -5,19 +5,6 @@ from dataclasses import dataclass, fields, replace
 import numpy as np
 import networkx as nx
 
-# When set, process_graph skips the k-blocking and non-cycling matrices, whose
-# per-graph cost dwarfs everything else (~1000x). Used to generate n=10 (12M
-# graphs) for the cheap matrices in hours rather than weeks; the expensive
-# matrices can be backfilled separately later.
-SKIP_EXPENSIVE = os.environ.get("SMOL_SKIP_EXPENSIVE") == "1"
-
-# When set, store only the spectral hashes (+ metadata), not the eigenvalue
-# arrays. The hash is all cospectrality needs; this makes generation
-# compute-bound instead of insert-bound (~20x faster at n=10) and keeps the
-# database small. Used for n=10, which is local-only and never browsed
-# graph-by-graph at 12M scale.
-HASH_ONLY = os.environ.get("SMOL_HASH_ONLY") == "1"
-
 from .matrices import (
     adjacency_matrix,
     kirchhoff_laplacian,
@@ -44,6 +31,19 @@ from .spectrum import (
     spectral_hash_complex,
 )
 from .metadata import compute_metadata
+
+# When set, process_graph skips the k-blocking and non-cycling matrices, whose
+# per-graph cost dwarfs everything else (~1000x). Used to generate n=10 (12M
+# graphs) for the cheap matrices in hours rather than weeks; the expensive
+# matrices can be backfilled separately later.
+SKIP_EXPENSIVE = os.environ.get("SMOL_SKIP_EXPENSIVE") == "1"
+
+# When set, store only the spectral hashes (+ metadata), not the eigenvalue
+# arrays. The hash is all cospectrality needs; this makes generation
+# compute-bound instead of insert-bound (~20x faster at n=10) and keeps the
+# database small. Used for n=10, which is local-only and never browsed
+# graph-by-graph at 12M scale.
+HASH_ONLY = os.environ.get("SMOL_HASH_ONLY") == "1"
 
 
 def _real_spectrum_or_none(M):
