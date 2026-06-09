@@ -225,26 +225,35 @@ def reassemble_remote(manifest: dict) -> None:
     )
 
     # set -e: stop on the first failed append (e.g. disk full) instead of
-    # building a corrupt DB. The size check then guarantees we only swap a
-    # complete file in, so a failed reassembly leaves the live DB untouched.
+    # building a corrupt DB. The size check then guarantees we only install a
+    # complete file.
+    #
+    # The volume is only 3GB, which cannot hold the old DB + the chunks + the
+    # new DB simultaneously. Streaming (append-then-delete each chunk) keeps the
+    # chunk+new-DB footprint ~= one DB, but the *old* DB must also be removed up
+    # front, or old_db + new_db alone (~3.1GB) overflows. So we delete the old
+    # DB before streaming. The chunks stay on disk until appended, and the size
+    # check prevents installing a partial DB; a failed run is fixed by simply
+    # re-running the deploy (which re-uploads any missing chunks).
     commands = f"""
         set -e
-        echo "Reassembling (streaming)..."
+        echo "Freeing old database to make room (3GB volume)..."
         rm -f {temp_db}
+        rm -f {REMOTE_DB_PATH}
+
+        echo "Reassembling (streaming)..."
         {append_cmds}
 
         actual=$(stat -c %s {temp_db})
         echo "Reassembled size: $actual (expected {expected_size})"
         if [ "$actual" != "{expected_size}" ]; then
-            echo "SIZE MISMATCH - aborting, live DB left untouched"
+            echo "SIZE MISMATCH - aborting"
             rm -f {temp_db}
             exit 1
         fi
 
-        echo "Swapping database files..."
-        mv {REMOTE_DB_PATH} {REMOTE_DB_PATH}.bak 2>/dev/null || true
+        echo "Installing new database..."
         mv {temp_db} {REMOTE_DB_PATH}
-        rm -f {REMOTE_DB_PATH}.bak
         rm -rf {remote_dir}
 
         echo "Done!"
