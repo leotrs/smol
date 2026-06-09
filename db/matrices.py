@@ -41,19 +41,6 @@ def signless_laplacian(G: nx.Graph) -> np.ndarray:
     return D + A
 
 
-def seidel_matrix(G: nx.Graph) -> np.ndarray:
-    """
-    Return the Seidel matrix S = J - I - 2A.
-
-    Entries are 0 on the diagonal, -1 between adjacent vertices, and +1
-    between non-adjacent vertices. Real symmetric; defined for all graphs.
-    The Seidel spectrum is invariant under Seidel switching.
-    """
-    A = adjacency_matrix(G)
-    n = A.shape[0]
-    return np.ones((n, n)) - np.eye(n) - 2.0 * A
-
-
 def laplacian_matrix(G: nx.Graph) -> np.ndarray:
     """
     Return the symmetric normalized Laplacian L = I - D^{-1/2}AD^{-1/2}.

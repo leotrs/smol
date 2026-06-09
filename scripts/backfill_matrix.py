@@ -6,8 +6,8 @@ rows where the spectral-hash column is NULL, so it is safe to re-run and never
 touches columns that are already populated.
 
 Usage:
-    uv run python scripts/backfill_matrix.py --matrix seidel
-    uv run python scripts/backfill_matrix.py --matrix seidel --max-n 8
+    uv run python scripts/backfill_matrix.py --matrix non3cyc
+    uv run python scripts/backfill_matrix.py --matrix non4cyc --max-n 9
 """
 
 import argparse

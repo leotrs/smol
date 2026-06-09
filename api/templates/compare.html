@@ -10,7 +10,7 @@
     {% endif %}
 {% endfor %}
 
-{% set matrix_labels = {'adj': 'adj', 'kirchhoff': 'kir', 'signless': 'sgl', 'lap': 'lap', 'nb': 'nb', 'nbl': 'nbl', 'dist': 'dist', 'distlap': 'dlp', 'distsign': 'dsg', 'seidel': 'sei', 'kblock3': 'kb3', 'kblock4': 'kb4', 'yoon2': 'yn2', 'yoon3': 'yn3', 'non3cyc': 'n3c', 'non4cyc': 'n4c'} %}
+{% set matrix_labels = {'adj': 'adj', 'kirchhoff': 'kir', 'signless': 'sgl', 'lap': 'lap', 'nb': 'nb', 'nbl': 'nbl', 'dist': 'dist', 'distlap': 'dlp', 'distsign': 'dsg', 'kblock3': 'kb3', 'kblock4': 'kb4', 'yoon2': 'yn2', 'yoon3': 'yn3', 'non3cyc': 'n3c', 'non4cyc': 'n4c'} %}
 
 <hgroup>
     <h1 style="display: flex; justify-content: space-between; align-items: baseline; gap: 1rem;">
@@ -66,7 +66,7 @@
 
 <h3>{% if result.graphs|length == 2 %}Spectral Distance{% else %}Spectral Comparison{% endif %}</h3>
 {% if result.distance_matrix %}
-{% set matrix_labels = {'adj': 'adj', 'kirchhoff': 'kir', 'signless': 'sgl', 'lap': 'lap', 'nb': 'nb', 'nbl': 'nbl', 'dist': 'dist', 'distlap': 'dlp', 'distsign': 'dsg', 'seidel': 'sei', 'kblock3': 'kb3', 'kblock4': 'kb4', 'yoon2': 'yn2', 'yoon3': 'yn3', 'non3cyc': 'n3c', 'non4cyc': 'n4c'} %}
+{% set matrix_labels = {'adj': 'adj', 'kirchhoff': 'kir', 'signless': 'sgl', 'lap': 'lap', 'nb': 'nb', 'nbl': 'nbl', 'dist': 'dist', 'distlap': 'dlp', 'distsign': 'dsg', 'kblock3': 'kb3', 'kblock4': 'kb4', 'yoon2': 'yn2', 'yoon3': 'yn3', 'non3cyc': 'n3c', 'non4cyc': 'n4c'} %}
 {% set graph_labels = result.graphs | map(attribute='graph6') | list %}
 {% set n = graph_labels|length %}
 
@@ -336,7 +336,6 @@ function renderCompareSpectrumRealPlot() {
             dist: (g.spectra.dist_eigenvalues || []).map(re => ({re, im: 0})),
             distlap: (g.spectra.distlap_eigenvalues || []).map(re => ({re, im: 0})),
             distsign: (g.spectra.distsign_eigenvalues || []).map(re => ({re, im: 0})),
-            seidel: (g.spectra.seidel_eigenvalues || []).map(re => ({re, im: 0})),
             yoon2: (g.spectra.yoon2_eigenvalues || []).map(re => ({re, im: 0})),
             yoon3: (g.spectra.yoon3_eigenvalues || []).map(re => ({re, im: 0}))
         }
@@ -362,7 +361,7 @@ function renderCompareSpectrumRealPlot() {
     const plotWidth = width - margin.left - margin.right;
     const plotHeight = height - margin.top - margin.bottom;
 
-    const matrices = ['adj', 'kirchhoff', 'signless', 'lap', 'dist', 'distlap', 'distsign', 'seidel', 'yoon2', 'yoon3']
+    const matrices = ['adj', 'kirchhoff', 'signless', 'lap', 'dist', 'distlap', 'distsign', 'yoon2', 'yoon3']
         .filter(m => graphsSpectra.some(gs => gs.spectra[m].length > 0));
     const laneHeight = plotHeight / matrices.length;
 
@@ -468,12 +467,11 @@ function renderCompareSpectrumRealPlot() {
         dist: style.getPropertyValue('--spectrum-dist').trim() || '#9333EA',
         distlap: style.getPropertyValue('--spectrum-distlap').trim() || '#0E7490',
         distsign: style.getPropertyValue('--spectrum-distsign').trim() || '#4D7C0F',
-        seidel: style.getPropertyValue('--spectrum-seidel').trim() || '#DB2777',
         yoon2: style.getPropertyValue('--spectrum-yoon2').trim() || '#A21CAF',
         yoon3: style.getPropertyValue('--spectrum-yoon3').trim() || '#047857'
     };
 
-    const labels = {adj: 'adj', kirchhoff: 'kir', signless: 'sgl', lap: 'lap', dist: 'dist', distlap: 'dlp', distsign: 'dsg', seidel: 'sei', yoon2: 'yn2', yoon3: 'yn3'};
+    const labels = {adj: 'adj', kirchhoff: 'kir', signless: 'sgl', lap: 'lap', dist: 'dist', distlap: 'dlp', distsign: 'dsg', yoon2: 'yn2', yoon3: 'yn3'};
 
     const markerShapes = [
         { name: 'circle', type: null },

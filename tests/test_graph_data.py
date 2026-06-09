@@ -128,7 +128,7 @@ def test_to_db_tuple():
 
     assert isinstance(tup, tuple)
     # Value order/length must match the shared INSERT column list exactly.
-    assert len(tup) == len(INSERT_COLUMNS) == 50
+    assert len(tup) == len(INSERT_COLUMNS) == 48
     assert tup[0] == 3  # n
     assert tup[1] == 2  # m
 
@@ -160,7 +160,6 @@ def test_process_graph_nilpotent_matrices_are_null():
     # Always-defined matrices remain populated.
     assert rec.adj_spectral_hash is not None
     assert rec.nb_spectral_hash is not None
-    assert rec.seidel_spectral_hash is not None
 
 
 def test_process_graph_populates_cyclic_matrices():
@@ -170,8 +169,7 @@ def test_process_graph_populates_cyclic_matrices():
     rec = process_graph(G, g6)
     for h in [rec.kblock3_spectral_hash, rec.kblock4_spectral_hash,
               rec.non3cyc_spectral_hash, rec.non4cyc_spectral_hash,
-              rec.yoon2_spectral_hash, rec.yoon3_spectral_hash,
-              rec.seidel_spectral_hash]:
+              rec.yoon2_spectral_hash, rec.yoon3_spectral_hash]:
         assert h is not None and len(h) == 16
     # Complex matrices store paired real/imag arrays of equal length.
     assert len(rec.non4cyc_eigenvalues_re) == len(rec.non4cyc_eigenvalues_im)

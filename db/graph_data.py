@@ -28,7 +28,6 @@ from .matrices import (
     distance_matrix,
     distance_laplacian,
     distance_signless_laplacian,
-    seidel_matrix,
     kblock3_matrix,
     kblock4_matrix,
     kblock3_size,
@@ -85,7 +84,6 @@ INSERT_COLUMNS = (
     "dist_eigenvalues", "dist_spectral_hash",
     "distlap_eigenvalues", "distlap_spectral_hash",
     "distsign_eigenvalues", "distsign_spectral_hash",
-    "seidel_eigenvalues", "seidel_spectral_hash",
     "kblock3_eigenvalues_re", "kblock3_eigenvalues_im", "kblock3_spectral_hash",
     "kblock4_eigenvalues_re", "kblock4_eigenvalues_im", "kblock4_spectral_hash",
     "yoon2_eigenvalues", "yoon2_spectral_hash",
@@ -141,10 +139,6 @@ class GraphRecord:
     distlap_spectral_hash: str | None
     distsign_eigenvalues: np.ndarray | None
     distsign_spectral_hash: str | None
-
-    # Seidel spectrum (real)
-    seidel_eigenvalues: np.ndarray
-    seidel_spectral_hash: str
 
     # k-blocking spectra (complex; None when the cycle core is empty/trivial)
     kblock3_eigenvalues_re: np.ndarray | None
@@ -205,8 +199,6 @@ class GraphRecord:
             self.distlap_spectral_hash,
             self.distsign_eigenvalues.tolist() if self.distsign_eigenvalues is not None else None,
             self.distsign_spectral_hash,
-            self.seidel_eigenvalues.tolist() if self.seidel_eigenvalues is not None else None,
-            self.seidel_spectral_hash,
             self.kblock3_eigenvalues_re.tolist() if self.kblock3_eigenvalues_re is not None else None,
             self.kblock3_eigenvalues_im.tolist() if self.kblock3_eigenvalues_im is not None else None,
             self.kblock3_spectral_hash,
@@ -254,7 +246,6 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
     B = nonbacktracking_matrix(G)
     L_NB = nonbacktracking_laplacian(G)
     D_dist = distance_matrix(G)  # None for disconnected graphs
-    S_seidel = seidel_matrix(G)
 
     # Compute eigenvalues
     adj_eigs = compute_real_eigenvalues(A)
@@ -284,9 +275,6 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
         dist_eigs = dist_hash = None
         distlap_eigs = distlap_hash = None
         distsign_eigs = distsign_hash = None
-
-    seidel_eigs = compute_real_eigenvalues(S_seidel)
-    seidel_hash = spectral_hash_real(seidel_eigs)
 
     # The k-blocking and non-cycling matrices are ~1000x slower per graph than
     # all the others combined (large De Bruijn-style operators), so at n=10
@@ -332,8 +320,6 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
         distlap_spectral_hash=distlap_hash,
         distsign_eigenvalues=distsign_eigs,
         distsign_spectral_hash=distsign_hash,
-        seidel_eigenvalues=seidel_eigs,
-        seidel_spectral_hash=seidel_hash,
         kblock3_eigenvalues_re=kb3_re,
         kblock3_eigenvalues_im=kb3_im,
         kblock3_spectral_hash=kb3_hash,

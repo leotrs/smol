@@ -19,7 +19,7 @@ from db.matrix_types import (
 def test_canonical_keys_and_order():
     assert MATRIX_KEYS == (
         "adj", "kirchhoff", "signless", "lap", "nb", "nbl",
-        "dist", "distlap", "distsign", "seidel", "kblock3", "kblock4",
+        "dist", "distlap", "distsign", "kblock3", "kblock4",
         "yoon2", "yoon3", "non3cyc", "non4cyc",
     )
 
@@ -27,7 +27,7 @@ def test_canonical_keys_and_order():
 def test_real_vs_complex_partition():
     assert real_keys() == (
         "adj", "kirchhoff", "signless", "lap", "dist", "distlap", "distsign",
-        "seidel", "yoon2", "yoon3",
+        "yoon2", "yoon3",
     )
     assert complex_keys() == ("nb", "nbl", "kblock3", "kblock4", "non3cyc", "non4cyc")
     # Partition is exhaustive and disjoint.

@@ -51,8 +51,6 @@ class Spectra(BaseModel):
     distlap_hash: str | None
     distsign_eigenvalues: list[float] | None
     distsign_hash: str | None
-    seidel_eigenvalues: list[float]
-    seidel_hash: str
     kblock3_eigenvalues_re: list[float] | None
     kblock3_eigenvalues_im: list[float] | None
     kblock3_hash: str | None
@@ -81,7 +79,6 @@ class CospectralMates(BaseModel):
     dist: list[str]
     distlap: list[str]
     distsign: list[str]
-    seidel: list[str]
     kblock3: list[str]
     kblock4: list[str]
     yoon2: list[str]

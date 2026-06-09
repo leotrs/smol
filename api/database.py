@@ -84,7 +84,6 @@ def _parse_row(row: Any) -> dict[str, Any] | None:
             "nb_eigenvalues_re", "nb_eigenvalues_im",
             "nbl_eigenvalues_re", "nbl_eigenvalues_im",
             "dist_eigenvalues", "distlap_eigenvalues", "distsign_eigenvalues",
-            "seidel_eigenvalues",
             "kblock3_eigenvalues_re", "kblock3_eigenvalues_im",
             "kblock4_eigenvalues_re", "kblock4_eigenvalues_im",
             "yoon2_eigenvalues", "yoon3_eigenvalues",
@@ -145,7 +144,6 @@ async def fetch_graph(graph6: str) -> dict[str, Any] | None:
                        dist_eigenvalues, dist_spectral_hash,
                        distlap_eigenvalues, distlap_spectral_hash,
                        distsign_eigenvalues, distsign_spectral_hash,
-                       seidel_eigenvalues, seidel_spectral_hash,
                        kblock3_eigenvalues_re, kblock3_eigenvalues_im, kblock3_spectral_hash,
                        kblock4_eigenvalues_re, kblock4_eigenvalues_im, kblock4_spectral_hash,
                        yoon2_eigenvalues, yoon2_spectral_hash,
@@ -181,7 +179,6 @@ async def fetch_graph(graph6: str) -> dict[str, Any] | None:
                        dist_eigenvalues, dist_spectral_hash,
                        distlap_eigenvalues, distlap_spectral_hash,
                        distsign_eigenvalues, distsign_spectral_hash,
-                       seidel_eigenvalues, seidel_spectral_hash,
                        kblock3_eigenvalues_re, kblock3_eigenvalues_im, kblock3_spectral_hash,
                        kblock4_eigenvalues_re, kblock4_eigenvalues_im, kblock4_spectral_hash,
                        yoon2_eigenvalues, yoon2_spectral_hash,
@@ -424,11 +421,8 @@ async def query_graphs(
     # Cospectral mate filter
     if has_cospectral_mate:
         if has_cospectral_mate == "none":
-            # No cospectral mates for any matrix type. Seidel is excluded here:
-            # Seidel switching makes nearly every graph Seidel-cospectral, which
-            # would trivialize this filter, and Seidel pairs are only materialized
-            # for n <= 8 (so including them would make the filter inconsistent by n).
-            conditions.append("graphs.id NOT IN (SELECT DISTINCT graph1_id FROM cospectral_mates WHERE matrix_type <> 'seidel' UNION SELECT DISTINCT graph2_id FROM cospectral_mates WHERE matrix_type <> 'seidel')")
+            # No cospectral mates for any matrix type.
+            conditions.append("graphs.id NOT IN (SELECT DISTINCT graph1_id FROM cospectral_mates UNION SELECT DISTINCT graph2_id FROM cospectral_mates)")
         else:
             # Filter graphs that have cospectral mates for the specified matrix type
             conditions.append(f"graphs.id IN (SELECT DISTINCT graph1_id FROM cospectral_mates WHERE matrix_type = {ph} UNION SELECT DISTINCT graph2_id FROM cospectral_mates WHERE matrix_type = {ph})")
@@ -572,7 +566,6 @@ async def fetch_random_graph() -> dict[str, Any] | None:
                        dist_eigenvalues, dist_spectral_hash,
                        distlap_eigenvalues, distlap_spectral_hash,
                        distsign_eigenvalues, distsign_spectral_hash,
-                       seidel_eigenvalues, seidel_spectral_hash,
                        kblock3_eigenvalues_re, kblock3_eigenvalues_im, kblock3_spectral_hash,
                        kblock4_eigenvalues_re, kblock4_eigenvalues_im, kblock4_spectral_hash,
                        yoon2_eigenvalues, yoon2_spectral_hash,
@@ -625,7 +618,6 @@ async def fetch_random_graph() -> dict[str, Any] | None:
                        dist_eigenvalues, dist_spectral_hash,
                        distlap_eigenvalues, distlap_spectral_hash,
                        distsign_eigenvalues, distsign_spectral_hash,
-                       seidel_eigenvalues, seidel_spectral_hash,
                        kblock3_eigenvalues_re, kblock3_eigenvalues_im, kblock3_spectral_hash,
                        kblock4_eigenvalues_re, kblock4_eigenvalues_im, kblock4_spectral_hash,
                        yoon2_eigenvalues, yoon2_spectral_hash,
