@@ -3,12 +3,19 @@
 These tests actually execute the examples to verify they work.
 """
 
+import os
 import subprocess
 import sys
 
 import pytest
 
 needs_db = pytest.mark.needs_db
+
+# Point the API examples at a closed local port so they fail fast with a
+# connection error instead of making a real (possibly slow/cold) call to the
+# production server. The tests only verify the scripts run without import or
+# syntax errors, not that they can reach a live API.
+_OFFLINE_ENV = {**os.environ, "SMOL_API_URL": "http://127.0.0.1:9"}
 
 
 class TestPythonExamples:
@@ -21,6 +28,7 @@ class TestPythonExamples:
             [sys.executable, "examples/basic_api.py"],
             capture_output=True,
             timeout=10,
+            env=_OFFLINE_ENV,
         )
         # Either exits 0 (server running) or fails with connection error (not import error)
         stderr = result.stderr.decode()
@@ -36,6 +44,7 @@ class TestPythonExamples:
             [sys.executable, "examples/advanced_api.py"],
             capture_output=True,
             timeout=60,  # Advanced example makes many API calls
+            env=_OFFLINE_ENV,
         )
         stderr = result.stderr.decode()
         if result.returncode != 0:

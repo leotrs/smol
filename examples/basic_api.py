@@ -16,11 +16,13 @@ Usage:
 """
 
 import sys
+import os
 from urllib.parse import quote
 
 import requests
 
-BASE_URL = "https://smol-graphs-db.fly.dev"  # Production API (or http://127.0.0.1:8000 for local)
+# Production API by default; override with SMOL_API_URL (e.g. http://127.0.0.1:8000 for local).
+BASE_URL = os.environ.get("SMOL_API_URL", "https://smol-graphs-db.fly.dev")
 
 
 def lookup_graph(graph6: str) -> dict:

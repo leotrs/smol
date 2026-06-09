@@ -13,10 +13,12 @@ Usage:
     python advanced_api.py
 """
 
+import os
 import requests
 from urllib.parse import quote
 
-BASE_URL = "https://smol-graphs-db.fly.dev"  # Production API (or http://127.0.0.1:8000 for local)
+# Production API by default; override with SMOL_API_URL (e.g. http://127.0.0.1:8000 for local).
+BASE_URL = os.environ.get("SMOL_API_URL", "https://smol-graphs-db.fly.dev")
 
 
 def compare_graphs(graph6_list: list[str]) -> dict:
