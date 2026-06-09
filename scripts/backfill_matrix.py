@@ -30,13 +30,20 @@ from db.spectrum import (
 )
 
 
+# When set, store only the spectral hash, not the eigenvalue arrays (NULL).
+# Used to backfill the large-spectrum matrices for n=10 without writing the
+# hundreds of GB of eigenvalue arrays they would otherwise produce.
+HASH_ONLY = os.environ.get("SMOL_HASH_ONLY") == "1"
+
+
 def compute_columns(mt, g6):
     """Return (eigenvalue_column_values, hash) for one graph and matrix type."""
     import numpy as np
 
     G = nx.from_graph6_bytes(g6.encode("ascii"))
     M = mt.builder(G)
-    null = [None] * len(mt.eigenvalue_columns), None
+    n_cols = len(mt.eigenvalue_columns)
+    null = [None] * n_cols, None
     if M is None:  # connected-only matrix on a disconnected graph
         return null
     extra = f"|states={mt.size_fn(G)}" if mt.size_fn else ""
@@ -44,11 +51,17 @@ def compute_columns(mt, g6):
         eigs = compute_complex_eigenvalues(M)
         if mt.null_if_trivial and (eigs.size == 0 or np.allclose(eigs, 0.0)):
             return null
-        return [eigs.real.tolist(), eigs.imag.tolist()], spectral_hash_complex(eigs, extra=extra)
+        h = spectral_hash_complex(eigs, extra=extra)
+        if HASH_ONLY:
+            return [None] * n_cols, h
+        return [eigs.real.tolist(), eigs.imag.tolist()], h
     eigs = compute_real_eigenvalues(M)
     if mt.null_if_trivial and (eigs.size == 0 or np.allclose(eigs, 0.0)):
         return null
-    return [eigs.tolist()], spectral_hash_real(eigs, extra=extra)
+    h = spectral_hash_real(eigs, extra=extra)
+    if HASH_ONLY:
+        return [None] * n_cols, h
+    return [eigs.tolist()], h
 
 
 def main():
