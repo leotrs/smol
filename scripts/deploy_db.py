@@ -151,6 +151,15 @@ def upload_chunks(chunk_dir: Path, manifest: dict, manifest_path: Path, workers:
     chunks = manifest["chunks"]
     remote_dir = f"{REMOTE_DATA_DIR}/chunks"
 
+    # Free the live DB before uploading. The volume (3GB) cannot hold the old DB
+    # (~1.5GB) plus the incoming chunks (~1.5GB) at once, so leaving it in place
+    # makes the last chunks truncate on a full disk. This means brief downtime
+    # during the upload + reassembly, but the size check still guards against
+    # installing an incomplete DB, and a failed run is fixed by re-running
+    # (the chunks land in an empty volume). Only do this for a fresh upload.
+    if all(not c["uploaded"] for c in chunks):
+        run(["fly", "ssh", "console", "-C", f"rm -f {REMOTE_DB_PATH}"], check=False)
+
     # Create remote chunk directory
     run(["fly", "ssh", "console", "-C", f"mkdir -p {remote_dir}"], check=False)
 
@@ -176,8 +185,14 @@ def upload_chunks(chunk_dir: Path, manifest: dict, manifest_path: Path, workers:
         if check_remote_chunk(chunk["name"], remote_dir, chunk["size"]):
             return idx, True, chunk["size"], "exists"
 
-        success = upload_chunk(chunk_path, remote_dir)
-        return idx, success, chunk["size"] if success else 0, "uploaded" if success else "failed"
+        # fly sftp can return success while truncating the file, which then
+        # silently corrupts the reassembled DB. Verify the remote size after
+        # each put and retry a few times before giving up.
+        for _ in range(4):
+            upload_chunk(chunk_path, remote_dir)
+            if check_remote_chunk(chunk["name"], remote_dir, chunk["size"]):
+                return idx, True, chunk["size"], "uploaded"
+        return idx, False, 0, "failed"
 
     with ThreadPoolExecutor(max_workers=workers) as executor:
         futures = {executor.submit(upload_one, ic): ic for ic in pending}
@@ -333,6 +348,15 @@ def main():
 
     # Upload chunks
     upload_chunks(chunk_dir, manifest, manifest_path)
+
+    # Only reassemble once every chunk is verified present at the right size:
+    # reassembly streams-and-deletes the chunks, so running it on an incomplete
+    # set would consume them and produce a short DB.
+    bad = [c["name"] for c in manifest["chunks"] if not c["uploaded"]]
+    if bad:
+        print(f"\n{len(bad)} chunk(s) failed to upload/verify after retries: {bad[:5]}...")
+        print("Re-run to retry (uploaded chunks persist on the volume).")
+        sys.exit(1)
 
     # Reassemble on remote
     reassemble_remote(manifest)
