@@ -24,22 +24,21 @@ from .matrices import (
     distance_matrix,
     distance_laplacian,
     distance_signless_laplacian,
-    kblock3_matrix,
-    kblock4_matrix,
-    kblock3_size,
-    kblock4_size,
     yoon2_matrix,
     yoon3_matrix,
     non3cyc_matrix,
     non4cyc_matrix,
 )
+from .spectrum import kblock_family_signature
 
 
 @dataclass(frozen=True)
 class MatrixType:
     key: str
     name: str
-    builder: Callable[[nx.Graph], Optional[np.ndarray]]
+    # The single-matrix builder, or None for a composite signature type (see
+    # signature_fn below).
+    builder: Optional[Callable[[nx.Graph], Optional[np.ndarray]]]
     is_complex: bool
     connected_only: bool = False
     # When True, an empty or all-zero spectrum is stored as NULL (not hashed),
@@ -49,14 +48,21 @@ class MatrixType:
     # k-blocking operators use this for M_k's size |states(M_k)|, since two
     # graphs can share the D_k B_k spectrum but differ in M_k's kernel.
     size_fn: Optional[Callable[[nx.Graph], int]] = None
+    # When set, this type is a composite, hash-only signature (e.g. the whole
+    # k-blocking family): there is no single matrix or eigenvalue array.
+    # signature_fn(G) returns the 16-char hash directly, or None when trivial,
+    # bypassing the matrix -> eigenvalues -> hash path entirely.
+    signature_fn: Optional[Callable[[nx.Graph], Optional[str]]] = None
 
     @property
     def eigenvalue_columns(self) -> tuple[str, ...]:
         """Database column(s) holding the eigenvalues for this matrix type.
 
-        Complex spectra are split into real and imaginary parts; real spectra
-        use a single column.
+        Signature-only types store no eigenvalues. Complex spectra are split
+        into real and imaginary parts; real spectra use a single column.
         """
+        if self.signature_fn is not None:
+            return ()
         if self.is_complex:
             return (f"{self.key}_eigenvalues_re", f"{self.key}_eigenvalues_im")
         return (f"{self.key}_eigenvalues",)
@@ -79,8 +85,7 @@ MATRIX_TYPES: dict[str, MatrixType] = {
         MatrixType("dist", "Distance", distance_matrix, is_complex=False, connected_only=True),
         MatrixType("distlap", "Distance Laplacian", distance_laplacian, is_complex=False, connected_only=True),
         MatrixType("distsign", "Distance Signless Laplacian", distance_signless_laplacian, is_complex=False, connected_only=True),
-        MatrixType("kblock3", "3-blocking operator", kblock3_matrix, is_complex=True, null_if_trivial=True, size_fn=kblock3_size),
-        MatrixType("kblock4", "4-blocking operator", kblock4_matrix, is_complex=True, null_if_trivial=True, size_fn=kblock4_size),
+        MatrixType("kblock_family", "k-blocking family", builder=None, is_complex=False, signature_fn=kblock_family_signature),
         MatrixType("yoon2", "Yoon 2-Laplacian", yoon2_matrix, is_complex=False),
         MatrixType("yoon3", "Yoon 3-Laplacian", yoon3_matrix, is_complex=False),
         MatrixType("non3cyc", "Non-3-cycling matrix", non3cyc_matrix, is_complex=True, null_if_trivial=True),
@@ -97,17 +102,28 @@ MATRIX_KEYS: tuple[str, ...] = tuple(MATRIX_TYPES)
 # so it is unaffected; the spectrum can still be recomputed from graph6 on
 # demand. Eigenvalue-array features (plot, CSV, /similar) are not offered for
 # these in the deployed app.
-HASH_ONLY_KEYS: tuple[str, ...] = ("kblock3", "kblock4", "non3cyc", "non4cyc")
+HASH_ONLY_KEYS: tuple[str, ...] = ("non3cyc", "non4cyc")
 
 
 def real_keys() -> tuple[str, ...]:
-    """Keys of matrix types with a real spectrum, in canonical order."""
-    return tuple(k for k, m in MATRIX_TYPES.items() if not m.is_complex)
+    """Keys of real-spectrum matrix types (excluding signature types)."""
+    return tuple(
+        k for k, m in MATRIX_TYPES.items()
+        if m.signature_fn is None and not m.is_complex
+    )
 
 
 def complex_keys() -> tuple[str, ...]:
-    """Keys of matrix types with a complex spectrum, in canonical order."""
-    return tuple(k for k, m in MATRIX_TYPES.items() if m.is_complex)
+    """Keys of complex-spectrum matrix types (excluding signature types)."""
+    return tuple(
+        k for k, m in MATRIX_TYPES.items()
+        if m.signature_fn is None and m.is_complex
+    )
+
+
+def signature_keys() -> tuple[str, ...]:
+    """Keys of composite, hash-only signature types (no eigenvalue arrays)."""
+    return tuple(k for k, m in MATRIX_TYPES.items() if m.signature_fn is not None)
 
 
 def is_valid(key: str) -> bool:

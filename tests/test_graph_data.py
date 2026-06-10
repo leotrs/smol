@@ -128,7 +128,7 @@ def test_to_db_tuple():
 
     assert isinstance(tup, tuple)
     # Value order/length must match the shared INSERT column list exactly.
-    assert len(tup) == len(INSERT_COLUMNS) == 48
+    assert len(tup) == len(INSERT_COLUMNS) == 43
     assert tup[0] == 3  # n
     assert tup[1] == 2  # m
 
@@ -153,10 +153,13 @@ def test_process_graph_nilpotent_matrices_are_null():
     G = nx.path_graph(6)
     g6 = nx.to_graph6_bytes(G, header=False).decode("ascii").strip()
     rec = process_graph(G, g6)
-    assert rec.kblock3_spectral_hash is None
-    assert rec.kblock4_spectral_hash is None
+    # A forest has an empty 2-core, so the whole k-blocking family is trivial.
+    assert rec.kblock_family_spectral_hash is None
     assert rec.non3cyc_spectral_hash is None
     assert rec.non4cyc_spectral_hash is None
+    # The standalone blocking columns no longer exist on the record.
+    assert not hasattr(rec, "kblock3_spectral_hash")
+    assert not hasattr(rec, "kblock4_spectral_hash")
     # Always-defined matrices remain populated.
     assert rec.adj_spectral_hash is not None
     assert rec.nb_spectral_hash is not None
@@ -167,7 +170,7 @@ def test_process_graph_populates_cyclic_matrices():
     G = nx.complete_graph(5)
     g6 = nx.to_graph6_bytes(G, header=False).decode("ascii").strip()
     rec = process_graph(G, g6)
-    for h in [rec.kblock3_spectral_hash, rec.kblock4_spectral_hash,
+    for h in [rec.kblock_family_spectral_hash,
               rec.non3cyc_spectral_hash, rec.non4cyc_spectral_hash,
               rec.yoon2_spectral_hash, rec.yoon3_spectral_hash]:
         assert h is not None and len(h) == 16

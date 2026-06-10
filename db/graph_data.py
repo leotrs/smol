@@ -15,10 +15,6 @@ from .matrices import (
     distance_matrix,
     distance_laplacian,
     distance_signless_laplacian,
-    kblock3_matrix,
-    kblock4_matrix,
-    kblock3_size,
-    kblock4_size,
     yoon2_matrix,
     yoon3_matrix,
     non3cyc_matrix,
@@ -29,6 +25,7 @@ from .spectrum import (
     compute_complex_eigenvalues,
     spectral_hash_real,
     spectral_hash_complex,
+    kblock_family_signature,
 )
 from .metadata import compute_metadata
 
@@ -84,8 +81,7 @@ INSERT_COLUMNS = (
     "dist_eigenvalues", "dist_spectral_hash",
     "distlap_eigenvalues", "distlap_spectral_hash",
     "distsign_eigenvalues", "distsign_spectral_hash",
-    "kblock3_eigenvalues_re", "kblock3_eigenvalues_im", "kblock3_spectral_hash",
-    "kblock4_eigenvalues_re", "kblock4_eigenvalues_im", "kblock4_spectral_hash",
+    "kblock_family_spectral_hash",
     "yoon2_eigenvalues", "yoon2_spectral_hash",
     "yoon3_eigenvalues", "yoon3_spectral_hash",
     "non3cyc_eigenvalues_re", "non3cyc_eigenvalues_im", "non3cyc_spectral_hash",
@@ -140,13 +136,9 @@ class GraphRecord:
     distsign_eigenvalues: np.ndarray | None
     distsign_spectral_hash: str | None
 
-    # k-blocking spectra (complex; None when the cycle core is empty/trivial)
-    kblock3_eigenvalues_re: np.ndarray | None
-    kblock3_eigenvalues_im: np.ndarray | None
-    kblock3_spectral_hash: str | None
-    kblock4_eigenvalues_re: np.ndarray | None
-    kblock4_eigenvalues_im: np.ndarray | None
-    kblock4_spectral_hash: str | None
+    # k-blocking family: one composite hash over {M_k : k=2..Delta}, None for
+    # forests (empty 2-core). No eigenvalue arrays (it is a multi-matrix signature).
+    kblock_family_spectral_hash: str | None
 
     # Yoon m-Laplacian spectra (real; None when n <= m)
     yoon2_eigenvalues: np.ndarray | None
@@ -199,12 +191,7 @@ class GraphRecord:
             self.distlap_spectral_hash,
             self.distsign_eigenvalues.tolist() if self.distsign_eigenvalues is not None else None,
             self.distsign_spectral_hash,
-            self.kblock3_eigenvalues_re.tolist() if self.kblock3_eigenvalues_re is not None else None,
-            self.kblock3_eigenvalues_im.tolist() if self.kblock3_eigenvalues_im is not None else None,
-            self.kblock3_spectral_hash,
-            self.kblock4_eigenvalues_re.tolist() if self.kblock4_eigenvalues_re is not None else None,
-            self.kblock4_eigenvalues_im.tolist() if self.kblock4_eigenvalues_im is not None else None,
-            self.kblock4_spectral_hash,
+            self.kblock_family_spectral_hash,
             self.yoon2_eigenvalues.tolist() if self.yoon2_eigenvalues is not None else None,
             self.yoon2_spectral_hash,
             self.yoon3_eigenvalues.tolist() if self.yoon3_eigenvalues is not None else None,
@@ -276,17 +263,15 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
         distlap_eigs = distlap_hash = None
         distsign_eigs = distsign_hash = None
 
-    # The k-blocking and non-cycling matrices are ~1000x slower per graph than
-    # all the others combined (large De Bruijn-style operators), so at n=10
-    # scale they are skipped during generation and can be backfilled later.
+    # The k-blocking family and non-cycling matrices are far slower per graph
+    # than all the others combined, so at n=10 scale they are skipped during
+    # generation and backfilled later.
     if SKIP_EXPENSIVE:
-        kb3_re = kb3_im = kb3_hash = None
-        kb4_re = kb4_im = kb4_hash = None
+        kblock_family_hash = None
         n3_re = n3_im = n3_hash = None
         n4_re = n4_im = n4_hash = None
     else:
-        kb3_re, kb3_im, kb3_hash = _complex_spectrum_or_none(kblock3_matrix(G), size=kblock3_size(G))
-        kb4_re, kb4_im, kb4_hash = _complex_spectrum_or_none(kblock4_matrix(G), size=kblock4_size(G))
+        kblock_family_hash = kblock_family_signature(G)
         n3_re, n3_im, n3_hash = _complex_spectrum_or_none(non3cyc_matrix(G))
         n4_re, n4_im, n4_hash = _complex_spectrum_or_none(non4cyc_matrix(G))
 
@@ -320,12 +305,7 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
         distlap_spectral_hash=distlap_hash,
         distsign_eigenvalues=distsign_eigs,
         distsign_spectral_hash=distsign_hash,
-        kblock3_eigenvalues_re=kb3_re,
-        kblock3_eigenvalues_im=kb3_im,
-        kblock3_spectral_hash=kb3_hash,
-        kblock4_eigenvalues_re=kb4_re,
-        kblock4_eigenvalues_im=kb4_im,
-        kblock4_spectral_hash=kb4_hash,
+        kblock_family_spectral_hash=kblock_family_hash,
         yoon2_eigenvalues=yoon2_eigs,
         yoon2_spectral_hash=yoon2_hash,
         yoon3_eigenvalues=yoon3_eigs,

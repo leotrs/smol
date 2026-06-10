@@ -23,9 +23,9 @@ sys.path.insert(0, str(__file__).rsplit("/", 2)[0])
 from db.database import connect
 from db.matrix_types import MATRIX_KEYS
 
-# Some matrices have graph-level cospectrality that explodes (e.g. kblock4 at
-# larger n). Cap which n get materialized into cospectral_mates for those.
-MAX_COSPECTRAL_N = {"kblock4": 8}
+# Per-matrix caps on which n get materialized into cospectral_mates, for any
+# matrix whose graph-level cospectrality would explode. None currently needed.
+MAX_COSPECTRAL_N: dict[str, int] = {}
 
 
 def compute_for_matrix(conn, matrix: str, n_filter: int | None = None):

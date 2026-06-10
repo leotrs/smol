@@ -32,7 +32,7 @@ from .models import (
     CompareResult,
 )
 from .routes import mechanisms
-from db.matrix_types import MATRIX_KEYS, real_keys, HASH_ONLY_KEYS
+from db.matrix_types import MATRIX_KEYS, real_keys, signature_keys, HASH_ONLY_KEYS
 
 logging.basicConfig(
     level=logging.INFO,
@@ -150,12 +150,7 @@ def row_to_graph_full(row: dict, mates: dict[str, list[str]]) -> GraphFull:
             distlap_hash=row["distlap_spectral_hash"],
             distsign_eigenvalues=row["distsign_eigenvalues"],
             distsign_hash=row["distsign_spectral_hash"],
-            kblock3_eigenvalues_re=row["kblock3_eigenvalues_re"],
-            kblock3_eigenvalues_im=row["kblock3_eigenvalues_im"],
-            kblock3_hash=row["kblock3_spectral_hash"],
-            kblock4_eigenvalues_re=row["kblock4_eigenvalues_re"],
-            kblock4_eigenvalues_im=row["kblock4_eigenvalues_im"],
-            kblock4_hash=row["kblock4_spectral_hash"],
+            kblock_family_hash=row["kblock_family_spectral_hash"],
             yoon2_eigenvalues=row["yoon2_eigenvalues"],
             yoon2_hash=row["yoon2_spectral_hash"],
             yoon3_eigenvalues=row["yoon3_eigenvalues"],
@@ -231,8 +226,7 @@ async def get_graph_by_id(graph6: str, request: Request):
         "dist": row["dist_spectral_hash"] or "",
         "distlap": row["distlap_spectral_hash"] or "",
         "distsign": row["distsign_spectral_hash"] or "",
-        "kblock3": row["kblock3_spectral_hash"] or "",
-        "kblock4": row["kblock4_spectral_hash"] or "",
+        "kblock_family": row["kblock_family_spectral_hash"] or "",
         "yoon2": row["yoon2_spectral_hash"] or "",
         "yoon3": row["yoon3_spectral_hash"] or "",
         "non3cyc": row["non3cyc_spectral_hash"] or "",
@@ -402,8 +396,7 @@ async def search_graphs(
             "dist": row["dist_spectral_hash"] or "",
             "distlap": row["distlap_spectral_hash"] or "",
             "distsign": row["distsign_spectral_hash"] or "",
-            "kblock3": row["kblock3_spectral_hash"] or "",
-            "kblock4": row["kblock4_spectral_hash"] or "",
+            "kblock_family": row["kblock_family_spectral_hash"] or "",
             "yoon2": row["yoon2_spectral_hash"] or "",
             "yoon3": row["yoon3_spectral_hash"] or "",
             "non3cyc": row["non3cyc_spectral_hash"] or "",
@@ -704,8 +697,7 @@ async def compare_graphs(
             "dist": row["dist_spectral_hash"] or "",
             "distlap": row["distlap_spectral_hash"] or "",
             "distsign": row["distsign_spectral_hash"] or "",
-            "kblock3": row["kblock3_spectral_hash"] or "",
-            "kblock4": row["kblock4_spectral_hash"] or "",
+            "kblock_family": row["kblock_family_spectral_hash"] or "",
             "yoon2": row["yoon2_spectral_hash"] or "",
             "yoon3": row["yoon3_spectral_hash"] or "",
             "non3cyc": row["non3cyc_spectral_hash"] or "",
@@ -731,6 +723,8 @@ async def compare_graphs(
 
         comparison = {}
         for matrix in MATRIX_KEYS:
+            if matrix in signature_keys():
+                continue  # composite hash-only invariant: no spectrum to compare
             if matrix in real_keys():
                 # 1D Wasserstein for real eigenvalues
                 eigs1 = g1_row[f"{matrix}_eigenvalues"]
@@ -774,6 +768,8 @@ async def compare_graphs(
 
         distance_matrix_data = {}
         for matrix in MATRIX_KEYS:
+            if matrix in signature_keys():
+                continue  # composite hash-only invariant: no spectrum to compare
             dist_matrix = [[0.0 for _ in range(n)] for _ in range(n)]
 
             for i in range(n):
@@ -923,7 +919,7 @@ async def similar_graphs(
 
     if matrix not in MATRIX_KEYS:
         raise HTTPException(status_code=400, detail="Invalid matrix type")
-    if matrix in HASH_ONLY_KEYS:
+    if matrix in HASH_ONLY_KEYS or matrix in signature_keys():
         raise HTTPException(
             status_code=400,
             detail="Spectral similarity is not available for this matrix "

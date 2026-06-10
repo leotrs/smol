@@ -334,3 +334,50 @@ def test_spectral_hash_extra_tag():
     # The tag distinguishes even empty spectra.
     empty = np.array([], dtype=np.float64)
     assert spectral_hash_complex(empty, extra="a") != spectral_hash_complex(empty, extra="b")
+
+
+def test_kblock_family_forest_is_none():
+    """A forest has an empty 2-core, so the whole k-blocking family is trivial."""
+    from db.spectrum import kblock_family_signature
+    assert kblock_family_signature(nx.path_graph(5)) is None
+    assert kblock_family_signature(nx.star_graph(5)) is None
+
+
+def test_kblock_family_cyclic_is_16char_hash():
+    from db.spectrum import kblock_family_signature
+    h = kblock_family_signature(nx.complete_graph(5))
+    assert isinstance(h, str) and len(h) == 16
+
+
+def test_kblock_family_reproducible():
+    from db.spectrum import kblock_family_signature
+    G = nx.complete_graph(6)
+    assert kblock_family_signature(G) == kblock_family_signature(G.copy())
+
+
+def test_kblock_family_does_not_encode_max_degree():
+    """Two graphs whose non-trivial families coincide must hash equally even if
+    their max degrees differ (no trailing-NULL padding up to Delta)."""
+    from db.spectrum import kblock_family_signature
+    C5 = nx.cycle_graph(5)               # 2-regular: family stops at k=2
+    # Attach a pendant path to one vertex: raises max degree but adds no cyclic
+    # core above k=2, and (being 2-regular at the core) leaves M_2 unchanged.
+    G = nx.cycle_graph(5)
+    G.add_edges_from([(0, 5), (5, 6)])
+    assert kblock_family_signature(C5) == kblock_family_signature(G)
+
+
+def test_kblock_family_groups_known_family_cospectral_pair():
+    """H?`DBjw and H?`DUbs: non-isomorphic but share the entire k-blocking
+    family (verified by exact char-polys), so they get the same family hash."""
+    from db.spectrum import kblock_family_signature
+    g1 = nx.from_graph6_bytes(b"H?`DBjw")
+    g2 = nx.from_graph6_bytes(b"H?`DUbs")
+    assert not nx.is_isomorphic(g1, g2)
+    assert kblock_family_signature(g1) == kblock_family_signature(g2)
+
+
+def test_kblock_family_separates_blocking_distinguishable_pair():
+    """K5 and the 5-cycle have different families and must hash differently."""
+    from db.spectrum import kblock_family_signature
+    assert kblock_family_signature(nx.complete_graph(5)) != kblock_family_signature(nx.cycle_graph(5))

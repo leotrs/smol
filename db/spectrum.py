@@ -211,3 +211,31 @@ def spectral_hash_complex(eigenvalues: np.ndarray, extra: str = "") -> str:
         for r, i in zip(half.real, half.imag)
     ) + extra
     return hashlib.sha256(canonical.encode()).hexdigest()[:16]
+
+
+def kblock_family_signature(graph) -> str | None:
+    """Hash of the faithful k-blocking family {M_k : k = 2 .. Delta}.
+
+    Each member contributes its own M_k hash (the D_k B_k spectrum with
+    |states(M_k)| folded in, exactly the per-matrix kblock hash). We iterate up
+    from k = 2 and stop at the first empty cycle core: the degree->=k subgraphs
+    are nested, so once H_k is a forest every larger H_k is too. Only the
+    non-trivial members enter the hash, so the result depends on the actual
+    family, not on the max degree (no trailing-NULL padding).
+
+    Returns None for a forest (empty 2-core), so acyclic graphs are not grouped.
+    """
+    from .matrices import cycle_core, kblocking_matrix, kblocking_size
+
+    parts = []
+    k = 2
+    while cycle_core(graph, k).number_of_edges() > 0:
+        member = spectral_hash_complex(
+            compute_complex_eigenvalues(kblocking_matrix(graph, k)),
+            extra=f"|states={kblocking_size(graph, k)}",
+        )
+        parts.append(f"k{k}={member}")
+        k += 1
+    if not parts:
+        return None
+    return hashlib.sha256("|".join(parts).encode()).hexdigest()[:16]

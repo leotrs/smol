@@ -11,6 +11,10 @@ import psycopg2
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from db.matrix_types import MATRIX_KEYS
 
+# The stats describe the deployed database (n <= 9). n=10 lives locally only
+# (for research) and must not leak into the totals / per-n / distributions.
+MAX_N = int(os.environ.get("SMOL_STATS_MAX_N", "9"))
+
 
 def get_conn():
     return psycopg2.connect(os.environ.get("DATABASE_URL", "dbname=smol"))
@@ -20,30 +24,24 @@ def compute_stats(conn) -> dict:
     """Compute all stats (slow - runs aggregation queries)."""
     cur = conn.cursor()
 
-    # Total counts
-    cur.execute("SELECT COUNT(*) FROM graphs")
+    # Total counts (deployed range only)
+    cur.execute("SELECT COUNT(*) FROM graphs WHERE n <= %s", (MAX_N,))
     total = cur.fetchone()[0]
 
-    cur.execute("SELECT COUNT(*) FROM graphs WHERE diameter IS NOT NULL")
+    cur.execute("SELECT COUNT(*) FROM graphs WHERE diameter IS NOT NULL AND n <= %s", (MAX_N,))
     connected = cur.fetchone()[0]
 
     # Counts by n
     cur.execute(
-        """
-        SELECT n, COUNT(*) FROM graphs
-        WHERE diameter IS NOT NULL
-        GROUP BY n ORDER BY n
-        """
+        "SELECT n, COUNT(*) FROM graphs WHERE diameter IS NOT NULL AND n <= %s GROUP BY n ORDER BY n",
+        (MAX_N,),
     )
     counts_by_n = {str(r[0]): r[1] for r in cur.fetchall()}
 
     # Counts by n for min_degree >= 2
     cur.execute(
-        """
-        SELECT n, COUNT(*) FROM graphs
-        WHERE diameter IS NOT NULL AND min_degree >= 2
-        GROUP BY n ORDER BY n
-        """
+        "SELECT n, COUNT(*) FROM graphs WHERE diameter IS NOT NULL AND min_degree >= 2 AND n <= %s GROUP BY n ORDER BY n",
+        (MAX_N,),
     )
     counts_by_n_mindeg2 = {str(r[0]): r[1] for r in cur.fetchall()}
 
@@ -90,10 +88,10 @@ def compute_stats(conn) -> dict:
 
     # Tag counts
     cur.execute(
-        """
+        f"""
         SELECT tag, COUNT(*) as count
         FROM graphs, unnest(tags) as tag
-        WHERE tags IS NOT NULL
+        WHERE tags IS NOT NULL AND n <= {MAX_N}
         GROUP BY tag
         ORDER BY count DESC
         """
@@ -140,21 +138,22 @@ def compute_stats(conn) -> dict:
                 "total_graphs": totals.get(n, 0),
                 "mechanisms": {}
             }
-        total = totals.get(n, 0)
+        n_total = totals.get(n, 0)
         mechanism_stats[str(n)]["mechanisms"][mech_type] = {
             "graphs": graph_count,
             "pairs": pair_count,
-            "coverage": graph_count / total if total > 0 else 0
+            "coverage": graph_count / n_total if n_total > 0 else 0
         }
 
     # Network property computation progress
     cur.execute(
-        """
+        f"""
         SELECT
             COUNT(*) as total,
             COUNT(clique_number) as has_clique,
             COUNT(global_clustering) as has_clustering
         FROM graphs
+        WHERE n <= {MAX_N}
         """
     )
     row = cur.fetchone()
@@ -179,7 +178,7 @@ def compute_stats(conn) -> dict:
                     MAX({col})::float,
                     AVG({col})::float
                 FROM graphs
-                WHERE {col} IS NOT NULL
+                WHERE {col} IS NOT NULL AND n <= {MAX_N}
                 """
             )
             r = cur.fetchone()
@@ -206,7 +205,7 @@ def compute_stats(conn) -> dict:
             f"""
             SELECT {col}, COUNT(*) as count
             FROM graphs
-            WHERE {col} IS NOT NULL
+            WHERE {col} IS NOT NULL AND n <= {MAX_N}
             GROUP BY {col}
             ORDER BY {col}
             """

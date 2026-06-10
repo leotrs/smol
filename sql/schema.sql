@@ -115,7 +115,7 @@ CREATE TABLE IF NOT EXISTS cospectral_mates (
     id              BIGSERIAL PRIMARY KEY,
     graph1_id       BIGINT NOT NULL REFERENCES graphs(id),
     graph2_id       BIGINT NOT NULL REFERENCES graphs(id),
-    matrix_type     VARCHAR(10) NOT NULL CHECK (matrix_type IN ('adj', 'kirchhoff', 'signless', 'lap', 'nb', 'nbl')),
+    matrix_type     VARCHAR(20) NOT NULL CHECK (matrix_type IN ('adj', 'kirchhoff', 'signless', 'lap', 'nb', 'nbl')),
 
     CONSTRAINT graph_order CHECK (graph1_id < graph2_id),
     UNIQUE (graph1_id, graph2_id, matrix_type)

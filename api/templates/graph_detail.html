@@ -79,12 +79,6 @@ const spectraData = {
         re: re,
         im: {{ graph.spectra.nbl_eigenvalues_im | tojson }}[i]
     })),
-    kblock3: ({{ graph.spectra.kblock3_eigenvalues_re | tojson }} || []).map((re, i) => ({
-        re: re, im: ({{ graph.spectra.kblock3_eigenvalues_im | tojson }} || [])[i]
-    })),
-    kblock4: ({{ graph.spectra.kblock4_eigenvalues_re | tojson }} || []).map((re, i) => ({
-        re: re, im: ({{ graph.spectra.kblock4_eigenvalues_im | tojson }} || [])[i]
-    })),
     non3cyc: ({{ graph.spectra.non3cyc_eigenvalues_re | tojson }} || []).map((re, i) => ({
         re: re, im: ({{ graph.spectra.non3cyc_eigenvalues_im | tojson }} || [])[i]
     })),
@@ -274,15 +268,13 @@ function renderGraphDetailComplexPlot() {
     const plotData = {
         nb: withConjugates(spectraData.nb),
         nbl: withConjugates(spectraData.nbl),
-        kblock3: withConjugates(spectraData.kblock3),
-        kblock4: withConjugates(spectraData.kblock4),
         non3cyc: withConjugates(spectraData.non3cyc),
         non4cyc: withConjugates(spectraData.non4cyc)
     };
 
-    // k-blocking and non-cycling lanes only appear when their spectrum is non-trivial.
+    // Non-cycling lanes only appear when their spectrum is non-trivial.
     const complexMatrices = ['nb', 'nbl'].concat(
-        ['kblock3', 'kblock4', 'non3cyc', 'non4cyc'].filter(m => spectraData[m].length > 0)
+        ['non3cyc', 'non4cyc'].filter(m => spectraData[m].length > 0)
     );
 
     const allPoints = [];
@@ -408,13 +400,11 @@ function renderGraphDetailComplexPlot() {
     const colors = {
         nb: style.getPropertyValue('--spectrum-nb').trim(),
         nbl: style.getPropertyValue('--spectrum-nbl').trim(),
-        kblock3: style.getPropertyValue('--spectrum-kblock3').trim() || '#B45309',
-        kblock4: style.getPropertyValue('--spectrum-kblock4').trim() || '#1D4ED8',
         non3cyc: style.getPropertyValue('--spectrum-non3cyc').trim() || '#9333EA',
         non4cyc: style.getPropertyValue('--spectrum-non4cyc').trim() || '#C2410C'
     };
 
-    const labels = {nb: 'nb', nbl: 'nbl', kblock3: 'kb3', kblock4: 'kb4', non3cyc: 'n3c', non4cyc: 'n4c'};
+    const labels = {nb: 'nb', nbl: 'nbl', non3cyc: 'n3c', non4cyc: 'n4c'};
 
     function formatEig(d) {
         const re = d.re.toFixed(4);
@@ -665,7 +655,7 @@ function renderGraph() {
 <details open>
     <summary><h3>Cospectral Mates</h3></summary>
     <p style="margin: 0 0 0.75rem 0; color: var(--pico-muted-color);">Graphs with the same spectrum</p>
-    {% if graph.cospectral_mates.adj or graph.cospectral_mates.kirchhoff or graph.cospectral_mates.signless or graph.cospectral_mates.lap or graph.cospectral_mates.nb or graph.cospectral_mates.nbl or graph.cospectral_mates.dist or graph.cospectral_mates.distlap or graph.cospectral_mates.distsign or graph.cospectral_mates.kblock3 or graph.cospectral_mates.kblock4 or graph.cospectral_mates.yoon2 or graph.cospectral_mates.yoon3 or graph.cospectral_mates.non3cyc or graph.cospectral_mates.non4cyc %}
+    {% if graph.cospectral_mates.adj or graph.cospectral_mates.kirchhoff or graph.cospectral_mates.signless or graph.cospectral_mates.lap or graph.cospectral_mates.nb or graph.cospectral_mates.nbl or graph.cospectral_mates.dist or graph.cospectral_mates.distlap or graph.cospectral_mates.distsign or graph.cospectral_mates.kblock_family or graph.cospectral_mates.yoon2 or graph.cospectral_mates.yoon3 or graph.cospectral_mates.non3cyc or graph.cospectral_mates.non4cyc %}
     <table>
         <thead>
             <tr>
@@ -821,7 +811,7 @@ function renderGraph() {
                 </td>
             </tr>
             {% endif %}
-            {% for mt, mt_name in [('distlap', 'Distance Laplacian'), ('distsign', 'Distance Signless Laplacian'), ('kblock3', '3-blocking operator'), ('kblock4', '4-blocking operator'), ('yoon2', 'Yoon 2-Laplacian'), ('yoon3', 'Yoon 3-Laplacian'), ('non3cyc', 'Non-3-cycling matrix'), ('non4cyc', 'Non-4-cycling matrix')] %}
+            {% for mt, mt_name in [('distlap', 'Distance Laplacian'), ('distsign', 'Distance Signless Laplacian'), ('kblock_family', 'k-blocking family'), ('yoon2', 'Yoon 2-Laplacian'), ('yoon3', 'Yoon 3-Laplacian'), ('non3cyc', 'Non-3-cycling matrix'), ('non4cyc', 'Non-4-cycling matrix')] %}
             {% set mates = graph.cospectral_mates[mt] %}
             {% if mates %}
             <tr>
@@ -864,8 +854,6 @@ function renderGraph() {
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'lap')">Laplacian</button>
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'nb')">NB</button>
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'nbl')">NBL</button>
-        <button class="code-tab-btn" onclick="switchCodeTab(event, 'kblock3')">3-block</button>
-        <button class="code-tab-btn" onclick="switchCodeTab(event, 'kblock4')">4-block</button>
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'yoon2')">Yoon-2</button>
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'yoon3')">Yoon-3</button>
         <button class="code-tab-btn" onclick="switchCodeTab(event, 'non3cyc')">Non-3-cyc</button>
@@ -1065,28 +1053,6 @@ print(eigenvalues)</code></pre>
     {% endif %}
 
 
-    {% for kb, kk in [('kblock3', 3), ('kblock4', 4)] %}
-    <div id="code-{{ kb }}" class="code-tab-content">
-        <div class="code-block">
-            <span class="code-lang-label">Python</span>
-            <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy to clipboard">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            </button>
-<pre><code class="language-python">import networkx as nx
-import numpy as np
-from math import comb
-
-G = nx.from_graph6_bytes(b"{{ graph.graph6 }}")
-k = {{ kk }}
-# Cycle core H_k = 2-core of the subgraph on vertices with degree >= k
-Gk = G.subgraph([v for v in G if G.degree(v) >= k])
-Hk = nx.k_core(Gk, 2)
-# Spectrum of the k-blocking operator = spectrum of D_k @ B_k on H_k,
-# where B_k is the non-backtracking matrix and D_k[(u,v)] = C(d_G(v)-2, k-2).
-# (empty cycle core => no k-blocking spectrum)</code></pre>
-        </div>
-    </div>
-    {% endfor %}
 
     {% for ym in [2, 3] %}
     <div id="code-yoon{{ ym }}" class="code-tab-content">
@@ -1236,18 +1202,6 @@ function copyCode(btn) {
     <button class="outline" onclick="downloadEigenvaluesCSV('distsign')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Dist Signless
-    </button>
-    {% endif %}
-    {% if graph.spectra.kblock3_eigenvalues_re %}
-    <button class="outline" onclick="downloadEigenvaluesCSV('kblock3')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        3-block
-    </button>
-    {% endif %}
-    {% if graph.spectra.kblock4_eigenvalues_re %}
-    <button class="outline" onclick="downloadEigenvaluesCSV('kblock4')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        4-block
     </button>
     {% endif %}
     {% if graph.spectra.yoon2_hash %}
@@ -1432,15 +1386,6 @@ function downloadEigenvaluesCSV(matrixType) {
         eigenvalues = graphData.spectra[`${matrixType}_eigenvalues`];
         filename = `${graphData.graph6}_${matrixType}_eigenvalues.csv`;
         header = `# Yoon ${m}-Laplacian eigenvalues`;
-    } else if (matrixType === 'kblock3' || matrixType === 'kblock4') {
-        const k = matrixType === 'kblock3' ? 3 : 4;
-        const re = graphData.spectra[`${matrixType}_eigenvalues_re`] || [];
-        const im = graphData.spectra[`${matrixType}_eigenvalues_im`] || [];
-        const lines = ['real,imaginary'];
-        for (let i = 0; i < re.length; i++) lines.push(`${re[i]},${im[i]}`);
-        const content = `# ${k}-blocking operator eigenvalues\n# ${graphData.graph6}\n` + lines.join('\n');
-        downloadFile(content, `${graphData.graph6}_${matrixType}_eigenvalues.csv`, 'text/csv');
-        return;
     } else if (matrixType === 'non3cyc' || matrixType === 'non4cyc') {
         const k = matrixType === 'non3cyc' ? 3 : 4;
         const re = graphData.spectra[`${matrixType}_eigenvalues_re`] || [];

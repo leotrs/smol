@@ -41,6 +41,10 @@ def compute_columns(mt, g6):
     import numpy as np
 
     G = nx.from_graph6_bytes(g6.encode("ascii"))
+    # Composite, hash-only signature types (e.g. the k-blocking family) have no
+    # single matrix or eigenvalue arrays: just compute the hash directly.
+    if mt.signature_fn is not None:
+        return [], mt.signature_fn(G)
     M = mt.builder(G)
     n_cols = len(mt.eigenvalue_columns)
     null = [None] * n_cols, None
