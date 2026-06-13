@@ -308,6 +308,10 @@ def main():
                         help="Skip PostgreSQL export (use existing smol.db)")
     parser.add_argument("--sqlite-path", type=str, default="smol.db",
                         help="Path to SQLite file (default: smol.db)")
+    parser.add_argument("--workers", type=int, default=2,
+                        help="Concurrent sftp uploads (default: 2). The 256MB "
+                        "machine OOMs on too many simultaneous 50MB puts, which "
+                        "shows up as chunks failing at 0.0 MB/s; drop to 1 then.")
     args = parser.parse_args()
 
     sqlite_path = Path(args.sqlite_path)
@@ -347,7 +351,7 @@ def main():
         save_manifest(manifest_path, manifest)
 
     # Upload chunks
-    upload_chunks(chunk_dir, manifest, manifest_path)
+    upload_chunks(chunk_dir, manifest, manifest_path, workers=args.workers)
 
     # Only reassemble once every chunk is verified present at the right size:
     # reassembly streams-and-deletes the chunks, so running it on an incomplete
