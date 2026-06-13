@@ -41,6 +41,10 @@ CREATE TABLE IF NOT EXISTS graphs (
     distlap_spectral_hash  TEXT,
     distsign_eigenvalues   TEXT,
     distsign_spectral_hash TEXT,
+    distnorm_eigenvalues   TEXT,
+    distnorm_spectral_hash TEXT,
+    ecc_eigenvalues        TEXT,
+    ecc_spectral_hash      TEXT,
 
     -- k-blocking family: one composite hash over {M_k : k=2..Delta} (NULL for
     -- forests). A multi-matrix signature, so no eigenvalue arrays.
@@ -120,6 +124,10 @@ CREATE INDEX IF NOT EXISTS idx_graphs_distlap_hash ON graphs(distlap_spectral_ha
 CREATE INDEX IF NOT EXISTS idx_n_distlap_hash ON graphs(n, distlap_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_graphs_distsign_hash ON graphs(distsign_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_distsign_hash ON graphs(n, distsign_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_graphs_distnorm_hash ON graphs(distnorm_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_n_distnorm_hash ON graphs(n, distnorm_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_graphs_ecc_hash ON graphs(ecc_spectral_hash);
+CREATE INDEX IF NOT EXISTS idx_n_ecc_hash ON graphs(n, ecc_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_graphs_kblock_family_hash ON graphs(kblock_family_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_kblock_family_hash ON graphs(n, kblock_family_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_graphs_yoon2_hash ON graphs(yoon2_spectral_hash);
@@ -142,7 +150,7 @@ CREATE TABLE IF NOT EXISTS cospectral_mates (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     graph1_id   INTEGER NOT NULL REFERENCES graphs(id),
     graph2_id   INTEGER NOT NULL REFERENCES graphs(id),
-    matrix_type TEXT NOT NULL CHECK (matrix_type IN ('adj', 'kirchhoff', 'signless', 'lap', 'nb', 'nbl', 'dist', 'distlap', 'distsign', 'kblock_family', 'yoon2', 'yoon3', 'non3cyc', 'non4cyc')),
+    matrix_type TEXT NOT NULL CHECK (matrix_type IN ('adj', 'kirchhoff', 'signless', 'lap', 'nb', 'nbl', 'dist', 'distlap', 'distsign', 'distnorm', 'ecc', 'kblock_family', 'yoon2', 'yoon3', 'non3cyc', 'non4cyc')),
     UNIQUE (graph1_id, graph2_id, matrix_type),
     CHECK (graph1_id < graph2_id)
 );

@@ -161,6 +161,24 @@
             $D_Q = \mathrm{Tr} + D$, the signless counterpart of the distance Laplacian. Real symmetric.
             Only defined for connected graphs.
         </dd>
+
+        <dt id="distnorm"><strong>Normalized distance Laplacian</strong></dt>
+        <dd>
+            $\mathcal{D}^{\mathcal{L}} = I - \mathrm{Tr}^{-1/2} D\, \mathrm{Tr}^{-1/2}$, where
+            $\mathrm{Tr} = \operatorname{diag}(t(v))$ and $t(v) = \sum_u d(v,u)$ is the transmission.
+            The transmission-normalized analogue of the distance Laplacian (Reinhart, 2019); real
+            symmetric, positive semidefinite, spectral radius below 2. The strongest discriminator in
+            the distance family: cospectral mates are very rare. Connected graphs only.
+        </dd>
+
+        <dt id="ecc"><strong>Eccentricity matrix</strong></dt>
+        <dd>
+            $\varepsilon(G)_{ij} = d(i,j)$ when $d(i,j) = \min(\mathrm{ecc}(i), \mathrm{ecc}(j))$ and $0$
+            otherwise, where $\mathrm{ecc}(v) = \max_u d(v,u)$. Obtained from the distance matrix by
+            keeping only the largest distance in each row and column (Mahato et al., 2019; the
+            "anti-adjacency" matrix). Real symmetric, often reducible, and a weak invariant (many
+            graphs share its spectrum). Connected graphs only.
+        </dd>
     </dl>
 
 </dl>

@@ -20,7 +20,7 @@ from db.matrix_types import (
 def test_canonical_keys_and_order():
     assert MATRIX_KEYS == (
         "adj", "kirchhoff", "signless", "lap", "nb", "nbl",
-        "dist", "distlap", "distsign", "kblock_family",
+        "dist", "distlap", "distsign", "distnorm", "ecc", "kblock_family",
         "yoon2", "yoon3", "non3cyc", "non4cyc",
     )
 
@@ -28,7 +28,7 @@ def test_canonical_keys_and_order():
 def test_real_vs_complex_partition():
     assert real_keys() == (
         "adj", "kirchhoff", "signless", "lap", "dist", "distlap", "distsign",
-        "yoon2", "yoon3",
+        "distnorm", "ecc", "yoon2", "yoon3",
     )
     assert complex_keys() == ("nb", "nbl", "non3cyc", "non4cyc")
     # The k-blocking family is a composite, hash-only signature: neither a
@@ -51,7 +51,7 @@ def test_kblock_family_is_signature_only():
 
 
 def test_connected_only_flag():
-    connected_only = {"dist", "distlap", "distsign"}
+    connected_only = {"dist", "distlap", "distsign", "distnorm", "ecc"}
     assert all(MATRIX_TYPES[k].connected_only for k in connected_only)
     assert all(
         not m.connected_only

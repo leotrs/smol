@@ -128,7 +128,7 @@ def test_to_db_tuple():
 
     assert isinstance(tup, tuple)
     # Value order/length must match the shared INSERT column list exactly.
-    assert len(tup) == len(INSERT_COLUMNS) == 43
+    assert len(tup) == len(INSERT_COLUMNS) == 47
     assert tup[0] == 3  # n
     assert tup[1] == 2  # m
 

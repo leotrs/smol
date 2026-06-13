@@ -15,6 +15,8 @@ from .matrices import (
     distance_matrix,
     distance_laplacian,
     distance_signless_laplacian,
+    normalized_distance_laplacian,
+    eccentricity_matrix,
     yoon2_matrix,
     yoon3_matrix,
     non3cyc_matrix,
@@ -81,6 +83,8 @@ INSERT_COLUMNS = (
     "dist_eigenvalues", "dist_spectral_hash",
     "distlap_eigenvalues", "distlap_spectral_hash",
     "distsign_eigenvalues", "distsign_spectral_hash",
+    "distnorm_eigenvalues", "distnorm_spectral_hash",
+    "ecc_eigenvalues", "ecc_spectral_hash",
     "kblock_family_spectral_hash",
     "yoon2_eigenvalues", "yoon2_spectral_hash",
     "yoon3_eigenvalues", "yoon3_spectral_hash",
@@ -135,6 +139,10 @@ class GraphRecord:
     distlap_spectral_hash: str | None
     distsign_eigenvalues: np.ndarray | None
     distsign_spectral_hash: str | None
+    distnorm_eigenvalues: np.ndarray | None
+    distnorm_spectral_hash: str | None
+    ecc_eigenvalues: np.ndarray | None
+    ecc_spectral_hash: str | None
 
     # k-blocking family: one composite hash over {M_k : k=2..Delta}, None for
     # forests (empty 2-core). No eigenvalue arrays (it is a multi-matrix signature).
@@ -191,6 +199,10 @@ class GraphRecord:
             self.distlap_spectral_hash,
             self.distsign_eigenvalues.tolist() if self.distsign_eigenvalues is not None else None,
             self.distsign_spectral_hash,
+            self.distnorm_eigenvalues.tolist() if self.distnorm_eigenvalues is not None else None,
+            self.distnorm_spectral_hash,
+            self.ecc_eigenvalues.tolist() if self.ecc_eigenvalues is not None else None,
+            self.ecc_spectral_hash,
             self.kblock_family_spectral_hash,
             self.yoon2_eigenvalues.tolist() if self.yoon2_eigenvalues is not None else None,
             self.yoon2_spectral_hash,
@@ -258,10 +270,14 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
         distlap_hash = spectral_hash_real(distlap_eigs)
         distsign_eigs = compute_real_eigenvalues(distance_signless_laplacian(G))
         distsign_hash = spectral_hash_real(distsign_eigs)
+        distnorm_eigs, distnorm_hash = _real_spectrum_or_none(normalized_distance_laplacian(G))
+        ecc_eigs, ecc_hash = _real_spectrum_or_none(eccentricity_matrix(G))
     else:
         dist_eigs = dist_hash = None
         distlap_eigs = distlap_hash = None
         distsign_eigs = distsign_hash = None
+        distnorm_eigs = distnorm_hash = None
+        ecc_eigs = ecc_hash = None
 
     # The k-blocking family and non-cycling matrices are far slower per graph
     # than all the others combined, so at n=10 scale they are skipped during
@@ -305,6 +321,10 @@ def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
         distlap_spectral_hash=distlap_hash,
         distsign_eigenvalues=distsign_eigs,
         distsign_spectral_hash=distsign_hash,
+        distnorm_eigenvalues=distnorm_eigs,
+        distnorm_spectral_hash=distnorm_hash,
+        ecc_eigenvalues=ecc_eigs,
+        ecc_spectral_hash=ecc_hash,
         kblock_family_spectral_hash=kblock_family_hash,
         yoon2_eigenvalues=yoon2_eigs,
         yoon2_spectral_hash=yoon2_hash,

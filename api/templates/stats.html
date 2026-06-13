@@ -55,6 +55,8 @@
                             <th>Distance</th>
                             <th>Dist Lap</th>
                             <th>Dist Sgl</th>
+                            <th>Dist Norm</th>
+                            <th>Ecc</th>
                             <th>k-block family</th>
                             <th>yn2</th>
                             <th>yn3</th>
@@ -76,6 +78,8 @@
                             <td>{{ "{:,}".format(stats.cospectral_counts.dist.get(n, 0)) if stats.cospectral_counts.dist.get(n, 0) else "—" }}</td>
                             <td>{{ "{:,}".format(stats.cospectral_counts.distlap.get(n, 0)) if stats.cospectral_counts.distlap.get(n, 0) else "—" }}</td>
                             <td>{{ "{:,}".format(stats.cospectral_counts.distsign.get(n, 0)) if stats.cospectral_counts.distsign.get(n, 0) else "—" }}</td>
+                            <td>{{ "{:,}".format(stats.cospectral_counts.distnorm.get(n, 0)) if stats.cospectral_counts.distnorm.get(n, 0) else "—" }}</td>
+                            <td>{{ "{:,}".format(stats.cospectral_counts.ecc.get(n, 0)) if stats.cospectral_counts.ecc.get(n, 0) else "—" }}</td>
                             <td>{{ "{:,}".format(stats.cospectral_counts.kblock_family.get(n, 0)) if stats.cospectral_counts.kblock_family.get(n, 0) else "—" }}</td>
                             <td>{{ "{:,}".format(stats.cospectral_counts.yoon2.get(n, 0)) if stats.cospectral_counts.yoon2.get(n, 0) else "—" }}</td>
                             <td>{{ "{:,}".format(stats.cospectral_counts.yoon3.get(n, 0)) if stats.cospectral_counts.yoon3.get(n, 0) else "—" }}</td>
@@ -108,6 +112,8 @@
                             <th>Distance</th>
                             <th>Dist Lap</th>
                             <th>Dist Sgl</th>
+                            <th>Dist Norm</th>
+                            <th>Ecc</th>
                             <th>k-block family</th>
                             <th>yn2</th>
                             <th>yn3</th>
@@ -129,6 +135,8 @@
                             <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.dist.get(n, 0)) if stats.cospectral_counts_mindeg2.dist.get(n, 0) else "—" }}</td>
                             <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.distlap.get(n, 0)) if stats.cospectral_counts_mindeg2.distlap.get(n, 0) else "—" }}</td>
                             <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.distsign.get(n, 0)) if stats.cospectral_counts_mindeg2.distsign.get(n, 0) else "—" }}</td>
+                            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.distnorm.get(n, 0)) if stats.cospectral_counts_mindeg2.distnorm.get(n, 0) else "—" }}</td>
+                            <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.ecc.get(n, 0)) if stats.cospectral_counts_mindeg2.ecc.get(n, 0) else "—" }}</td>
                             <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.kblock_family.get(n, 0)) if stats.cospectral_counts_mindeg2.kblock_family.get(n, 0) else "—" }}</td>
                             <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.yoon2.get(n, 0)) if stats.cospectral_counts_mindeg2.yoon2.get(n, 0) else "—" }}</td>
                             <td>{{ "{:,}".format(stats.cospectral_counts_mindeg2.yoon3.get(n, 0)) if stats.cospectral_counts_mindeg2.yoon3.get(n, 0) else "—" }}</td>

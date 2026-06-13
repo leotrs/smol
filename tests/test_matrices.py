@@ -440,3 +440,38 @@ class TestNonbacktrackingCycleGraphs:
                 magnitudes, 1.0, rtol=1e-10,
                 err_msg=f"C_{n}: NB eigenvalues not on unit circle"
             )
+
+
+def test_normalized_distance_laplacian_path():
+    """I - T^{-1/2} D T^{-1/2}: symmetric, unit diagonal, PSD, spectral radius < 2."""
+    from db.matrices import normalized_distance_laplacian
+    M = normalized_distance_laplacian(nx.path_graph(4))
+    assert np.allclose(M, M.T)
+    assert np.allclose(np.diag(M), 1.0)
+    eig = np.linalg.eigvalsh(M)
+    assert eig[0] > -1e-9                # PSD
+    assert eig[-1] < 2.0                 # spectral radius < 2 (Reinhart)
+    # disconnected -> None
+    assert normalized_distance_laplacian(nx.empty_graph(3)) is None
+
+
+def test_eccentricity_matrix_path():
+    """eps[i,j] = d(i,j) iff d = min(ecc(i),ecc(j)); P4 keeps the extremal entries."""
+    from db.matrices import eccentricity_matrix
+    E = eccentricity_matrix(nx.path_graph(4))   # 0-1-2-3; ecc = [3,2,2,3]
+    expected = np.array([
+        [0, 0, 2, 3],
+        [0, 0, 0, 2],
+        [2, 0, 0, 0],
+        [3, 2, 0, 0],
+    ], dtype=float)
+    assert np.array_equal(E, expected)
+    assert np.allclose(E, E.T)
+    assert eccentricity_matrix(nx.empty_graph(3)) is None  # disconnected -> None
+
+
+def test_eccentricity_complete_graph_is_adjacency():
+    """In K_n every distance equals the (unit) eccentricity, so eps = A(K_n)."""
+    from db.matrices import eccentricity_matrix, adjacency_matrix
+    G = nx.complete_graph(5)
+    assert np.array_equal(eccentricity_matrix(G), adjacency_matrix(G))

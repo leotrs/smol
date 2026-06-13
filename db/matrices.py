@@ -363,3 +363,40 @@ def distance_signless_laplacian(G: nx.Graph) -> np.ndarray | None:
         return None
     Tr = np.diag(Dist.sum(axis=1))
     return Tr + Dist
+
+
+def normalized_distance_laplacian(G: nx.Graph) -> np.ndarray | None:
+    """
+    Return the normalized distance Laplacian I - T^{-1/2} Dist T^{-1/2}, where
+    T = diag(transmissions), transmission t(v) = sum_u d(v,u). Equivalently
+    (i,j) = -d(i,j)/sqrt(t(i)t(j)) off-diagonal, 1 on the diagonal.
+
+    Reinhart (2019). Real symmetric, PSD, spectral radius < 2. Connected graphs
+    only (returns None otherwise); also None for n < 2 (transmission 0).
+    """
+    Dist = distance_matrix(G)
+    if Dist is None or Dist.shape[0] < 2:
+        return None
+    t = Dist.sum(axis=1)
+    if np.any(t == 0):
+        return None
+    inv = 1.0 / np.sqrt(t)
+    return np.eye(len(t)) - (inv[:, None] * Dist * inv[None, :])
+
+
+def eccentricity_matrix(G: nx.Graph) -> np.ndarray | None:
+    """
+    Return the eccentricity matrix eps, where eps[i,j] = d(i,j) when
+    d(i,j) = min(ecc(i), ecc(j)) and 0 otherwise; ecc(v) = max_u d(v,u).
+    (Equivalently: keep, in each row/column, only the largest-distance entries.)
+
+    Mahato et al. (2019). Real symmetric. Connected graphs only (None otherwise).
+    """
+    Dist = distance_matrix(G)
+    if Dist is None or Dist.shape[0] == 0:
+        return None
+    ecc = Dist.max(axis=1)
+    keep = np.minimum(ecc[:, None], ecc[None, :])
+    E = np.where(Dist == keep, Dist, 0.0)
+    np.fill_diagonal(E, 0.0)
+    return E
