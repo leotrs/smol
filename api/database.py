@@ -198,59 +198,34 @@ async def fetch_graph(graph6: str) -> dict[str, Any] | None:
 async def fetch_cospectral_mates(
     graph6: str, n: int, hashes: dict[str, str]
 ) -> dict[str, list[str]]:
-    """Fetch cospectral mates for each matrix type using pre-computed pairs."""
+    """Fetch cospectral mates for each matrix type.
+
+    Mates are derived directly from the per-matrix spectral_hash columns (using the
+    idx_n_<matrix>_hash indexes): any other graph with the same n and hash is a mate.
+    This replaces the old pre-computed pairs table.
+    """
     ph = _placeholder()
     # Always initialize with all matrix types (for Pydantic model compatibility)
     mates = {k: [] for k in MATRIX_KEYS}
 
     async with get_db() as conn:
-        if IS_SQLITE:
-            # Get graph id first
-            cursor = await conn.execute(
-                f"SELECT id FROM graphs WHERE graph6 = {ph}", (graph6,)
+        for matrix, h in hashes.items():
+            if not h or matrix not in MATRIX_KEYS:
+                continue
+            hash_col = f"{matrix}_spectral_hash"
+            sql = (
+                f"SELECT graph6 FROM graphs "
+                f"WHERE n = {ph} AND {hash_col} = {ph} AND graph6 <> {ph} "
+                f"ORDER BY graph6"
             )
-            row = await cursor.fetchone()
-            if not row:
-                return mates
-            graph_id = row[0]
-
-            for matrix in hashes:
-                cursor = await conn.execute(
-                    f"""
-                    SELECT g.graph6 FROM cospectral_mates cp
-                    JOIN graphs g ON g.id = CASE
-                        WHEN cp.graph1_id = {ph} THEN cp.graph2_id
-                        ELSE cp.graph1_id
-                    END
-                    WHERE (cp.graph1_id = {ph} OR cp.graph2_id = {ph})
-                      AND cp.matrix_type = {ph}
-                    """,
-                    (graph_id, graph_id, graph_id, matrix),
-                )
+            if IS_SQLITE:
+                cursor = await conn.execute(sql, (n, h, graph6))
                 rows = await cursor.fetchall()
-                mates[matrix] = [r[0] for r in rows]
-        else:
-            cur = conn.cursor()
-            cur.execute(f"SELECT id FROM graphs WHERE graph6 = {ph}", (graph6,))
-            row = cur.fetchone()
-            if not row:
-                return mates
-            graph_id = row[0]
-
-            for matrix in hashes:
-                cur.execute(
-                    f"""
-                    SELECT g.graph6 FROM cospectral_mates cp
-                    JOIN graphs g ON g.id = CASE
-                        WHEN cp.graph1_id = {ph} THEN cp.graph2_id
-                        ELSE cp.graph1_id
-                    END
-                    WHERE (cp.graph1_id = {ph} OR cp.graph2_id = {ph})
-                      AND cp.matrix_type = {ph}
-                    """,
-                    (graph_id, graph_id, graph_id, matrix),
-                )
-                mates[matrix] = [r[0] for r in cur.fetchall()]
+            else:
+                cur = conn.cursor()
+                cur.execute(sql, (n, h, graph6))
+                rows = cur.fetchall()
+            mates[matrix] = [r[0] for r in rows]
     return mates
 
 
@@ -419,15 +394,18 @@ async def query_graphs(
             conditions.append(f"graphs.id IN (SELECT DISTINCT graph1_id FROM switching_mechanisms WHERE mechanism_type = {ph} UNION SELECT DISTINCT graph2_id FROM switching_mechanisms WHERE mechanism_type = {ph})")
             params.extend([has_mechanism, has_mechanism])
 
-    # Cospectral mate filter
-    if has_cospectral_mate:
-        if has_cospectral_mate == "none":
-            # No cospectral mates for any matrix type.
-            conditions.append("graphs.id NOT IN (SELECT DISTINCT graph1_id FROM cospectral_mates UNION SELECT DISTINCT graph2_id FROM cospectral_mates)")
-        else:
-            # Filter graphs that have cospectral mates for the specified matrix type
-            conditions.append(f"graphs.id IN (SELECT DISTINCT graph1_id FROM cospectral_mates WHERE matrix_type = {ph} UNION SELECT DISTINCT graph2_id FROM cospectral_mates WHERE matrix_type = {ph})")
-            params.extend([has_cospectral_mate, has_cospectral_mate])
+    # Cospectral mate filter: a graph has a mate for matrix M iff its (n, hash) is a
+    # family (size >= 2) in cospectral_families for M. The inverse ("no mate at all")
+    # is intentionally unsupported: the database exists to surface cospectral graphs,
+    # and that query has no cheap form against the hash-keyed families table.
+    if has_cospectral_mate and has_cospectral_mate in MATRIX_KEYS:
+        hash_col = f"{has_cospectral_mate}_spectral_hash"
+        conditions.append(
+            f"EXISTS (SELECT 1 FROM cospectral_families cf "
+            f"WHERE cf.matrix_type = {ph} AND cf.n = graphs.n "
+            f"AND cf.spectral_hash = graphs.{hash_col})"
+        )
+        params.append(has_cospectral_mate)
 
     where = " AND ".join(conditions) if conditions else "1=1"
 
@@ -640,160 +618,110 @@ async def fetch_random_graph() -> dict[str, Any] | None:
             return None
 
 
-async def fetch_cospectral_pairs(
+async def fetch_cospectral_families(
     matrix: str = "adj",
     n: int | None = None,
     limit: int = 10,
     offset: int = 0,
+    members_cap: int = 100,
 ) -> list[dict[str, Any]]:
-    """Fetch cospectral pairs from the pre-computed table.
+    """Fetch cospectral families for a matrix type.
 
-    Returns list of dicts with keys: graph1, graph2 (each a dict with graph6, n, m).
+    Returns a list of dicts: {matrix_type, n, size, graphs: [{graph6, n, m}, ...]}.
+    Members are read from the graphs hash columns; up to members_cap are returned
+    per family (size reports the true count, which can exceed members_cap for weak
+    discriminators like ecc). Caller must validate `matrix` against MATRIX_KEYS.
     """
     ph = _placeholder()
+    hash_col = f"{matrix}_spectral_hash"
 
     async with get_db() as conn:
-        conditions = [f"cm.matrix_type = {ph}"]
-        params = [matrix]
-
+        conditions = [f"matrix_type = {ph}"]
+        params: list[Any] = [matrix]
         if n is not None:
-            conditions.append(f"g1.n = {ph}")
+            conditions.append(f"n = {ph}")
             params.append(n)
-
         where = " AND ".join(conditions)
-        params.extend([limit, offset])
+        fam_sql = (
+            f"SELECT n, spectral_hash, family_size FROM cospectral_families "
+            f"WHERE {where} ORDER BY n, spectral_hash LIMIT {ph} OFFSET {ph}"
+        )
+        fam_params = params + [limit, offset]
 
         if IS_SQLITE:
-            cursor = await conn.execute(
-                f"""
-                SELECT g1.graph6 as g1_graph6, g1.n as g1_n, g1.m as g1_m,
-                       g2.graph6 as g2_graph6, g2.n as g2_n, g2.m as g2_m
-                FROM cospectral_mates cm
-                JOIN graphs g1 ON cm.graph1_id = g1.id
-                JOIN graphs g2 ON cm.graph2_id = g2.id
-                WHERE {where}
-                LIMIT {ph} OFFSET {ph}
-                """,
-                params,
-            )
-            rows = await cursor.fetchall()
+            cursor = await conn.execute(fam_sql, fam_params)
+            fam_rows = await cursor.fetchall()
         else:
-            from psycopg2.extras import RealDictCursor
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute(
-                f"""
-                SELECT g1.graph6 as g1_graph6, g1.n as g1_n, g1.m as g1_m,
-                       g2.graph6 as g2_graph6, g2.n as g2_n, g2.m as g2_m
-                FROM cospectral_mates cm
-                JOIN graphs g1 ON cm.graph1_id = g1.id
-                JOIN graphs g2 ON cm.graph2_id = g2.id
-                WHERE {where}
-                LIMIT {ph} OFFSET {ph}
-                """,
-                params,
-            )
-            rows = cur.fetchall()
+            cur = conn.cursor()
+            cur.execute(fam_sql, fam_params)
+            fam_rows = cur.fetchall()
 
         result = []
-        for row in rows:
+        for fam_n, fam_hash, size in fam_rows:
+            mem_sql = (
+                f"SELECT graph6, n, m FROM graphs "
+                f"WHERE n = {ph} AND {hash_col} = {ph} ORDER BY graph6 LIMIT {ph}"
+            )
+            mem_params = (fam_n, fam_hash, members_cap)
+            if IS_SQLITE:
+                cursor = await conn.execute(mem_sql, mem_params)
+                mem_rows = await cursor.fetchall()
+            else:
+                cur = conn.cursor()
+                cur.execute(mem_sql, mem_params)
+                mem_rows = cur.fetchall()
+            members = [
+                {"graph6": r[0], "n": r[1], "m": r[2]} for r in mem_rows
+            ]
             result.append({
-                "graph1": {
-                    "graph6": row["g1_graph6" if IS_SQLITE else "g1_graph6"],
-                    "n": row["g1_n"],
-                    "m": row["g1_m"],
-                },
-                "graph2": {
-                    "graph6": row["g2_graph6" if IS_SQLITE else "g2_graph6"],
-                    "n": row["g2_n"],
-                    "m": row["g2_m"],
-                },
                 "matrix_type": matrix,
+                "n": fam_n,
+                "size": size,
+                "graphs": members,
             })
         return result
 
 
 async def fetch_random_cospectral_class(matrix: str = "adj") -> list[str]:
-    """Fetch a random cospectral class for the specified matrix type using pre-computed pairs."""
+    """Fetch a random cospectral class for the specified matrix type.
+
+    Picks a random family from cospectral_families, then expands it via the matrix's
+    spectral_hash column on graphs.
+    """
     ph = _placeholder()
+    if matrix not in MATRIX_KEYS:
+        return []
+    hash_col = f"{matrix}_spectral_hash"
 
     async with get_db() as conn:
+        # Restrict to n <= 9: n=10 graphs are stored hash-only (no eigenvalue
+        # arrays), so the graph/compare pages this redirects to cannot render them.
+        # Mirrors fetch_random_graph, which samples n in [4, 9].
+        seed_sql = (
+            f"SELECT n, spectral_hash FROM cospectral_families "
+            f"WHERE matrix_type = {ph} AND n <= 9 ORDER BY RANDOM() LIMIT 1"
+        )
+        members_sql = (
+            f"SELECT graph6 FROM graphs "
+            f"WHERE n = {ph} AND {hash_col} = {ph} ORDER BY graph6 LIMIT 10"
+        )
         if IS_SQLITE:
-            # Get a random pair directly using ORDER BY RANDOM()
-            cursor = await conn.execute(
-                f"""
-                SELECT graph1_id, graph2_id
-                FROM cospectral_mates
-                WHERE matrix_type = {ph}
-                ORDER BY RANDOM()
-                LIMIT 1
-                """,
-                (matrix,),
-            )
+            cursor = await conn.execute(seed_sql, (matrix,))
             row = await cursor.fetchone()
             if not row:
                 return []
-
-            seed_id1, seed_id2 = row
-
-            # Get all graphs in this cospectral family by finding all pairs involving these graphs
-            cursor = await conn.execute(
-                f"""
-                WITH family_ids AS (
-                    SELECT DISTINCT graph1_id as gid FROM cospectral_mates
-                    WHERE matrix_type = {ph} AND (graph1_id = {ph} OR graph2_id = {ph})
-                    UNION
-                    SELECT DISTINCT graph2_id as gid FROM cospectral_mates
-                    WHERE matrix_type = {ph} AND (graph1_id = {ph} OR graph2_id = {ph})
-                )
-                SELECT g.graph6
-                FROM family_ids f
-                JOIN graphs g ON g.id = f.gid
-                ORDER BY g.graph6
-                LIMIT 10
-                """,
-                (matrix, seed_id1, seed_id1, matrix, seed_id2, seed_id2),
-            )
-            graphs = [r[0] for r in await cursor.fetchall()]
-            return graphs
+            fam_n, fam_hash = row
+            cursor = await conn.execute(members_sql, (fam_n, fam_hash))
+            return [r[0] for r in await cursor.fetchall()]
         else:
             cur = conn.cursor()
-            # Get a random pair directly using ORDER BY RANDOM()
-            cur.execute(
-                f"""
-                SELECT graph1_id, graph2_id
-                FROM cospectral_mates
-                WHERE matrix_type = {ph}
-                ORDER BY RANDOM()
-                LIMIT 1
-                """,
-                (matrix,),
-            )
+            cur.execute(seed_sql, (matrix,))
             row = cur.fetchone()
             if not row:
                 return []
-
-            seed_id1, seed_id2 = row
-
-            # Get all graphs in this cospectral family by finding all pairs involving these graphs
-            cur.execute(
-                f"""
-                WITH family_ids AS (
-                    SELECT DISTINCT graph1_id as gid FROM cospectral_mates
-                    WHERE matrix_type = {ph} AND (graph1_id = {ph} OR graph2_id = {ph})
-                    UNION
-                    SELECT DISTINCT graph2_id as gid FROM cospectral_mates
-                    WHERE matrix_type = {ph} AND (graph1_id = {ph} OR graph2_id = {ph})
-                )
-                SELECT g.graph6
-                FROM family_ids f
-                JOIN graphs g ON g.id = f.gid
-                ORDER BY g.graph6
-                LIMIT 10
-                """,
-                (matrix, seed_id1, seed_id1, matrix, seed_id2, seed_id2),
-            )
-            graphs = [r[0] for r in cur.fetchall()]
-            return graphs
+            fam_n, fam_hash = row
+            cur.execute(members_sql, (fam_n, fam_hash))
+            return [r[0] for r in cur.fetchall()]
 
 
 async def fetch_similar_graphs(
@@ -1038,15 +966,13 @@ async def get_stats() -> dict[str, Any]:
 
             cospectral = {}
             for matrix in ["adj", "lap", "nb", "nbl"]:
-                hash_col = f"{matrix}_spectral_hash"
                 cursor = await conn.execute(
                     f"""
-                    SELECT g.n, COUNT(DISTINCT g.{hash_col})
-                    FROM cospectral_mates cp
-                    JOIN graphs g ON g.id = cp.graph1_id
-                    WHERE cp.matrix_type = {ph}
-                    GROUP BY g.n
-                    ORDER BY g.n
+                    SELECT n, COUNT(*)
+                    FROM cospectral_families
+                    WHERE matrix_type = {ph}
+                    GROUP BY n
+                    ORDER BY n
                     """,
                     (matrix,),
                 )
@@ -1070,15 +996,13 @@ async def get_stats() -> dict[str, Any]:
 
             cospectral = {}
             for matrix in ["adj", "lap", "nb", "nbl"]:
-                hash_col = f"{matrix}_spectral_hash"
                 cur.execute(
                     f"""
-                    SELECT g.n, COUNT(DISTINCT g.{hash_col})
-                    FROM cospectral_mates cp
-                    JOIN graphs g ON g.id = cp.graph1_id
-                    WHERE cp.matrix_type = {ph}
-                    GROUP BY g.n
-                    ORDER BY g.n
+                    SELECT n, COUNT(*)
+                    FROM cospectral_families
+                    WHERE matrix_type = {ph}
+                    GROUP BY n
+                    ORDER BY n
                     """,
                     (matrix,),
                 )
@@ -1296,21 +1220,16 @@ async def fetch_mechanism_stats(
 
     async with get_db() as conn:
         if IS_SQLITE:
-            # Total graphs with mates
+            # Total graphs with mates (sum of family sizes)
             query_total = f"""
-                WITH all_graphs AS (
-                    SELECT graph1_id as gid FROM cospectral_mates WHERE matrix_type = {ph}
-                    UNION
-                    SELECT graph2_id FROM cospectral_mates WHERE matrix_type = {ph}
-                )
-                SELECT COUNT(DISTINCT a.gid)
-                FROM all_graphs a
-                JOIN graphs g ON a.gid = g.id
+                SELECT COALESCE(SUM(family_size), 0)
+                FROM cospectral_families
+                WHERE matrix_type = {ph}
             """
-            params_total = [matrix_type, matrix_type]
+            params_total = [matrix_type]
 
             if n is not None:
-                query_total += f" WHERE g.n = {ph}"
+                query_total += f" AND n = {ph}"
                 params_total.append(n)
 
             cursor = await conn.execute(query_total, params_total)
@@ -1340,24 +1259,19 @@ async def fetch_mechanism_stats(
             cur = conn.cursor(cursor_factory=RealDictCursor)
 
             query_total = """
-                WITH all_graphs AS (
-                    SELECT graph1_id as gid FROM cospectral_mates WHERE matrix_type = %s
-                    UNION
-                    SELECT graph2_id FROM cospectral_mates WHERE matrix_type = %s
-                )
-                SELECT COUNT(DISTINCT a.gid)
-                FROM all_graphs a
-                JOIN graphs g ON a.gid = g.id
+                SELECT COALESCE(SUM(family_size), 0) AS total
+                FROM cospectral_families
+                WHERE matrix_type = %s
             """
-            params_total = [matrix_type, matrix_type]
+            params_total = [matrix_type]
 
             if n is not None:
-                query_total += " WHERE g.n = %s"
+                query_total += " AND n = %s"
                 params_total.append(n)
 
             cur.execute(query_total, params_total)
             result = cur.fetchone()
-            total_graphs = result["count"] if result else 0
+            total_graphs = result["total"] if result else 0
 
             query_mechs = """
                 SELECT sm.mechanism_type, COUNT(DISTINCT sm.graph1_id || ',' || sm.graph2_id) as pair_count
@@ -1420,19 +1334,14 @@ async def fetch_all_mechanism_stats(matrix_type: str = "adj") -> dict[int, dict[
             cursor = await conn.execute(query, [matrix_type])
             rows = await cursor.fetchall()
 
-            # Get total graphs with mates for each n
+            # Get total graphs with mates for each n (sum of family sizes)
             query_totals = f"""
-                WITH all_graphs AS (
-                    SELECT graph1_id as gid FROM cospectral_mates WHERE matrix_type = {ph}
-                    UNION
-                    SELECT graph2_id FROM cospectral_mates WHERE matrix_type = {ph}
-                )
-                SELECT g.n, COUNT(DISTINCT a.gid) as total
-                FROM all_graphs a
-                JOIN graphs g ON a.gid = g.id
-                GROUP BY g.n
+                SELECT n, COALESCE(SUM(family_size), 0) as total
+                FROM cospectral_families
+                WHERE matrix_type = {ph}
+                GROUP BY n
             """
-            cursor = await conn.execute(query_totals, [matrix_type, matrix_type])
+            cursor = await conn.execute(query_totals, [matrix_type])
             totals_rows = await cursor.fetchall()
 
         else:
@@ -1454,17 +1363,12 @@ async def fetch_all_mechanism_stats(matrix_type: str = "adj") -> dict[int, dict[
             rows = cur.fetchall()
 
             query_totals = """
-                WITH all_graphs AS (
-                    SELECT graph1_id as gid FROM cospectral_mates WHERE matrix_type = %s
-                    UNION
-                    SELECT graph2_id FROM cospectral_mates WHERE matrix_type = %s
-                )
-                SELECT g.n, COUNT(DISTINCT a.gid) as total
-                FROM all_graphs a
-                JOIN graphs g ON a.gid = g.id
-                GROUP BY g.n
+                SELECT n, COALESCE(SUM(family_size), 0) as total
+                FROM cospectral_families
+                WHERE matrix_type = %s
+                GROUP BY n
             """
-            cur.execute(query_totals, [matrix_type, matrix_type])
+            cur.execute(query_totals, [matrix_type])
             totals_rows = cur.fetchall()
 
         # Build totals map

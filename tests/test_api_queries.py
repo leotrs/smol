@@ -215,12 +215,14 @@ class TestCospectralQueries:
         data = response.json()
         assert len(data) > 0
 
-    def test_query_no_cospectral_mates(self):
-        """Test filtering graphs with no cospectral mates."""
+    def test_query_cospectral_mate_none_is_not_a_filter(self):
+        """'none' is no longer a supported value; it is ignored (no cospectral filter applied)."""
         response = client.get("/search?n=5&has_cospectral_mate=none&limit=10")
         assert response.status_code == 200
         data = response.json()
-        assert len(data) > 0
+        # Ignored filter returns the same set as no cospectral filter at all.
+        baseline = client.get("/search?n=5&limit=10").json()
+        assert len(data) == len(baseline)
 
 
 class TestMechanismQueries:

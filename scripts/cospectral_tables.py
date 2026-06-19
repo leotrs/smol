@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate cospectrality tables from cospectral_mates.
+"""Generate cospectrality tables from cospectral_families.
 
 Produces two tables:
 1. All graphs not determined by their spectrum, by n
@@ -37,24 +37,18 @@ def table1(conn, max_n: int) -> dict:
     )
     totals = {r[0]: r[1] for r in cur.fetchall()}
 
-    # Cospectral counts by matrix type
+    # Cospectral counts by matrix type: sum of family sizes per n.
     results = {}
     for matrix in MATRIX_KEYS:
         cur.execute(
             """
-            WITH all_graphs AS (
-                SELECT graph1_id as gid FROM cospectral_mates WHERE matrix_type = %s
-                UNION
-                SELECT graph2_id FROM cospectral_mates WHERE matrix_type = %s
-            )
-            SELECT g.n, COUNT(DISTINCT a.gid)
-            FROM all_graphs a
-            JOIN graphs g ON a.gid = g.id
-            WHERE g.n <= %s
-            GROUP BY g.n
-            ORDER BY g.n
+            SELECT n, COALESCE(SUM(family_size), 0)
+            FROM cospectral_families
+            WHERE matrix_type = %s AND n <= %s
+            GROUP BY n
+            ORDER BY n
             """,
-            (matrix, matrix, max_n),
+            (matrix, max_n),
         )
         results[matrix] = {r[0]: r[1] for r in cur.fetchall()}
 
@@ -74,30 +68,25 @@ def table2(conn, max_n: int) -> dict:
     )
     totals = {r[0]: r[1] for r in cur.fetchall()}
 
-    # Cospectral counts by matrix type (both graphs in pair must have min_degree >= 2)
+    # Cospectral counts by matrix type, restricted to md2 graphs cospectral with
+    # ANOTHER md2 graph: within each family, count members with min_degree >= 2 and
+    # keep only families where at least two such members remain.
     results = {}
     for matrix in MATRIX_KEYS:
+        hash_col = f"{matrix}_spectral_hash"
         cur.execute(
-            """
-            WITH valid_pairs AS (
-                SELECT cm.graph1_id, cm.graph2_id, g1.n
-                FROM cospectral_mates cm
-                JOIN graphs g1 ON cm.graph1_id = g1.id
-                JOIN graphs g2 ON cm.graph2_id = g2.id
-                WHERE cm.matrix_type = %s
-                  AND g1.min_degree >= 2
-                  AND g2.min_degree >= 2
-                  AND g1.n <= %s
-            ),
-            all_graphs AS (
-                SELECT graph1_id as gid, n FROM valid_pairs
-                UNION
-                SELECT graph2_id, n FROM valid_pairs
+            f"""
+            WITH md2_fam AS (
+                SELECT g.n AS n, COUNT(*) AS c
+                FROM graphs g
+                JOIN cospectral_families cf
+                  ON cf.matrix_type = %s AND cf.n = g.n
+                 AND cf.spectral_hash = g.{hash_col}
+                WHERE g.min_degree >= 2 AND g.n <= %s
+                GROUP BY g.n, g.{hash_col}
+                HAVING COUNT(*) > 1
             )
-            SELECT n, COUNT(DISTINCT gid)
-            FROM all_graphs
-            GROUP BY n
-            ORDER BY n
+            SELECT n, SUM(c) FROM md2_fam GROUP BY n ORDER BY n
             """,
             (matrix, max_n),
         )

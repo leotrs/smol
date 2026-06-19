@@ -10,8 +10,9 @@ GM switching is an involution: the switching set/partition that maps G1 to G2
 also maps G2 to G1, so the config is orientation-independent and we can store
 the pair as (min_id, max_id) regardless of the snapshot's ordering.
 
-Must run AFTER scripts/compute_cospectral_tables.py, because switching_mechanisms
-has a foreign key into cospectral_mates.
+switching_mechanisms stores its (graph1_id, graph2_id, matrix_type) pair as
+self-contained data (no foreign key into a pairs table), so this can run
+independently of cospectral_families population.
 
 Usage:
     uv run python scripts/remap_mechanisms.py --sqlite smol_prod.db

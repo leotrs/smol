@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""Pre-compute cospectral_mates table for all matrix types.
+"""Populate the cospectral_families table for all matrix types.
 
-This script populates cospectral_mates: all pairs of graphs sharing the same spectrum.
-For a cospectral family of k graphs, stores C(k,2) = k*(k-1)/2 pairs.
-Enables O(1) lookup of cospectral mates for any graph.
+For each matrix type, groups graphs by (n, spectral_hash) and records one row per
+family of size >= 2. This is O(#families), unlike the old per-pair table which was
+O(sum C(k,2)) and exploded for weak discriminators (ecc reaches families of 8000+).
+
+Family membership is recovered at query time via the idx_n_<matrix>_hash indexes on
+graphs, so the family hash column used here MUST match the one the API derives mates
+from (<matrix>_spectral_hash). The exact-charpoly NB improvement is tracked separately
+and would change that column for nb consistently across the API and this script.
 
 Usage:
-    python scripts/compute_cospectral_tables.py [--matrix adj|kirchhoff|signless|lap|nb|nbl] [--n N]
-
-Examples:
     python scripts/compute_cospectral_tables.py           # All matrix types, all n
     python scripts/compute_cospectral_tables.py --n 9     # All matrix types, only n=9
     python scripts/compute_cospectral_tables.py --matrix adj --n 10  # adj only, n=10
@@ -16,200 +18,71 @@ Examples:
 
 import argparse
 import sys
-from itertools import combinations
+from pathlib import Path
 
-sys.path.insert(0, str(__file__).rsplit("/", 2)[0])
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from db.database import connect
 from db.matrix_types import MATRIX_KEYS
 
-# Per-matrix caps on which n get materialized into cospectral_mates, for any
-# matrix whose graph-level cospectrality would explode. None currently needed.
-MAX_COSPECTRAL_N: dict[str, int] = {}
-
 
 def compute_for_matrix(conn, matrix: str, n_filter: int | None = None):
-    """Compute cospectral_mates for a single matrix type."""
+    """Populate cospectral_families for a single matrix type."""
     cur = conn.cursor()
     hash_col = f"{matrix}_spectral_hash"
-    cap = MAX_COSPECTRAL_N.get(matrix)
-    if n_filter is not None and cap is not None and n_filter > cap:
-        print(f"{matrix} (n={n_filter}): skipped (capped at n<={cap})")
-        return
-    cap_clause = f" AND n <= {cap}" if cap is not None else ""
     label = f"{matrix}" if n_filter is None else f"{matrix} (n={n_filter})"
 
-    # Check if already computed
+    # Skip if already populated for this scope
     if n_filter is not None:
         cur.execute(
-            """SELECT COUNT(*) FROM cospectral_mates cm
-               JOIN graphs g ON cm.graph1_id = g.id
-               WHERE cm.matrix_type = %s AND g.n = %s""",
+            "SELECT COUNT(*) FROM cospectral_families WHERE matrix_type = %s AND n = %s",
             (matrix, n_filter),
         )
     else:
         cur.execute(
-            "SELECT COUNT(*) FROM cospectral_mates WHERE matrix_type = %s", (matrix,)
+            "SELECT COUNT(*) FROM cospectral_families WHERE matrix_type = %s", (matrix,)
         )
     existing = cur.fetchone()[0]
     if existing > 0:
-        print(f"{label}: {existing:,} pairs already exist, skipping")
+        print(f"{label}: {existing:,} families already exist, skipping")
         return
 
-    print(f"{label}: Streaming graphs ordered by hash...")
+    print(f"{label}: aggregating families...")
 
-    # Stream through graphs ordered by (n, hash) to group cospectral graphs
-    # Skip NULL hashes (disconnected graphs for dist, or missing data)
-    if n_filter is not None:
-        cur.execute(f"""
-            SELECT id, n, {hash_col}
-            FROM graphs
-            WHERE n = %s AND {hash_col} IS NOT NULL
-            ORDER BY {hash_col}, id
-        """, (n_filter,))
-    else:
-        cur.execute(f"""
-            SELECT id, n, {hash_col}
-            FROM graphs
-            WHERE {hash_col} IS NOT NULL{cap_clause}
-            ORDER BY n, {hash_col}, id
-        """)
+    # A single grouped INSERT does all the work: families of size >= 2 keyed by
+    # (n, hash). NULL hashes (disconnected/undefined graphs) are excluded.
+    where_n = "" if n_filter is None else " AND n = %s"
+    params = (matrix,) if n_filter is None else (matrix, n_filter)
+    cur.execute(
+        f"""
+        INSERT INTO cospectral_families (matrix_type, n, spectral_hash, family_size)
+        SELECT %s, n, {hash_col}, COUNT(*)
+        FROM graphs
+        WHERE {hash_col} IS NOT NULL{where_n}
+        GROUP BY n, {hash_col}
+        HAVING COUNT(*) > 1
+        ON CONFLICT (matrix_type, n, spectral_hash) DO NOTHING
+        """,
+        params,
+    )
+    inserted = cur.rowcount
+    conn.commit()
 
-    mates_buffer = []
-    total_pairs = 0
-    total_graphs = 0
-    current_key = None
-    current_group = []  # list of graph ids
-
-    def flush_group():
-        """Generate pairs for current group."""
-        nonlocal total_pairs, total_graphs
-        if len(current_group) > 1:
-            total_graphs += len(current_group)
-            for id1, id2 in combinations(current_group, 2):
-                mates_buffer.append((id1, id2, matrix))
-            total_pairs += len(current_group) * (len(current_group) - 1) // 2
-
-    def flush_buffers():
-        """Insert buffered data into database."""
-        if mates_buffer:
-            from psycopg2.extras import execute_values
-            insert_cur = conn.cursor()
-            execute_values(
-                insert_cur,
-                "INSERT INTO cospectral_mates (graph1_id, graph2_id, matrix_type) VALUES %s ON CONFLICT DO NOTHING",
-                mates_buffer,
-            )
-            mates_buffer.clear()
-        conn.commit()
-
-    for row in cur:
-        graph_id, n, hash_val = row
-        key = (n, hash_val)
-
-        if key != current_key:
-            flush_group()
-            current_key = key
-            current_group = []
-
-        current_group.append(graph_id)
-
-        # Flush buffers periodically
-        if len(mates_buffer) >= 100000:
-            flush_buffers()
-            print(f"  {label}: {total_pairs:,} pairs, {total_graphs:,} graphs so far...")
-
-    # Final flush
-    flush_group()
-    flush_buffers()
-
-    print(f"  {label}: {total_pairs:,} pairs, {total_graphs:,} graphs total")
-
-
-def compute_nb_charpoly(conn, n_filter: int | None = None):
-    """Compute NB cospectral mates using exact characteristic polynomials.
-
-    Uses the nb_charpoly_hash column (populated by the Bareiss algorithm)
-    instead of the floating-point nb_spectral_hash. This is exact — no
-    precision issues.
-    """
-    cur = conn.cursor()
-    label = "nb_charpoly" if n_filter is None else f"nb_charpoly (n={n_filter})"
-
-    print(f"{label}: Streaming graphs ordered by charpoly hash...")
-
-    if n_filter is not None:
-        cur.execute("""
-            SELECT id, n, nb_charpoly_hash
-            FROM graphs
-            WHERE n = %s AND nb_charpoly_hash IS NOT NULL
-            ORDER BY nb_charpoly_hash, id
-        """, (n_filter,))
-    else:
-        cur.execute("""
-            SELECT id, n, nb_charpoly_hash
-            FROM graphs
-            WHERE nb_charpoly_hash IS NOT NULL
-            ORDER BY n, nb_charpoly_hash, id
-        """)
-
-    mates_buffer = []
-    total_pairs = 0
-    total_graphs = 0
-    current_key = None
-    current_group = []
-
-    def flush_group():
-        nonlocal total_pairs, total_graphs
-        if len(current_group) > 1:
-            total_graphs += len(current_group)
-            for id1, id2 in combinations(current_group, 2):
-                mates_buffer.append((id1, id2, "nb"))
-            total_pairs += len(current_group) * (len(current_group) - 1) // 2
-
-    def flush_buffers():
-        if mates_buffer:
-            from psycopg2.extras import execute_values
-            insert_cur = conn.cursor()
-            execute_values(
-                insert_cur,
-                "INSERT INTO cospectral_mates (graph1_id, graph2_id, matrix_type) VALUES %s ON CONFLICT DO NOTHING",
-                mates_buffer,
-            )
-            mates_buffer.clear()
-        conn.commit()
-
-    for row in cur:
-        graph_id, n, hash_val = row
-        key = (n, hash_val)
-
-        if key != current_key:
-            flush_group()
-            current_key = key
-            current_group = []
-
-        current_group.append(graph_id)
-
-        if len(mates_buffer) >= 100000:
-            flush_buffers()
-            print(f"  {label}: {total_pairs:,} pairs, {total_graphs:,} graphs so far...")
-
-    flush_group()
-    flush_buffers()
-
-    print(f"  {label}: {total_pairs:,} pairs, {total_graphs:,} graphs total")
+    cur.execute(
+        "SELECT COALESCE(SUM(family_size), 0) FROM cospectral_families WHERE matrix_type = %s"
+        + ("" if n_filter is None else " AND n = %s"),
+        params,
+    )
+    graphs_in_families = cur.fetchone()[0]
+    print(f"  {label}: {inserted:,} families, {graphs_in_families:,} graphs total")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Compute cospectral tables")
+    parser = argparse.ArgumentParser(description="Populate cospectral_families")
     parser.add_argument(
         "--matrix",
         choices=list(MATRIX_KEYS),
         help="Compute only this matrix type (default: all)",
-    )
-    parser.add_argument(
-        "--nb-charpoly", action="store_true",
-        help="Use exact charpoly for NB instead of eigenvalue hashing",
     )
     parser.add_argument(
         "--n",
@@ -220,9 +93,7 @@ def main():
 
     conn = connect()
 
-    if args.nb_charpoly:
-        compute_nb_charpoly(conn, args.n)
-    elif args.matrix:
+    if args.matrix:
         compute_for_matrix(conn, args.matrix, args.n)
     else:
         for matrix in MATRIX_KEYS:

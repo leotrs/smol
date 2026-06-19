@@ -105,25 +105,22 @@ CREATE INDEX IF NOT EXISTS idx_extra ON graphs USING GIN(extra);
 CREATE INDEX IF NOT EXISTS idx_tags ON graphs USING GIN(tags);
 
 -- Pre-computed cospectral mates table
--- Stores all pairs of graphs that share the same spectrum for a given matrix type.
--- For a cospectral family of k graphs, we store C(k,2) = k*(k-1)/2 pairs.
--- This redundancy is intentional: it enables O(1) lookup of all cospectral mates
--- for any graph, without needing to scan the entire graphs table.
--- Example: family {A, B, C} stores pairs (A,B), (A,C), (B,C).
--- Populated by scripts/compute_cospectral_tables.py
-CREATE TABLE IF NOT EXISTS cospectral_mates (
-    id              BIGSERIAL PRIMARY KEY,
-    graph1_id       BIGINT NOT NULL REFERENCES graphs(id),
-    graph2_id       BIGINT NOT NULL REFERENCES graphs(id),
-    matrix_type     VARCHAR(20) NOT NULL CHECK (matrix_type IN ('adj', 'kirchhoff', 'signless', 'lap', 'nb', 'nbl')),
+-- One row per cospectral family (a set of graphs sharing a spectrum for a given
+-- matrix type), instead of one row per pair. The pair-based design stored
+-- C(k,2) rows per family, which exploded for weak discriminators (e.g. ecc has
+-- families of 8000+ graphs). A family is identified by (matrix_type, n, hash);
+-- its members are recovered with an indexed lookup on graphs.<matrix>_spectral_hash.
+-- Only families of size >= 2 are stored. Populated by scripts/compute_cospectral_tables.py
+CREATE TABLE IF NOT EXISTS cospectral_families (
+    matrix_type     VARCHAR(20) NOT NULL,
+    n               SMALLINT NOT NULL,
+    spectral_hash   CHAR(16) NOT NULL,
+    family_size     INTEGER NOT NULL CHECK (family_size >= 2),
 
-    CONSTRAINT graph_order CHECK (graph1_id < graph2_id),
-    UNIQUE (graph1_id, graph2_id, matrix_type)
+    PRIMARY KEY (matrix_type, n, spectral_hash)
 );
 
-CREATE INDEX IF NOT EXISTS idx_mates_matrix ON cospectral_mates(matrix_type);
-CREATE INDEX IF NOT EXISTS idx_mates_graph1 ON cospectral_mates(graph1_id);
-CREATE INDEX IF NOT EXISTS idx_mates_graph2 ON cospectral_mates(graph2_id);
+CREATE INDEX IF NOT EXISTS idx_families_matrix_n ON cospectral_families(matrix_type, n);
 
 -- Stats cache table
 CREATE TABLE IF NOT EXISTS stats_cache (

@@ -25,3 +25,7 @@ coverage/
 # Local prod-data snapshot pulled from Fly (large, do not commit)
 smol_prod.db
 smol_prod.db-*
+
+# Local agent config and deploy-state artifact (do not commit)
+.claude/
+.deploy_manifest.json

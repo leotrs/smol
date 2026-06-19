@@ -62,10 +62,10 @@
 <script>
 // Spectrum data
 const spectraData = {
-    adj: {{ graph.spectra.adj_eigenvalues | tojson }}.map(x => ({re: x, im: 0})),
-    kirchhoff: {{ graph.spectra.kirchhoff_eigenvalues | tojson }}.map(x => ({re: x, im: 0})),
-    signless: {{ graph.spectra.signless_eigenvalues | tojson }}.map(x => ({re: x, im: 0})),
-    lap: {{ graph.spectra.lap_eigenvalues | tojson }}.map(x => ({re: x, im: 0})),
+    adj: ({{ graph.spectra.adj_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
+    kirchhoff: ({{ graph.spectra.kirchhoff_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
+    signless: ({{ graph.spectra.signless_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
+    lap: ({{ graph.spectra.lap_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
     dist: ({{ graph.spectra.dist_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
     distlap: ({{ graph.spectra.distlap_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
     distsign: ({{ graph.spectra.distsign_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
@@ -73,13 +73,13 @@ const spectraData = {
     ecc: ({{ graph.spectra.ecc_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
     yoon2: ({{ graph.spectra.yoon2_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
     yoon3: ({{ graph.spectra.yoon3_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
-    nb: {{ graph.spectra.nb_eigenvalues_re | tojson }}.map((re, i) => ({
+    nb: ({{ graph.spectra.nb_eigenvalues_re | tojson }} || []).map((re, i) => ({
         re: re,
-        im: {{ graph.spectra.nb_eigenvalues_im | tojson }}[i]
+        im: ({{ graph.spectra.nb_eigenvalues_im | tojson }} || [])[i]
     })),
-    nbl: {{ graph.spectra.nbl_eigenvalues_re | tojson }}.map((re, i) => ({
+    nbl: ({{ graph.spectra.nbl_eigenvalues_re | tojson }} || []).map((re, i) => ({
         re: re,
-        im: {{ graph.spectra.nbl_eigenvalues_im | tojson }}[i]
+        im: ({{ graph.spectra.nbl_eigenvalues_im | tojson }} || [])[i]
     })),
     non3cyc: ({{ graph.spectra.non3cyc_eigenvalues_re | tojson }} || []).map((re, i) => ({
         re: re, im: ({{ graph.spectra.non3cyc_eigenvalues_im | tojson }} || [])[i]
@@ -1354,8 +1354,9 @@ function downloadEigenvaluesCSV(matrixType) {
         filename = `${graphData.graph6}_lap_eigenvalues.csv`;
         header = '# Normalized Laplacian matrix eigenvalues';
     } else if (matrixType === 'nb') {
-        const re = graphData.spectra.nb_eigenvalues_re;
-        const im = graphData.spectra.nb_eigenvalues_im;
+        const re = graphData.spectra.nb_eigenvalues_re || [];
+        const im = graphData.spectra.nb_eigenvalues_im || [];
+        if (!re.length) return;  // hash-only graph: nothing to export
         const lines = ['real,imaginary'];
         for (let i = 0; i < re.length; i++) {
             lines.push(`${re[i]},${im[i]}`);
@@ -1364,8 +1365,9 @@ function downloadEigenvaluesCSV(matrixType) {
         downloadFile(content, `${graphData.graph6}_nb_eigenvalues.csv`, 'text/csv');
         return;
     } else if (matrixType === 'nbl') {
-        const re = graphData.spectra.nbl_eigenvalues_re;
-        const im = graphData.spectra.nbl_eigenvalues_im;
+        const re = graphData.spectra.nbl_eigenvalues_re || [];
+        const im = graphData.spectra.nbl_eigenvalues_im || [];
+        if (!re.length) return;  // hash-only graph: nothing to export
         const lines = ['real,imaginary'];
         for (let i = 0; i < re.length; i++) {
             lines.push(`${re[i]},${im[i]}`);
@@ -1402,6 +1404,7 @@ function downloadEigenvaluesCSV(matrixType) {
     }
 
     // For real eigenvalues (adj, kirchhoff, signless, lap, dist, distlap, distsign)
+    if (!eigenvalues || !eigenvalues.length) return;  // hash-only graph: nothing to export
     const lines = ['eigenvalue'];
     eigenvalues.forEach(e => lines.push(e.toString()));
     const content = `${header}\n# ${graphData.graph6}\n` + lines.join('\n');

@@ -13,12 +13,7 @@ CREATE TABLE switching_mechanisms (
     PRIMARY KEY (graph1_id, graph2_id, matrix_type, mechanism_type),
 
     -- Ensure graph1_id < graph2_id for consistency
-    CONSTRAINT ordered_pair CHECK (graph1_id < graph2_id),
-
-    -- Foreign key to cospectral_mates
-    FOREIGN KEY (graph1_id, graph2_id, matrix_type)
-        REFERENCES cospectral_mates(graph1_id, graph2_id, matrix_type)
-        ON DELETE CASCADE
+    CONSTRAINT ordered_pair CHECK (graph1_id < graph2_id)
 );
 
 -- Indexes for fast lookups

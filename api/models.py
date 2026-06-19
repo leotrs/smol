@@ -31,19 +31,21 @@ class GraphProperties(BaseModel):
 
 
 class Spectra(BaseModel):
-    adj_eigenvalues: list[float]
+    # Eigenvalue arrays are nullable: large-n graphs (e.g. n=10) are stored hash-only,
+    # so the arrays are absent while the spectral hashes remain.
+    adj_eigenvalues: list[float] | None = None
     adj_hash: str
-    kirchhoff_eigenvalues: list[float]
+    kirchhoff_eigenvalues: list[float] | None = None
     kirchhoff_hash: str
-    signless_eigenvalues: list[float]
+    signless_eigenvalues: list[float] | None = None
     signless_hash: str
-    lap_eigenvalues: list[float]
+    lap_eigenvalues: list[float] | None = None
     lap_hash: str
-    nb_eigenvalues_re: list[float]
-    nb_eigenvalues_im: list[float]
+    nb_eigenvalues_re: list[float] | None = None
+    nb_eigenvalues_im: list[float] | None = None
     nb_hash: str
-    nbl_eigenvalues_re: list[float]
-    nbl_eigenvalues_im: list[float]
+    nbl_eigenvalues_re: list[float] | None = None
+    nbl_eigenvalues_im: list[float] | None = None
     nbl_hash: str
     dist_eigenvalues: list[float] | None
     dist_hash: str | None
@@ -109,7 +111,7 @@ class GraphSummary(BaseModel):
 class CompareResult(BaseModel):
     graphs: list[GraphFull]
     spectral_comparison: dict[str, str]  # matrix -> "same" or "different" (or distance for 2 graphs)
-    distance_matrix: dict[str, list[list[float]]] | None = None  # matrix -> NxN distance matrix for >2 graphs
+    distance_matrix: dict[str, list[list[float | None]]] | None = None  # matrix -> NxN distance matrix for >2 graphs; None cell = N/A (e.g. disconnected graph)
 
 
 class PropertyStats(BaseModel):

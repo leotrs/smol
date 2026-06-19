@@ -30,7 +30,7 @@ NULLED_COLUMNS = frozenset(
 # Tables to export and their n-filtering (None = export all rows)
 TABLES = {
     "graphs": "n <= {max_n}",
-    "cospectral_mates": "graph1_id IN (SELECT id FROM graphs WHERE n <= {max_n})",
+    "cospectral_families": "n <= {max_n}",
     "switching_mechanisms": "graph1_id IN (SELECT id FROM graphs WHERE n <= {max_n})",
     "stats_cache": None,
 }

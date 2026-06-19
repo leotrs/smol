@@ -79,7 +79,7 @@ just deploy-db --skip-export                   # Skip export, use existing smol.
 GET /                              Home page (search interface)
 GET /graph/{graph6}                Graph detail + cospectral mates + tags + mechanisms
 GET /graphs                        Query/filter graphs (HTMX partial or JSON)
-GET /cospectral-pairs              Get cospectral pairs (matrix, n, limit, offset)
+GET /cospectral-families           Get cospectral families (matrix, n, limit, offset); /cospectral-pairs redirects here
 GET /search                        Advanced search with filters
 GET /compare?graphs=...            Compare multiple graphs
 GET /similar/{graph6}              Find spectrally similar graphs (Earth Mover's Distance)
@@ -127,7 +127,7 @@ Footer on all pages has "Random graph" and "Random cospectral family" links.
 - Stats cached in `stats_cache` table (refresh with `scripts/refresh_stats.py`)
   - Includes: cospectral counts, property distributions, tag counts, mechanism stats
   - Cache ensures stats page loads in <15ms
-- Cospectral pairs pre-computed in `cospectral_mates` table for fast lookup
+- Cospectral families pre-computed in `cospectral_families` table (one row per family of size >= 2, keyed by matrix_type/n/hash); members derived via the per-matrix hash index on `graphs`
 - Switching mechanisms stored in `switching_mechanisms` table (GM switching for n=8,9)
 - Database contains ALL graphs (connected and disconnected)
 

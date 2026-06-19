@@ -71,13 +71,13 @@
 <h2>Cospectral Mates</h2>
 <dl>
     <dt><code>has_cospectral_mate</code></dt>
-    <dd>Filter by cospectrality. Values: <code>adj</code>, <code>kirchhoff</code>, <code>signless</code>, <code>lap</code>, <code>nb</code>, <code>nbl</code>, <code>dist</code>, or <code>none</code></dd>
+    <dd>Filter to graphs that have a cospectral mate for the given matrix. Values: any matrix key, e.g. <code>adj</code>, <code>kirchhoff</code>, <code>signless</code>, <code>lap</code>, <code>nb</code>, <code>nbl</code>, <code>dist</code></dd>
 </dl>
 
 <p><strong>Examples:</strong></p>
 <pre><code>/search?n=8&amp;has_cospectral_mate=adj        # 8-vertex graphs with adjacency cospectral mates
 /search?n=7&amp;has_cospectral_mate=kirchhoff  # 7-vertex graphs with Kirchhoff cospectral mates
-/search?n=6&amp;has_cospectral_mate=none       # 6-vertex graphs with NO cospectral mates</code></pre>
+/search?n=9&amp;has_cospectral_mate=nb         # 9-vertex graphs with non-backtracking cospectral mates</code></pre>
 
 <h2>Switching Mechanisms</h2>
 <dl>
@@ -108,8 +108,8 @@
 <pre><code># 8-vertex bipartite planar graphs with diameter ≤ 3 and adjacency cospectral mates
 /search?n=8&amp;tags=bipartite&amp;tags=planar&amp;tag_mode=AND&amp;diameter_max=3&amp;has_cospectral_mate=adj
 
-# 7-vertex regular graphs with girth ≥ 4 and no cospectral mates
-/search?n=7&amp;tags=regular&amp;girth_min=4&amp;has_cospectral_mate=none
+# 7-vertex regular graphs with girth ≥ 4 and distance cospectral mates
+/search?n=7&amp;tags=regular&amp;girth_min=4&amp;has_cospectral_mate=dist
 
 # Cubic graphs (3-regular) with 8 vertices and exactly 1 triangle
 /search?n=8&amp;tags=cubic&amp;triangle_count=1</code></pre>
@@ -140,9 +140,9 @@
             <td><code>/random/cospectral?matrix=adj</code></td>
         </tr>
         <tr>
-            <td><code>GET /cospectral-pairs</code></td>
-            <td>Get cospectral pairs</td>
-            <td><code>/cospectral-pairs?matrix=adj&amp;n=8</code></td>
+            <td><code>GET /cospectral-families</code></td>
+            <td>Get cospectral families (sets of graphs sharing a spectrum)</td>
+            <td><code>/cospectral-families?matrix=adj&amp;n=8</code></td>
         </tr>
         <tr>
             <td><code>GET /compare</code></td>

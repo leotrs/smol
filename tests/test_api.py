@@ -247,6 +247,42 @@ class TestCompareEndpoint:
         assert "Spectra</strong>" in response.text or "Spectra</" in response.text
         assert "compare-spectrum-real-plot" in response.text
 
+    def test_n10_graph_detail_renders_hash_only(self):
+        """n=10 graphs are stored hash-only (eigenvalue arrays NULL); their detail
+        page must render (eigenvalues optional), not 500."""
+        from urllib.parse import quote
+        listing = client.get("/search?n=10&limit=1", headers={"Accept": "application/json"})
+        if listing.status_code != 200 or not listing.json():
+            pytest.skip("no n=10 graphs in this database")
+        g6 = listing.json()[0]["graph6"]
+        resp = client.get(f"/graph/{quote(g6, safe='')}", headers={"Accept": "application/json"})
+        assert resp.status_code == 200
+        spectra = resp.json()["spectra"]
+        assert spectra["adj_hash"]  # hash retained
+        assert spectra["adj_eigenvalues"] is None  # array not stored
+
+    def test_compare_many_with_disconnected_graph_serializes(self):
+        """Regression: comparing >2 graphs where one is disconnected must not 500.
+
+        A disconnected graph has no distance spectrum, so distance-based matrices
+        yield null (N/A) cells. These were previously float('nan'), which is not
+        JSON-serializable and 500'd the response. D?? is the empty graph on 5
+        vertices (disconnected); D?{ and DEo are connected 5-vertex graphs.
+        """
+        response = client.get("/compare?graphs=D%3F%3F,D%3F%7B,DEo")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["graphs"]) == 3
+        dm = data["distance_matrix"]
+        assert dm is not None
+        # The disconnected graph forces at least one null cell in a distance-based matrix.
+        assert any(
+            cell is None
+            for matrix in dm.values()
+            for row in matrix
+            for cell in row
+        )
+
 
 class TestGlossaryEndpoint:
     def test_glossary_returns_html(self):
@@ -1430,62 +1466,69 @@ class TestMechanismVisualization:
 
 
 @needs_db
-class TestCospectralPairsEndpoint:
-    def test_cospectral_pairs_returns_json(self):
-        """Test that /cospectral-pairs returns JSON."""
-        response = client.get("/cospectral-pairs?matrix=adj&n=8&limit=2")
+class TestCospectralFamiliesEndpoint:
+    def test_families_returns_json(self):
+        """Test that /cospectral-families returns JSON."""
+        response = client.get("/cospectral-families?matrix=adj&n=8&limit=2")
         assert response.status_code == 200
         assert "application/json" in response.headers["content-type"]
 
-    def test_cospectral_pairs_structure(self):
-        """Test that pairs have correct structure."""
-        response = client.get("/cospectral-pairs?matrix=adj&n=8&limit=1")
+    def test_families_structure(self):
+        """Test that families have correct structure."""
+        response = client.get("/cospectral-families?matrix=adj&n=8&limit=1")
         data = response.json()
         assert isinstance(data, list)
         if len(data) > 0:
-            pair = data[0]
-            assert "graph1" in pair
-            assert "graph2" in pair
-            assert "matrix_type" in pair
-            assert "graph6" in pair["graph1"]
-            assert "n" in pair["graph1"]
-            assert "m" in pair["graph1"]
-            assert "graph6" in pair["graph2"]
-            assert "n" in pair["graph2"]
-            assert "m" in pair["graph2"]
-            assert pair["matrix_type"] == "adj"
+            fam = data[0]
+            assert fam["matrix_type"] == "adj"
+            assert "n" in fam
+            assert "size" in fam
+            assert fam["size"] >= 2
+            assert isinstance(fam["graphs"], list)
+            assert len(fam["graphs"]) >= 2
+            member = fam["graphs"][0]
+            assert "graph6" in member and "n" in member and "m" in member
 
-    def test_cospectral_pairs_filters_by_matrix(self):
+    def test_families_filters_by_matrix(self):
         """Test filtering by matrix type."""
-        response = client.get("/cospectral-pairs?matrix=nb&n=8&limit=1")
+        response = client.get("/cospectral-families?matrix=nb&n=8&limit=1")
         data = response.json()
         assert response.status_code == 200
         if len(data) > 0:
             assert data[0]["matrix_type"] == "nb"
 
-    def test_cospectral_pairs_filters_by_n(self):
+    def test_families_filters_by_n(self):
         """Test filtering by n."""
-        response = client.get("/cospectral-pairs?matrix=adj&n=7&limit=5")
+        response = client.get("/cospectral-families?matrix=adj&n=7&limit=5")
         data = response.json()
         assert response.status_code == 200
-        for pair in data:
-            assert pair["graph1"]["n"] == 7
-            assert pair["graph2"]["n"] == 7
+        for fam in data:
+            assert fam["n"] == 7
+            for member in fam["graphs"]:
+                assert member["n"] == 7
 
-    def test_cospectral_pairs_respects_limit(self):
-        """Test that limit parameter works."""
-        response = client.get("/cospectral-pairs?matrix=adj&n=8&limit=3")
+    def test_families_respects_limit(self):
+        """Test that limit parameter bounds the number of families."""
+        response = client.get("/cospectral-families?matrix=adj&n=8&limit=3")
         data = response.json()
         assert response.status_code == 200
         assert len(data) <= 3
 
-    def test_cospectral_pairs_invalid_matrix(self):
+    def test_families_invalid_matrix(self):
         """Test that invalid matrix type returns 400."""
-        response = client.get("/cospectral-pairs?matrix=invalid")
+        response = client.get("/cospectral-families?matrix=invalid")
         assert response.status_code == 400
 
-    def test_cospectral_pairs_all_matrix_types(self):
+    def test_families_all_matrix_types(self):
         """Test all valid matrix types."""
         for matrix in ["adj", "kirchhoff", "signless", "lap", "nb", "nbl", "dist"]:
-            response = client.get(f"/cospectral-pairs?matrix={matrix}&limit=1")
+            response = client.get(f"/cospectral-families?matrix={matrix}&limit=1")
             assert response.status_code == 200, f"Failed for matrix={matrix}"
+
+    def test_cospectral_pairs_redirects_to_families(self):
+        """The deprecated /cospectral-pairs endpoint redirects to /cospectral-families."""
+        response = client.get(
+            "/cospectral-pairs?matrix=adj&n=8&limit=2", follow_redirects=False
+        )
+        assert response.status_code == 308
+        assert response.headers["location"] == "/cospectral-families?matrix=adj&n=8&limit=2"

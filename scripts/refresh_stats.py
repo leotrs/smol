@@ -45,44 +45,40 @@ def compute_stats(conn) -> dict:
     )
     counts_by_n_mindeg2 = {str(r[0]): r[1] for r in cur.fetchall()}
 
-    # Cospectral counts from pre-computed pairs table
+    # Cospectral counts from the families table. A graph is "not determined by its
+    # spectrum" iff its (n, hash) is a family of size >= 2; "all graphs" count is the
+    # sum of family sizes per n.
     cospectral = {}
     for matrix in MATRIX_KEYS:
         cur.execute(
             """
-            WITH all_graphs AS (
-                SELECT graph1_id as gid FROM cospectral_mates WHERE matrix_type = %s
-                UNION
-                SELECT graph2_id FROM cospectral_mates WHERE matrix_type = %s
-            )
-            SELECT g.n, COUNT(*) as cospectral_count
-            FROM all_graphs a
-            JOIN graphs g ON a.gid = g.id
-            GROUP BY g.n
-            ORDER BY g.n
+            SELECT n, COALESCE(SUM(family_size), 0)
+            FROM cospectral_families
+            WHERE matrix_type = %s AND n <= %s
+            GROUP BY n
+            ORDER BY n
             """,
-            (matrix, matrix),
+            (matrix, MAX_N),
         )
         cospectral[matrix] = {str(r[0]): r[1] for r in cur.fetchall()}
 
-    # Cospectral counts for min_degree >= 2
+    # Cospectral counts for min_degree >= 2: md2 graphs belonging to a family of
+    # size >= 2 (the family may include graphs of lower degree).
     cospectral_mindeg2 = {}
     for matrix in MATRIX_KEYS:
+        hash_col = f"{matrix}_spectral_hash"
         cur.execute(
-            """
-            WITH all_graphs AS (
-                SELECT graph1_id as gid FROM cospectral_mates WHERE matrix_type = %s
-                UNION
-                SELECT graph2_id FROM cospectral_mates WHERE matrix_type = %s
-            )
+            f"""
             SELECT g.n, COUNT(*) as cospectral_count
-            FROM all_graphs a
-            JOIN graphs g ON a.gid = g.id
-            WHERE g.min_degree >= 2
+            FROM graphs g
+            JOIN cospectral_families cf
+              ON cf.matrix_type = %s AND cf.n = g.n
+             AND cf.spectral_hash = g.{hash_col}
+            WHERE g.min_degree >= 2 AND g.n <= %s
             GROUP BY g.n
             ORDER BY g.n
             """,
-            (matrix, matrix),
+            (matrix, MAX_N),
         )
         cospectral_mindeg2[matrix] = {str(r[0]): r[1] for r in cur.fetchall()}
 
@@ -115,18 +111,13 @@ def compute_stats(conn) -> dict:
     )
     mech_rows = cur.fetchall()
 
-    # Get totals for coverage calculation
+    # Get totals for coverage calculation: graphs in adj cospectral families per n.
     cur.execute(
         """
-        WITH all_graphs AS (
-            SELECT graph1_id as gid FROM cospectral_mates WHERE matrix_type = 'adj'
-            UNION
-            SELECT graph2_id FROM cospectral_mates WHERE matrix_type = 'adj'
-        )
-        SELECT g.n, COUNT(DISTINCT a.gid) as total
-        FROM all_graphs a
-        JOIN graphs g ON a.gid = g.id
-        GROUP BY g.n
+        SELECT n, COALESCE(SUM(family_size), 0) as total
+        FROM cospectral_families
+        WHERE matrix_type = 'adj'
+        GROUP BY n
         """
     )
     totals = {r[0]: r[1] for r in cur.fetchall()}

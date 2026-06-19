@@ -128,14 +128,17 @@ def redetect_and_populate(conn, mechanism, n, matrix_type='adj'):
 
     cur = conn.cursor()
 
-    # Get all cospectral pairs
-    cur.execute("""
-        SELECT cm.graph1_id, cm.graph2_id, g1.graph6, g2.graph6
-        FROM cospectral_mates cm
-        JOIN graphs g1 ON cm.graph1_id = g1.id
-        JOIN graphs g2 ON cm.graph2_id = g2.id
-        WHERE cm.matrix_type = %s AND g1.n = %s
-    """, (matrix_type, n))
+    # Get all cospectral pairs (generated from same-hash families via a self-join).
+    hash_col = f"{matrix_type}_spectral_hash"
+    cur.execute(f"""
+        SELECT g1.id, g2.id, g1.graph6, g2.graph6
+        FROM graphs g1
+        JOIN graphs g2
+          ON g1.n = g2.n
+         AND g1.{hash_col} = g2.{hash_col}
+         AND g1.id < g2.id
+        WHERE g1.n = %s AND g1.{hash_col} IS NOT NULL
+    """, (n,))
 
     pairs = cur.fetchall()
     print(f"Found {len(pairs)} pairs to check")

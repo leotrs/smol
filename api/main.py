@@ -8,7 +8,7 @@ from pathlib import Path
 
 import networkx as nx
 from fastapi import FastAPI, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -272,20 +272,31 @@ async def random_graph():
     return RedirectResponse(url=f"/graph/{quote(row['graph6'], safe='')}", status_code=302)
 
 
-@app.get("/cospectral-pairs")
-async def cospectral_pairs(
+@app.get("/cospectral-families")
+async def cospectral_families(
     matrix: str = "adj",
     n: int | None = None,
     limit: int = Query(default=10, le=100),
     offset: int = 0,
 ):
-    """Get cospectral pairs for a given matrix type."""
+    """Get cospectral families for a given matrix type.
+
+    Each family is a set of graphs sharing a spectrum: {matrix_type, n, size, graphs}.
+    Up to 100 members are returned per family (size is the true count).
+    """
     if matrix not in MATRIX_KEYS:
         raise HTTPException(status_code=400, detail="Invalid matrix type")
 
-    from api.database import fetch_cospectral_pairs
-    pairs = await fetch_cospectral_pairs(matrix=matrix, n=n, limit=limit, offset=offset)
-    return pairs
+    from api.database import fetch_cospectral_families
+    return await fetch_cospectral_families(matrix=matrix, n=n, limit=limit, offset=offset)
+
+
+@app.get("/cospectral-pairs")
+async def cospectral_pairs(request: Request):
+    """Deprecated: cospectral data is now exposed as families. Redirects, preserving query params."""
+    qs = request.url.query
+    target = "/cospectral-families" + (f"?{qs}" if qs else "")
+    return RedirectResponse(url=target, status_code=308)
 
 
 @app.get("/random/cospectral")
@@ -794,7 +805,7 @@ async def compare_graphs(
                         if eigs1 is not None and eigs2 is not None and len(eigs1) == len(eigs2):
                             dist = wasserstein_distance(eigs1, eigs2)
                         else:
-                            dist = float('nan')
+                            dist = None
                     else:
                         # 2D Wasserstein for complex eigenvalues
                         re1 = g1_row[f"{matrix}_eigenvalues_re"]
@@ -811,10 +822,14 @@ async def compare_graphs(
                             M = ot.dist(eigs1, eigs2, metric='euclidean')
                             dist = ot.emd2(a, b, M)
                         else:
-                            dist = float('nan')
+                            dist = None
 
-                    # Round tiny floating point errors to exactly 0
-                    if not np.isnan(dist) and dist < 1e-8:
+                    # Missing or non-finite distances (e.g. disconnected graphs have
+                    # no distance spectrum) become None -> JSON null; the template
+                    # renders those cells as N/A. NaN cannot be JSON-serialized.
+                    if dist is not None and not np.isfinite(dist):
+                        dist = None
+                    if dist is not None and dist < 1e-8:
                         dist = 0.0
 
                     dist_matrix[i][j] = dist

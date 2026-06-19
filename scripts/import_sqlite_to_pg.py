@@ -8,8 +8,7 @@ This rebuilds the local PostgreSQL `smol` database from that file.
 It is generic: for each table it intersects the PostgreSQL columns with the
 SQLite columns and converts each value based on the PostgreSQL column type
 (JSON-text -> array, 0/1 -> boolean, JSON-text -> jsonb). Sparse `id` values
-are preserved so cospectral_mates / switching_mechanisms foreign keys remain
-valid.
+are preserved so switching_mechanisms graph references remain valid.
 
 Usage:
     uv run python scripts/import_sqlite_to_pg.py --sqlite smol_prod.db
@@ -24,7 +23,7 @@ import psycopg2
 from psycopg2.extras import execute_values, Json
 
 # Import order respects foreign keys (graphs must exist before its referents).
-TABLES = ["graphs", "cospectral_mates", "switching_mechanisms", "stats_cache"]
+TABLES = ["graphs", "cospectral_families", "switching_mechanisms", "stats_cache"]
 BATCH = 5000
 
 

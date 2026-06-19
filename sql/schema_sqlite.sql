@@ -139,25 +139,21 @@ CREATE INDEX IF NOT EXISTS idx_n_non3cyc_hash ON graphs(n, non3cyc_spectral_hash
 CREATE INDEX IF NOT EXISTS idx_graphs_non4cyc_hash ON graphs(non4cyc_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_non4cyc_hash ON graphs(n, non4cyc_spectral_hash);
 
--- Pre-computed cospectral mates table
--- Stores all pairs of graphs that share the same spectrum for a given matrix type.
--- For a cospectral family of k graphs, we store C(k,2) = k*(k-1)/2 pairs.
--- This redundancy is intentional: it enables O(1) lookup of all cospectral mates
--- for any graph, without needing to scan the entire graphs table.
--- Example: family {A, B, C} stores pairs (A,B), (A,C), (B,C).
--- Populated by scripts/compute_cospectral_tables.py
-CREATE TABLE IF NOT EXISTS cospectral_mates (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    graph1_id   INTEGER NOT NULL REFERENCES graphs(id),
-    graph2_id   INTEGER NOT NULL REFERENCES graphs(id),
-    matrix_type TEXT NOT NULL CHECK (matrix_type IN ('adj', 'kirchhoff', 'signless', 'lap', 'nb', 'nbl', 'dist', 'distlap', 'distsign', 'distnorm', 'ecc', 'kblock_family', 'yoon2', 'yoon3', 'non3cyc', 'non4cyc')),
-    UNIQUE (graph1_id, graph2_id, matrix_type),
-    CHECK (graph1_id < graph2_id)
+-- Pre-computed cospectral families table
+-- One row per cospectral family (graphs sharing a spectrum for a matrix type),
+-- replacing the old per-pair table which stored C(k,2) rows per family and
+-- exploded for weak discriminators (ecc has families of 8000+ graphs). Members
+-- are recovered with an indexed lookup on graphs.<matrix>_spectral_hash. Only
+-- families of size >= 2 are stored. Populated by scripts/compute_cospectral_tables.py
+CREATE TABLE IF NOT EXISTS cospectral_families (
+    matrix_type   TEXT NOT NULL,
+    n             INTEGER NOT NULL,
+    spectral_hash TEXT NOT NULL,
+    family_size   INTEGER NOT NULL CHECK (family_size >= 2),
+    PRIMARY KEY (matrix_type, n, spectral_hash)
 );
 
-CREATE INDEX IF NOT EXISTS idx_mates_matrix ON cospectral_mates(matrix_type);
-CREATE INDEX IF NOT EXISTS idx_mates_graph1 ON cospectral_mates(graph1_id);
-CREATE INDEX IF NOT EXISTS idx_mates_graph2 ON cospectral_mates(graph2_id);
+CREATE INDEX IF NOT EXISTS idx_families_matrix_n ON cospectral_families(matrix_type, n);
 
 -- Switching mechanisms table
 -- Stores detected switching mechanisms (like GM switching) that explain
@@ -171,8 +167,7 @@ CREATE TABLE IF NOT EXISTS switching_mechanisms (
     config          TEXT NOT NULL,  -- JSON
     detected_at     TEXT DEFAULT (datetime('now')),
     PRIMARY KEY (graph1_id, graph2_id, matrix_type, mechanism_type),
-    CHECK (graph1_id < graph2_id),
-    FOREIGN KEY (graph1_id, graph2_id, matrix_type) REFERENCES cospectral_mates(graph1_id, graph2_id, matrix_type) ON DELETE CASCADE
+    CHECK (graph1_id < graph2_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_mechanisms_graph1 ON switching_mechanisms(graph1_id);

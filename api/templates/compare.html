@@ -93,7 +93,7 @@
                     {% if j > i %}
                         {% set value = matrix_data[i][j] %}
                         {% set is_mate = (value == 0.0 and value is number) %}
-                        {% set is_nan = (value != value) %}
+                        {% set is_nan = (value is none) or (value != value) %}
                         <div class="cell data-cell{% if is_mate %} mate-cell{% elif is_nan %} na-cell{% endif %}"
                              {% if not is_nan %}style="background: linear-gradient(to right, var(--cell-color-start), var(--cell-color-end)); --distance: {{ value }};"{% endif %}
                              data-distance="{{ value if not is_nan else 'N/A' }}">
@@ -130,7 +130,7 @@ const allValues = [];
 Object.values(distanceMatrixData).forEach(matrix => {
     matrix.forEach((row, i) => {
         row.forEach((val, j) => {
-            if (j > i && !isNaN(val)) allValues.push(val);
+            if (j > i && val !== null && !isNaN(val)) allValues.push(val);
         });
     });
 });
@@ -329,10 +329,10 @@ function renderCompareSpectrumRealPlot() {
         graphIndex: idx,
         graph6: g.graph6,
         spectra: {
-            adj: g.spectra.adj_eigenvalues.map(re => ({re, im: 0})),
+            adj: (g.spectra.adj_eigenvalues || []).map(re => ({re, im: 0})),
             kirchhoff: (g.spectra.kirchhoff_eigenvalues || []).map(re => ({re, im: 0})),
             signless: (g.spectra.signless_eigenvalues || []).map(re => ({re, im: 0})),
-            lap: g.spectra.lap_eigenvalues.map(re => ({re, im: 0})),
+            lap: (g.spectra.lap_eigenvalues || []).map(re => ({re, im: 0})),
             dist: (g.spectra.dist_eigenvalues || []).map(re => ({re, im: 0})),
             distlap: (g.spectra.distlap_eigenvalues || []).map(re => ({re, im: 0})),
             distsign: (g.spectra.distsign_eigenvalues || []).map(re => ({re, im: 0})),
@@ -715,8 +715,8 @@ function renderCompareSpectrumComplexPlot() {
         graphIndex: idx,
         graph6: g.graph6,
         spectra: {
-            nb: g.spectra.nb_eigenvalues_re.map((re, i) => ({re, im: g.spectra.nb_eigenvalues_im[i]})),
-            nbl: g.spectra.nbl_eigenvalues_re.map((re, i) => ({re, im: g.spectra.nbl_eigenvalues_im[i]})),
+            nb: (g.spectra.nb_eigenvalues_re || []).map((re, i) => ({re, im: (g.spectra.nb_eigenvalues_im || [])[i]})),
+            nbl: (g.spectra.nbl_eigenvalues_re || []).map((re, i) => ({re, im: (g.spectra.nbl_eigenvalues_im || [])[i]})),
             non3cyc: (g.spectra.non3cyc_eigenvalues_re || []).map((re, i) => ({re, im: (g.spectra.non3cyc_eigenvalues_im || [])[i]})),
             non4cyc: (g.spectra.non4cyc_eigenvalues_re || []).map((re, i) => ({re, im: (g.spectra.non4cyc_eigenvalues_im || [])[i]}))
         }
@@ -745,7 +745,9 @@ function renderCompareSpectrumComplexPlot() {
         ...gs,
         plotSpectra: {
             nb: withConjugates(gs.spectra.nb),
-            nbl: withConjugates(gs.spectra.nbl)
+            nbl: withConjugates(gs.spectra.nbl),
+            non3cyc: withConjugates(gs.spectra.non3cyc),
+            non4cyc: withConjugates(gs.spectra.non4cyc)
         }
     }));
 
