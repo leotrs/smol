@@ -72,7 +72,9 @@ def build_for_n(conn, n: int, workers: int, batch_size: int, shard: int, num_sha
                 results = [_hashes_for(r) for r in chunk]
             _flush(conn, results)
             total += len(chunk)
-            print(f"  n={n} shard={shard}: {total:,}/{len(rows):,}", flush=True)
+            from datetime import datetime
+            ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"[{ts}] n={n} shard={shard}: {total:,}/{len(rows):,}", flush=True)
     finally:
         if pool:
             pool.close()
