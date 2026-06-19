@@ -28,13 +28,17 @@ import numpy as np
 
 from .matrices import adjacency_matrix, open_path_matrix
 from .matrix_types import MATRIX_TYPES
-from .spectrum import bareiss_poly_det, charpoly_hash, nb_charpoly
+from .spectrum import bareiss_poly_det, charpoly_hash
 
-# Matrices handled by this module (the "easy" tier).
+# Matrices that get an exact charpoly hash: the 11 real (symmetric, eigvalsh-stable)
+# matrices. The 4 complex-spectrum matrices (nb, nbl, non3cyc, non4cyc) keep the
+# float-eigenvalue hash: their non-symmetric matrices are far too large for exact
+# charpoly (non4cyc reaches 3024x3024 at n=9), and the only feasible exact route for
+# nb (the Ihara-Bass reduction) is deliberately not used here.
 INTEGER_MATRICES = ("adj", "kirchhoff", "signless", "dist", "distlap", "distsign", "ecc")
 NORMALIZED_MATRICES = ("lap", "distnorm")
 YOON_MATRICES = {"yoon2": 2, "yoon3": 3}
-EASY_MATRICES = INTEGER_MATRICES + NORMALIZED_MATRICES + tuple(YOON_MATRICES) + ("nb",)
+CHARPOLY_MATRICES = INTEGER_MATRICES + NORMALIZED_MATRICES + tuple(YOON_MATRICES)
 
 
 def _lcm(a: int, b: int) -> int:
@@ -157,8 +161,6 @@ def _yoon_charpoly_key(G: nx.Graph, m: int) -> str | None:
 def exact_spectral_hash(key: str, G: nx.Graph) -> str | None:
     """Exact charpoly cospectral hash for matrix `key` on graph G, or None if the
     matrix is undefined for G (e.g. distance matrices on disconnected graphs)."""
-    if key == "nb":
-        return charpoly_hash(nb_charpoly(adjacency_matrix(G)))
     if key == "lap":
         return _lap_charpoly_key(G)
     if key == "distnorm":

@@ -16,10 +16,10 @@ import networkx as nx
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from db.charpoly import EASY_MATRICES, exact_spectral_hash
+from db.charpoly import CHARPOLY_MATRICES, exact_spectral_hash
 from db.database import connect
 
-COLS = list(EASY_MATRICES)
+COLS = list(CHARPOLY_MATRICES)
 HASH_COLS = [f"{k}_spectral_hash" for k in COLS]
 
 

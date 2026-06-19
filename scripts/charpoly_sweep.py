@@ -26,10 +26,10 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from db.charpoly import EASY_MATRICES, exact_spectral_hash
+from db.charpoly import CHARPOLY_MATRICES, exact_spectral_hash
 from db.database import connect
 
-INTEGER_MATRICES = list(EASY_MATRICES)
+INTEGER_MATRICES = list(CHARPOLY_MATRICES)
 
 
 def _hash_for(args):
