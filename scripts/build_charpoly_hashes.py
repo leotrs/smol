@@ -29,21 +29,10 @@ def _hashes_for(args):
     return (gid, [exact_spectral_hash(k, G) for k in COLS])
 
 
-def build_for_n(conn, n: int, workers: int):
-    cur = conn.cursor()
-    cur.execute("SELECT id, graph6 FROM graphs_cp WHERE n = %s ORDER BY id", (n,))
-    rows = cur.fetchall()
-    if not rows:
-        return 0
-
-    if workers > 1 and len(rows) > 1000:
-        from multiprocessing import Pool
-        with Pool(workers) as pool:
-            results = pool.map(_hashes_for, rows, chunksize=1000)
-    else:
-        results = [_hashes_for(r) for r in rows]
-
+def _flush(conn, results):
+    """Stage a batch of (id, hashes) and UPDATE graphs_cp from it."""
     from psycopg2.extras import execute_values
+    cur = conn.cursor()
     cur.execute("DROP TABLE IF EXISTS _cp_stage")
     cols_ddl = ", ".join(f"{c} char(16)" for c in HASH_COLS)
     cur.execute(f"CREATE TEMP TABLE _cp_stage (id bigint PRIMARY KEY, {cols_ddl})")
@@ -54,12 +43,41 @@ def build_for_n(conn, n: int, workers: int):
         page_size=5000,
     )
     set_clause = ", ".join(f"{c} = s.{c}" for c in HASH_COLS)
-    cur.execute(
-        f"UPDATE graphs_cp g SET {set_clause} FROM _cp_stage s WHERE g.id = s.id"
-    )
+    cur.execute(f"UPDATE graphs_cp g SET {set_clause} FROM _cp_stage s WHERE g.id = s.id")
     cur.execute("DROP TABLE _cp_stage")
     conn.commit()
-    return len(rows)
+
+
+def build_for_n(conn, n: int, workers: int, batch_size: int, shard: int, num_shards: int):
+    """Compute charpoly hashes for graphs_cp at vertex count n, in id-ordered batches
+    (bounded memory). Optionally restrict to a residue class of id for parallel runs."""
+    cur = conn.cursor()
+    where = "n = %s AND {col} IS NULL".format(col=HASH_COLS[0])
+    if num_shards > 1:
+        where += f" AND (id %% {int(num_shards)}) = {int(shard)}"
+    cur.execute(f"SELECT id, graph6 FROM graphs_cp WHERE {where} ORDER BY id", (n,))
+    rows = cur.fetchall()
+    if not rows:
+        return 0
+
+    from multiprocessing import Pool
+    total = 0
+    pool = Pool(workers) if workers > 1 else None
+    try:
+        for start in range(0, len(rows), batch_size):
+            chunk = rows[start:start + batch_size]
+            if pool:
+                results = pool.map(_hashes_for, chunk, chunksize=1000)
+            else:
+                results = [_hashes_for(r) for r in chunk]
+            _flush(conn, results)
+            total += len(chunk)
+            print(f"  n={n} shard={shard}: {total:,}/{len(rows):,}", flush=True)
+    finally:
+        if pool:
+            pool.close()
+            pool.join()
+    return total
 
 
 def main():
@@ -67,11 +85,14 @@ def main():
     ap.add_argument("--min-n", type=int, default=1)
     ap.add_argument("--max-n", type=int, default=9)
     ap.add_argument("--workers", type=int, default=8)
+    ap.add_argument("--batch-size", type=int, default=200000)
+    ap.add_argument("--shard", type=int, default=0)
+    ap.add_argument("--num-shards", type=int, default=1)
     args = ap.parse_args()
 
     conn = connect()
     for n in range(args.min_n, args.max_n + 1):
-        count = build_for_n(conn, n, args.workers)
+        count = build_for_n(conn, n, args.workers, args.batch_size, args.shard, args.num_shards)
         print(f"n={n}: {count:,} graphs hashed ({len(COLS)} matrices)", flush=True)
     conn.close()
     print("Done.")
