@@ -11,7 +11,7 @@ import os
 from contextlib import asynccontextmanager
 from typing import Any
 
-from db.matrix_types import MATRIX_KEYS, complex_keys
+from db.matrix_types import MATRIX_KEYS
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "dbname=smol")
 
@@ -79,17 +79,9 @@ def _parse_row(row: Any) -> dict[str, Any] | None:
 
     if IS_SQLITE:
         d = dict(row)
-        json_fields = [
-            "adj_eigenvalues", "kirchhoff_eigenvalues", "signless_eigenvalues", "lap_eigenvalues",
-            "nb_eigenvalues_re", "nb_eigenvalues_im",
-            "nbl_eigenvalues_re", "nbl_eigenvalues_im",
-            "dist_eigenvalues", "distlap_eigenvalues", "distsign_eigenvalues",
-            "distnorm_eigenvalues", "ecc_eigenvalues",
-            "yoon2_eigenvalues", "yoon3_eigenvalues",
-            "non3cyc_eigenvalues_re", "non3cyc_eigenvalues_im",
-            "non4cyc_eigenvalues_re", "non4cyc_eigenvalues_im",
-            "tags",
-        ]
+        # Eigenvalue arrays are no longer stored (computed on demand from graph6
+        # for the viz); only tags remains as a JSON-encoded column in SQLite.
+        json_fields = ["tags"]
         for field in json_fields:
             if field in d and d[field] is not None:
                 d[field] = json.loads(d[field])
@@ -134,22 +126,22 @@ async def fetch_graph(graph6: str) -> dict[str, Any] | None:
                        clique_number, chromatic_number,
                        algebraic_connectivity, global_clustering, avg_local_clustering,
                        avg_path_length, assortativity,
-                       adj_eigenvalues, adj_spectral_hash,
-                       kirchhoff_eigenvalues, kirchhoff_spectral_hash,
-                       signless_eigenvalues, signless_spectral_hash,
-                       lap_eigenvalues, lap_spectral_hash,
-                       nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
-                       nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash,
-                       dist_eigenvalues, dist_spectral_hash,
-                       distlap_eigenvalues, distlap_spectral_hash,
-                       distsign_eigenvalues, distsign_spectral_hash,
-                       distnorm_eigenvalues, distnorm_spectral_hash,
-                       ecc_eigenvalues, ecc_spectral_hash,
+                       adj_spectral_hash,
+                       kirchhoff_spectral_hash,
+                       signless_spectral_hash,
+                       lap_spectral_hash,
+                       nb_spectral_hash,
+                       nbl_spectral_hash,
+                       dist_spectral_hash,
+                       distlap_spectral_hash,
+                       distsign_spectral_hash,
+                       distnorm_spectral_hash,
+                       ecc_spectral_hash,
                        kblock_family_spectral_hash,
-                       yoon2_eigenvalues, yoon2_spectral_hash,
-                       yoon3_eigenvalues, yoon3_spectral_hash,
-                       non3cyc_eigenvalues_re, non3cyc_eigenvalues_im, non3cyc_spectral_hash,
-                       non4cyc_eigenvalues_re, non4cyc_eigenvalues_im, non4cyc_spectral_hash
+                       yoon2_spectral_hash,
+                       yoon3_spectral_hash,
+                       non3cyc_spectral_hash,
+                       non4cyc_spectral_hash
                        {tags_col}
                 FROM graphs
                 WHERE graph6 = {ph}
@@ -170,22 +162,22 @@ async def fetch_graph(graph6: str) -> dict[str, Any] | None:
                        clique_number, chromatic_number,
                        algebraic_connectivity, global_clustering, avg_local_clustering,
                        avg_path_length, assortativity,
-                       adj_eigenvalues, adj_spectral_hash,
-                       kirchhoff_eigenvalues, kirchhoff_spectral_hash,
-                       signless_eigenvalues, signless_spectral_hash,
-                       lap_eigenvalues, lap_spectral_hash,
-                       nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
-                       nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash,
-                       dist_eigenvalues, dist_spectral_hash,
-                       distlap_eigenvalues, distlap_spectral_hash,
-                       distsign_eigenvalues, distsign_spectral_hash,
-                       distnorm_eigenvalues, distnorm_spectral_hash,
-                       ecc_eigenvalues, ecc_spectral_hash,
+                       adj_spectral_hash,
+                       kirchhoff_spectral_hash,
+                       signless_spectral_hash,
+                       lap_spectral_hash,
+                       nb_spectral_hash,
+                       nbl_spectral_hash,
+                       dist_spectral_hash,
+                       distlap_spectral_hash,
+                       distsign_spectral_hash,
+                       distnorm_spectral_hash,
+                       ecc_spectral_hash,
                        kblock_family_spectral_hash,
-                       yoon2_eigenvalues, yoon2_spectral_hash,
-                       yoon3_eigenvalues, yoon3_spectral_hash,
-                       non3cyc_eigenvalues_re, non3cyc_eigenvalues_im, non3cyc_spectral_hash,
-                       non4cyc_eigenvalues_re, non4cyc_eigenvalues_im, non4cyc_spectral_hash
+                       yoon2_spectral_hash,
+                       yoon3_spectral_hash,
+                       non3cyc_spectral_hash,
+                       non4cyc_spectral_hash
                        {tags_col}
                 FROM graphs
                 WHERE graph6 = {ph}
@@ -536,22 +528,22 @@ async def fetch_random_graph() -> dict[str, Any] | None:
                        clique_number, chromatic_number,
                        algebraic_connectivity, global_clustering, avg_local_clustering,
                        avg_path_length, assortativity,
-                       adj_eigenvalues, adj_spectral_hash,
-                       kirchhoff_eigenvalues, kirchhoff_spectral_hash,
-                       signless_eigenvalues, signless_spectral_hash,
-                       lap_eigenvalues, lap_spectral_hash,
-                       nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
-                       nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash,
-                       dist_eigenvalues, dist_spectral_hash,
-                       distlap_eigenvalues, distlap_spectral_hash,
-                       distsign_eigenvalues, distsign_spectral_hash,
-                       distnorm_eigenvalues, distnorm_spectral_hash,
-                       ecc_eigenvalues, ecc_spectral_hash,
+                       adj_spectral_hash,
+                       kirchhoff_spectral_hash,
+                       signless_spectral_hash,
+                       lap_spectral_hash,
+                       nb_spectral_hash,
+                       nbl_spectral_hash,
+                       dist_spectral_hash,
+                       distlap_spectral_hash,
+                       distsign_spectral_hash,
+                       distnorm_spectral_hash,
+                       ecc_spectral_hash,
                        kblock_family_spectral_hash,
-                       yoon2_eigenvalues, yoon2_spectral_hash,
-                       yoon3_eigenvalues, yoon3_spectral_hash,
-                       non3cyc_eigenvalues_re, non3cyc_eigenvalues_im, non3cyc_spectral_hash,
-                       non4cyc_eigenvalues_re, non4cyc_eigenvalues_im, non4cyc_spectral_hash
+                       yoon2_spectral_hash,
+                       yoon3_spectral_hash,
+                       non3cyc_spectral_hash,
+                       non4cyc_spectral_hash
                        {tags_col}
                 FROM graphs
                 WHERE n = {ph}
@@ -589,22 +581,22 @@ async def fetch_random_graph() -> dict[str, Any] | None:
                        clique_number, chromatic_number,
                        algebraic_connectivity, global_clustering, avg_local_clustering,
                        avg_path_length, assortativity,
-                       adj_eigenvalues, adj_spectral_hash,
-                       kirchhoff_eigenvalues, kirchhoff_spectral_hash,
-                       signless_eigenvalues, signless_spectral_hash,
-                       lap_eigenvalues, lap_spectral_hash,
-                       nb_eigenvalues_re, nb_eigenvalues_im, nb_spectral_hash,
-                       nbl_eigenvalues_re, nbl_eigenvalues_im, nbl_spectral_hash,
-                       dist_eigenvalues, dist_spectral_hash,
-                       distlap_eigenvalues, distlap_spectral_hash,
-                       distsign_eigenvalues, distsign_spectral_hash,
-                       distnorm_eigenvalues, distnorm_spectral_hash,
-                       ecc_eigenvalues, ecc_spectral_hash,
+                       adj_spectral_hash,
+                       kirchhoff_spectral_hash,
+                       signless_spectral_hash,
+                       lap_spectral_hash,
+                       nb_spectral_hash,
+                       nbl_spectral_hash,
+                       dist_spectral_hash,
+                       distlap_spectral_hash,
+                       distsign_spectral_hash,
+                       distnorm_spectral_hash,
+                       ecc_spectral_hash,
                        kblock_family_spectral_hash,
-                       yoon2_eigenvalues, yoon2_spectral_hash,
-                       yoon3_eigenvalues, yoon3_spectral_hash,
-                       non3cyc_eigenvalues_re, non3cyc_eigenvalues_im, non3cyc_spectral_hash,
-                       non4cyc_eigenvalues_re, non4cyc_eigenvalues_im, non4cyc_spectral_hash
+                       yoon2_spectral_hash,
+                       yoon3_spectral_hash,
+                       non3cyc_spectral_hash,
+                       non4cyc_spectral_hash
                        {tags_col}
                 FROM graphs
                 WHERE n = {ph}
@@ -722,193 +714,6 @@ async def fetch_random_cospectral_class(matrix: str = "adj") -> list[str]:
             fam_n, fam_hash = row
             cur.execute(members_sql, (fam_n, fam_hash))
             return [r[0] for r in cur.fetchall()]
-
-
-async def fetch_similar_graphs(
-    graph6: str,
-    matrix: str = "adj",
-    limit: int = 10,
-) -> list[tuple[dict[str, Any], float]]:
-    """Find graphs with similar spectrum using Earth Mover's Distance.
-
-    For real eigenvalues (adj, kirchhoff, signless, lap): Uses 1D Wasserstein distance.
-    For complex eigenvalues (nb, nbl): Uses 2D Wasserstein distance on (re, im) pairs.
-    """
-    import numpy as np
-    from scipy.stats import wasserstein_distance
-    import ot  # Python Optimal Transport
-    ph = _placeholder()
-
-    target = await fetch_graph(graph6)
-    if not target:
-        return []
-
-    n = target["n"]
-    is_complex = matrix in complex_keys()
-
-    if not is_complex:
-        target_eigs = target[f"{matrix}_eigenvalues"]
-        target_hash = target[f"{matrix}_spectral_hash"]
-        eig_col = f"{matrix}_eigenvalues"
-        hash_col = f"{matrix}_spectral_hash"
-    else:
-        re_col = f"{matrix}_eigenvalues_re"
-        im_col = f"{matrix}_eigenvalues_im"
-        target_re = target[re_col]
-        target_im = target[im_col]
-        target_eigs = np.column_stack([target_re, target_im])
-        target_hash = target[f"{matrix}_spectral_hash"]
-        eig_col = None
-        hash_col = f"{matrix}_spectral_hash"
-
-    async with get_db() as conn:
-        if IS_SQLITE:
-            if eig_col:
-                cursor = await conn.execute(
-                    f"""
-                    SELECT graph6, n, m,
-                           is_bipartite, is_planar, is_regular,
-                           diameter, girth, radius,
-                           min_degree, max_degree, triangle_count,
-                           {eig_col}
-                    FROM graphs
-                    WHERE n = {ph} AND {hash_col} = {ph} AND graph6 != {ph}
-                    LIMIT 50
-                    """,
-                    (n, target_hash, graph6),
-                )
-                cospectral = await cursor.fetchall()
-
-                cursor = await conn.execute(
-                    f"""
-                    SELECT graph6, n, m,
-                           is_bipartite, is_planar, is_regular,
-                           diameter, girth, radius,
-                           min_degree, max_degree, triangle_count,
-                           {eig_col}
-                    FROM graphs
-                    WHERE n = {ph} AND {hash_col} != {ph} AND graph6 != {ph}
-                    ORDER BY random()
-                    LIMIT 450
-                    """,
-                    (n, target_hash, graph6),
-                )
-                others = await cursor.fetchall()
-                candidates = list(cospectral) + list(others)
-            else:
-                cursor = await conn.execute(
-                    f"""
-                    SELECT graph6, n, m,
-                           is_bipartite, is_planar, is_regular,
-                           diameter, girth, radius,
-                           min_degree, max_degree, triangle_count,
-                           {matrix}_eigenvalues_re, {matrix}_eigenvalues_im
-                    FROM graphs
-                    WHERE n = {ph} AND {hash_col} = {ph} AND graph6 != {ph}
-                    LIMIT 50
-                    """,
-                    (n, target_hash, graph6),
-                )
-                cospectral = await cursor.fetchall()
-
-                cursor = await conn.execute(
-                    f"""
-                    SELECT graph6, n, m,
-                           is_bipartite, is_planar, is_regular,
-                           diameter, girth, radius,
-                           min_degree, max_degree, triangle_count,
-                           {matrix}_eigenvalues_re, {matrix}_eigenvalues_im
-                    FROM graphs
-                    WHERE n = {ph} AND {hash_col} != {ph} AND graph6 != {ph}
-                    ORDER BY random()
-                    LIMIT 450
-                    """,
-                    (n, target_hash, graph6),
-                )
-                others = await cursor.fetchall()
-                candidates = list(cospectral) + list(others)
-        else:
-            from psycopg2.extras import RealDictCursor
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            if eig_col:
-                cur.execute(
-                    f"""
-                    (SELECT graph6, n, m,
-                           is_bipartite, is_planar, is_regular,
-                           diameter, girth, radius,
-                           min_degree, max_degree, triangle_count,
-                           {eig_col}
-                    FROM graphs
-                    WHERE n = {ph} AND {hash_col} = {ph} AND graph6 != {ph}
-                    LIMIT 50)
-                    UNION ALL
-                    (SELECT graph6, n, m,
-                           is_bipartite, is_planar, is_regular,
-                           diameter, girth, radius,
-                           min_degree, max_degree, triangle_count,
-                           {eig_col}
-                    FROM graphs
-                    WHERE n = {ph} AND {hash_col} != {ph} AND graph6 != {ph}
-                    ORDER BY random()
-                    LIMIT 450)
-                    """,
-                    (n, target_hash, graph6, n, target_hash, graph6),
-                )
-            else:
-                cur.execute(
-                    f"""
-                    (SELECT graph6, n, m,
-                           is_bipartite, is_planar, is_regular,
-                           diameter, girth, radius,
-                           min_degree, max_degree, triangle_count,
-                           {matrix}_eigenvalues_re, {matrix}_eigenvalues_im
-                    FROM graphs
-                    WHERE n = {ph} AND {hash_col} = {ph} AND graph6 != {ph}
-                    LIMIT 50)
-                    UNION ALL
-                    (SELECT graph6, n, m,
-                           is_bipartite, is_planar, is_regular,
-                           diameter, girth, radius,
-                           min_degree, max_degree, triangle_count,
-                           {matrix}_eigenvalues_re, {matrix}_eigenvalues_im
-                    FROM graphs
-                    WHERE n = {ph} AND {hash_col} != {ph} AND graph6 != {ph}
-                    ORDER BY random()
-                    LIMIT 450)
-                    """,
-                    (n, target_hash, graph6, n, target_hash, graph6),
-                )
-            candidates = cur.fetchall()
-
-    results = []
-    for row in candidates:
-        row_dict = _parse_row(row)
-        if not is_complex:
-            eigs = row_dict[eig_col]
-            if len(eigs) != len(target_eigs):
-                continue
-            dist = wasserstein_distance(target_eigs, eigs)
-        else:
-            re_vals = row_dict[f"{matrix}_eigenvalues_re"]
-            im_vals = row_dict[f"{matrix}_eigenvalues_im"]
-            eigs = np.column_stack([re_vals, im_vals])
-            if len(eigs) != len(target_eigs):
-                continue
-
-            # 2D Wasserstein distance for complex eigenvalues
-            n_eigs = len(eigs)
-            # Uniform weights for both distributions
-            a = np.ones(n_eigs) / n_eigs
-            b = np.ones(n_eigs) / n_eigs
-            # Compute pairwise Euclidean distances in complex plane
-            M = ot.dist(target_eigs, eigs, metric='euclidean')
-            # Compute Earth Mover's Distance
-            dist = ot.emd2(a, b, M)
-
-        results.append((row_dict, dist))
-
-    results.sort(key=lambda x: x[1])
-    return results[:limit]
 
 
 async def get_stats() -> dict[str, Any]:

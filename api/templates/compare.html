@@ -65,132 +65,121 @@
 </div>
 
 <h3>{% if result.graphs|length == 2 %}Spectral Distance{% else %}Spectral Comparison{% endif %}</h3>
-{% if result.distance_matrix %}
-{% set matrix_labels = {'adj': 'adj', 'kirchhoff': 'kir', 'signless': 'sgl', 'lap': 'lap', 'nb': 'nb', 'nbl': 'nbl', 'dist': 'dist', 'distlap': 'dlp', 'distsign': 'dsg', 'distnorm': 'dnm', 'ecc': 'ecc', 'yoon2': 'yn2', 'yoon3': 'yn3', 'non3cyc': 'n3c', 'non4cyc': 'n4c'} %}
-{% set graph_labels = result.graphs | map(attribute='graph6') | list %}
-{% set n = graph_labels|length %}
-
-<div class="distance-matrices-container">
-    {% for matrix_name, matrix_data in result.distance_matrix.items() %}
-    <div class="distance-matrix">
-        <h4 class="matrix-label">{{ matrix_labels[matrix_name] }}</h4>
-        <div class="matrix-grid" style="grid-template-columns: auto repeat({{ n - 1 }}, 1fr);">
-            {# Header row with column labels #}
-            <div class="cell empty"></div>
-            {% for i in range(1, n) %}
-            <div class="cell header col-header">
-                <span class="rotated-label">{{ graph_labels[i] }}</span>
-            </div>
-            {% endfor %}
-
-            {# Data rows #}
-            {% for i in range(n - 1) %}
-                {# Row label #}
-                <div class="cell header row-header">{{ graph_labels[i] }}</div>
-
-                {# Data cells (only upper diagonal) #}
-                {% for j in range(1, n) %}
-                    {% if j > i %}
-                        {% set value = matrix_data[i][j] %}
-                        {% set is_mate = (value == 0.0 and value is number) %}
-                        {% set is_nan = (value is none) or (value != value) %}
-                        <div class="cell data-cell{% if is_mate %} mate-cell{% elif is_nan %} na-cell{% endif %}"
-                             {% if not is_nan %}style="background: linear-gradient(to right, var(--cell-color-start), var(--cell-color-end)); --distance: {{ value }};"{% endif %}
-                             data-distance="{{ value if not is_nan else 'N/A' }}">
-                            {% if is_mate %}
-                                <span class="mate-text">mate</span>
-                                <span class="mate-value">0.0000</span>
-                            {% elif not is_nan %}
-                                <span class="distance-value">{{ "%.4f"|format(value) }}</span>
-                            {% endif %}
-                        </div>
-                    {% else %}
-                        <div class="cell empty"></div>
-                    {% endif %}
-                {% endfor %}
-            {% endfor %}
-        </div>
-    </div>
-    {% endfor %}
-</div>
-
-<div class="distance-legend">
-    <div class="legend-bar"></div>
-    <div class="legend-labels">
-        <span>0</span>
-        <span>Distance</span>
-        <span id="legend-max">—</span>
-    </div>
+{# Spectral distances need eigenvalues (not stored); loaded lazily from
+   /api/compare/distances and rendered into #distance-section below. #}
+<div id="distance-section">
+    <div aria-busy="true" style="padding:1rem;color:var(--pico-muted-color);">Computing spectral distances...</div>
 </div>
 
 <script>
-// Compute color scale for all distance values
-const distanceMatrixData = {{ result.distance_matrix | tojson }};
-const allValues = [];
-Object.values(distanceMatrixData).forEach(matrix => {
-    matrix.forEach((row, i) => {
-        row.forEach((val, j) => {
-            if (j > i && val !== null && !isNaN(val)) allValues.push(val);
-        });
-    });
-});
+const COMPARE_G6 = {{ result.graphs | map(attribute='graph6') | list | tojson }};
+const MATRIX_LABELS = {'adj':'adj','kirchhoff':'kir','signless':'sgl','lap':'lap','nb':'nb','nbl':'nbl','dist':'dist','distlap':'dlp','distsign':'dsg','distnorm':'dnm','ecc':'ecc','yoon2':'yn2','yoon3':'yn3','non3cyc':'n3c','non4cyc':'n4c'};
 
-const maxDist = Math.max(...allValues) || 1;
-document.getElementById('legend-max').textContent = maxDist.toFixed(2);
+// Per-graph eigenvalue arrays, fetched lazily (not stored server-side) and used
+// to hydrate the spectrum plots once available.
+const EIGS = {};
+async function loadCompareSpectra() {
+    const realC = document.getElementById('compare-spectrum-real-plot');
+    const cplxC = document.getElementById('compare-spectrum-complex-plot');
+    const spinner = '<div aria-busy="true" style="padding:1.5rem;color:var(--pico-muted-color);">Computing eigenvalues...</div>';
+    if (realC) realC.innerHTML = spinner;
+    if (cplxC) cplxC.innerHTML = spinner;
+    try {
+        const results = await Promise.all(COMPARE_G6.map(g6 =>
+            fetch(`/api/graph/${encodeURIComponent(g6)}/eigenvalues`).then(r => {
+                if (!r.ok) throw new Error('eigenvalue fetch failed');
+                return r.json();
+            })
+        ));
+        COMPARE_G6.forEach((g6, i) => { EIGS[g6] = results[i]; });
+    } catch (e) {
+        const msg = '<div style="padding:1.5rem;color:var(--pico-muted-color);">Could not load eigenvalues.</div>';
+        if (realC) realC.innerHTML = msg;
+        if (cplxC) cplxC.innerHTML = msg;
+        return;
+    }
+    renderCompareSpectrumRealPlot();
+    renderCompareSpectrumComplexPlot();
+}
 
-// Apply colors to cells based on distance
-document.querySelectorAll('.data-cell[data-distance]').forEach(cell => {
-    const dist = parseFloat(cell.dataset.distance);
-    if (!isNaN(dist)) {
+function applyDistanceColors(maxDist) {
+    document.querySelectorAll('#distance-section .data-cell[data-distance]').forEach(cell => {
+        const dist = parseFloat(cell.dataset.distance);
+        if (isNaN(dist)) return;
         const ratio = dist / maxDist;
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const startColor = '#14B8A6';  // Teal for low distance
-        const endColor = isDark ? '#0f172a' : '#ffffff';  // Dark/white for high distance
-
-        // Interpolate between colors
-        cell.style.setProperty('--cell-color-start', startColor);
-        cell.style.setProperty('--cell-color-end', endColor);
+        const startColor = '#14B8A6';
+        const endColor = isDark ? '#0f172a' : '#ffffff';
         cell.style.background = `color-mix(in srgb, ${startColor} ${(1-ratio)*100}%, ${endColor})`;
-
-        // Set text color based on background
-        const textColor = ratio > 0.5 ? (isDark ? '#ddd' : '#000') : '#fff';
-        cell.style.color = textColor;
-    }
-});
-
-// Update on theme change
-const observer = new MutationObserver(() => {
-    document.querySelectorAll('.data-cell[data-distance]').forEach(cell => {
-        const dist = parseFloat(cell.dataset.distance);
-        if (!isNaN(dist)) {
-            const ratio = dist / maxDist;
-            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            const endColor = isDark ? '#0f172a' : '#ffffff';
-            const startColor = '#14B8A6';
-            cell.style.background = `color-mix(in srgb, ${startColor} ${(1-ratio)*100}%, ${endColor})`;
-            const textColor = ratio > 0.5 ? (isDark ? '#ddd' : '#000') : '#fff';
-            cell.style.color = textColor;
-        }
+        cell.style.color = ratio > 0.5 ? (isDark ? '#ddd' : '#000') : '#fff';
     });
-});
-observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+}
+
+function buildComparisonParagraph(comparison) {
+    const parts = Object.entries(comparison).map(([matrix, status]) => {
+        let inner;
+        if (status === 'n/a') inner = '<code>n/a</code>';
+        else if (status === '0.0000') inner = `<code style="color: var(--pico-primary);">${status}</code> <span class="mate-badge">mate</span>`;
+        else inner = `<code>${status}</code>`;
+        return `<strong>${matrix}:</strong> ${inner}`;
+    });
+    document.getElementById('distance-section').innerHTML = '<p>' + parts.join('&nbsp;&nbsp;') + '</p>';
+}
+
+function buildDistanceMatrices(dm) {
+    const labels = COMPARE_G6;
+    const n = labels.length;
+    const allValues = [];
+    let html = '<div class="distance-matrices-container">';
+    for (const [matrixName, data] of Object.entries(dm)) {
+        html += '<div class="distance-matrix">';
+        html += `<h4 class="matrix-label">${MATRIX_LABELS[matrixName] || matrixName}</h4>`;
+        html += `<div class="matrix-grid" style="grid-template-columns: auto repeat(${n - 1}, 1fr);">`;
+        html += '<div class="cell empty"></div>';
+        for (let i = 1; i < n; i++) html += `<div class="cell header col-header"><span class="rotated-label">${labels[i]}</span></div>`;
+        for (let i = 0; i < n - 1; i++) {
+            html += `<div class="cell header row-header">${labels[i]}</div>`;
+            for (let j = 1; j < n; j++) {
+                if (j > i) {
+                    const value = data[i][j];
+                    const isNan = (value === null || value !== value);
+                    const isMate = (!isNan && value === 0.0);
+                    if (!isNan) allValues.push(value);
+                    const cls = 'cell data-cell' + (isMate ? ' mate-cell' : (isNan ? ' na-cell' : ''));
+                    let content = '';
+                    if (isMate) content = '<span class="mate-text">mate</span><span class="mate-value">0.0000</span>';
+                    else if (!isNan) content = `<span class="distance-value">${value.toFixed(4)}</span>`;
+                    html += `<div class="${cls}" data-distance="${isNan ? 'N/A' : value}">${content}</div>`;
+                } else {
+                    html += '<div class="cell empty"></div>';
+                }
+            }
+        }
+        html += '</div></div>';
+    }
+    html += '</div>';
+    html += '<div class="distance-legend"><div class="legend-bar"></div><div class="legend-labels"><span>0</span><span>Distance</span><span id="legend-max">—</span></div></div>';
+    document.getElementById('distance-section').innerHTML = html;
+    const maxDist = Math.max(...allValues) || 1;
+    const lm = document.getElementById('legend-max');
+    if (lm) lm.textContent = maxDist.toFixed(2);
+    applyDistanceColors(maxDist);
+    new MutationObserver(() => applyDistanceColors(maxDist))
+        .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+}
+
+async function loadDistances() {
+    try {
+        const resp = await fetch(`/api/compare/distances?graphs=${COMPARE_G6.map(encodeURIComponent).join(',')}`);
+        if (!resp.ok) throw new Error('distance fetch failed');
+        const data = await resp.json();
+        if (data.distance_matrix) buildDistanceMatrices(data.distance_matrix);
+        else buildComparisonParagraph(data.spectral_comparison);
+    } catch (e) {
+        document.getElementById('distance-section').innerHTML = '<p style="color:var(--pico-muted-color);">Could not load spectral distances.</p>';
+    }
+}
 </script>
-{% else %}
-<p>
-    {% for matrix, status in result.spectral_comparison.items() %}
-        <strong>{{ matrix }}:</strong>
-        {% if status in ('same', 'different') %}
-            <span class="badge badge-{{ status }}">{{ status }}</span>
-        {% elif status == '0.0000' %}
-            <code style="color: var(--pico-primary);">{{ status }}</code>
-            <span class="mate-badge">mate</span>
-        {% else %}
-            <code>{{ status }}</code>
-        {% endif %}
-        {% if not loop.last %}&nbsp;&nbsp;{% endif %}
-    {% endfor %}
-</p>
-{% endif %}
 
 <script>
 const compareVizStates = [];
@@ -328,19 +317,19 @@ function renderCompareSpectrumRealPlot() {
     const graphsSpectra = graphs.map((g, idx) => ({
         graphIndex: idx,
         graph6: g.graph6,
-        spectra: {
-            adj: (g.spectra.adj_eigenvalues || []).map(re => ({re, im: 0})),
-            kirchhoff: (g.spectra.kirchhoff_eigenvalues || []).map(re => ({re, im: 0})),
-            signless: (g.spectra.signless_eigenvalues || []).map(re => ({re, im: 0})),
-            lap: (g.spectra.lap_eigenvalues || []).map(re => ({re, im: 0})),
-            dist: (g.spectra.dist_eigenvalues || []).map(re => ({re, im: 0})),
-            distlap: (g.spectra.distlap_eigenvalues || []).map(re => ({re, im: 0})),
-            distsign: (g.spectra.distsign_eigenvalues || []).map(re => ({re, im: 0})),
-            distnorm: (g.spectra.distnorm_eigenvalues || []).map(re => ({re, im: 0})),
-            ecc: (g.spectra.ecc_eigenvalues || []).map(re => ({re, im: 0})),
-            yoon2: (g.spectra.yoon2_eigenvalues || []).map(re => ({re, im: 0})),
-            yoon3: (g.spectra.yoon3_eigenvalues || []).map(re => ({re, im: 0}))
-        }
+        spectra: (eg => ({
+            adj: (eg.adj_eigenvalues || []).map(re => ({re, im: 0})),
+            kirchhoff: (eg.kirchhoff_eigenvalues || []).map(re => ({re, im: 0})),
+            signless: (eg.signless_eigenvalues || []).map(re => ({re, im: 0})),
+            lap: (eg.lap_eigenvalues || []).map(re => ({re, im: 0})),
+            dist: (eg.dist_eigenvalues || []).map(re => ({re, im: 0})),
+            distlap: (eg.distlap_eigenvalues || []).map(re => ({re, im: 0})),
+            distsign: (eg.distsign_eigenvalues || []).map(re => ({re, im: 0})),
+            distnorm: (eg.distnorm_eigenvalues || []).map(re => ({re, im: 0})),
+            ecc: (eg.ecc_eigenvalues || []).map(re => ({re, im: 0})),
+            yoon2: (eg.yoon2_eigenvalues || []).map(re => ({re, im: 0})),
+            yoon3: (eg.yoon3_eigenvalues || []).map(re => ({re, im: 0}))
+        }))(EIGS[g.graph6] || {})
     }));
 
     // Create legend buttons (only once)
@@ -714,12 +703,12 @@ function renderCompareSpectrumComplexPlot() {
     const graphsSpectra = graphs.map((g, idx) => ({
         graphIndex: idx,
         graph6: g.graph6,
-        spectra: {
-            nb: (g.spectra.nb_eigenvalues_re || []).map((re, i) => ({re, im: (g.spectra.nb_eigenvalues_im || [])[i]})),
-            nbl: (g.spectra.nbl_eigenvalues_re || []).map((re, i) => ({re, im: (g.spectra.nbl_eigenvalues_im || [])[i]})),
-            non3cyc: (g.spectra.non3cyc_eigenvalues_re || []).map((re, i) => ({re, im: (g.spectra.non3cyc_eigenvalues_im || [])[i]})),
-            non4cyc: (g.spectra.non4cyc_eigenvalues_re || []).map((re, i) => ({re, im: (g.spectra.non4cyc_eigenvalues_im || [])[i]}))
-        }
+        spectra: (eg => ({
+            nb: (eg.nb_eigenvalues_re || []).map((re, i) => ({re, im: (eg.nb_eigenvalues_im || [])[i]})),
+            nbl: (eg.nbl_eigenvalues_re || []).map((re, i) => ({re, im: (eg.nbl_eigenvalues_im || [])[i]})),
+            non3cyc: (eg.non3cyc_eigenvalues_re || []).map((re, i) => ({re, im: (eg.non3cyc_eigenvalues_im || [])[i]})),
+            non4cyc: (eg.non4cyc_eigenvalues_re || []).map((re, i) => ({re, im: (eg.non4cyc_eigenvalues_im || [])[i]}))
+        }))(EIGS[g.graph6] || {})
     }));
 
     const width = container.clientWidth || 500;
@@ -1239,7 +1228,7 @@ function resetCompareSpectrumComplexPlot() {
     }
 }
 </script>
-<script src="https://d3js.org/d3.v7.min.js" onload="renderGraphs(); renderCompareSpectrumRealPlot(); renderCompareSpectrumComplexPlot();"></script>
+<script src="https://d3js.org/d3.v7.min.js" onload="renderGraphs(); loadCompareSpectra(); loadDistances();"></script>
 
 <h3>Properties</h3>
 <div class="table-wrapper">

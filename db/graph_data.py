@@ -226,6 +226,66 @@ class GraphRecord:
         )
 
 
+def _complex_arrays_or_none(M):
+    """(real, imag) lists for a complex spectrum, or (None, None) when the
+    spectrum is empty or all-zero, matching the stored-data convention."""
+    eigs = compute_complex_eigenvalues(M)
+    if eigs.size == 0 or np.allclose(eigs, 0.0):
+        return None, None
+    return eigs.real.tolist(), eigs.imag.tolist()
+
+
+# The eigenvalue arrays the web viz plots. They are no longer stored in the
+# database (only the spectral hashes are), so the detail and compare pages
+# recompute them per request from graph6. The k-blocking family is excluded:
+# it is a multi-matrix signature with no eigenvalues to plot, and computing it
+# is far slower than every plotted matrix combined.
+def eigenvalues_for_viz(graph6_str: str) -> dict:
+    """Compute, on demand, the eigenvalue arrays the detail/compare viz needs.
+
+    Returns a dict keyed exactly like the old database columns
+    (``<m>_eigenvalues`` for real spectra, ``<m>_eigenvalues_re``/``_im`` for
+    complex), with None where a matrix is undefined (e.g. distance spectra of a
+    disconnected graph, or a nilpotent non-k-cycling operator).
+    """
+    G = graph_from_graph6(graph6_str)
+    out = {
+        "adj_eigenvalues": compute_real_eigenvalues(adjacency_matrix(G)).tolist(),
+        "kirchhoff_eigenvalues": compute_real_eigenvalues(kirchhoff_laplacian(G)).tolist(),
+        "signless_eigenvalues": compute_real_eigenvalues(signless_laplacian(G)).tolist(),
+        "lap_eigenvalues": compute_real_eigenvalues(laplacian_matrix(G)).tolist(),
+    }
+    nb = compute_complex_eigenvalues(nonbacktracking_matrix(G))
+    out["nb_eigenvalues_re"], out["nb_eigenvalues_im"] = nb.real.tolist(), nb.imag.tolist()
+    nbl = compute_complex_eigenvalues(nonbacktracking_laplacian(G))
+    out["nbl_eigenvalues_re"], out["nbl_eigenvalues_im"] = nbl.real.tolist(), nbl.imag.tolist()
+
+    D_dist = distance_matrix(G)
+    if D_dist is not None:
+        out["dist_eigenvalues"] = compute_real_eigenvalues(D_dist).tolist()
+        out["distlap_eigenvalues"] = compute_real_eigenvalues(distance_laplacian(G)).tolist()
+        out["distsign_eigenvalues"] = compute_real_eigenvalues(distance_signless_laplacian(G)).tolist()
+        dn = normalized_distance_laplacian(G)
+        out["distnorm_eigenvalues"] = compute_real_eigenvalues(dn).tolist() if dn is not None else None
+        ecc = eccentricity_matrix(G)
+        out["ecc_eigenvalues"] = compute_real_eigenvalues(ecc).tolist() if ecc is not None else None
+    else:
+        out["dist_eigenvalues"] = None
+        out["distlap_eigenvalues"] = None
+        out["distsign_eigenvalues"] = None
+        out["distnorm_eigenvalues"] = None
+        out["ecc_eigenvalues"] = None
+
+    y2 = yoon2_matrix(G)
+    y3 = yoon3_matrix(G)
+    out["yoon2_eigenvalues"] = compute_real_eigenvalues(y2).tolist() if y2 is not None else None
+    out["yoon3_eigenvalues"] = compute_real_eigenvalues(y3).tolist() if y3 is not None else None
+
+    out["non3cyc_eigenvalues_re"], out["non3cyc_eigenvalues_im"] = _complex_arrays_or_none(non3cyc_matrix(G))
+    out["non4cyc_eigenvalues_re"], out["non4cyc_eigenvalues_im"] = _complex_arrays_or_none(non4cyc_matrix(G))
+    return out
+
+
 def process_graph(G: nx.Graph, graph6_str: str) -> GraphRecord:
     """
     Process a graph and compute all spectral and metadata properties.

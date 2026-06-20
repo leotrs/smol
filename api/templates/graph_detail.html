@@ -60,34 +60,27 @@
 </div>
 
 <script>
-// Spectrum data
+// Spectrum data. Eigenvalue arrays are no longer stored server-side; they are
+// fetched lazily from /api/graph/{g6}/eigenvalues and used to hydrate the plots
+// (a single non-cycling matrix can be ~5000x5000 at n=10, several seconds to
+// diagonalize, so it must not block the page render). Starts empty.
+const SPECTRA_G6 = {{ graph.graph6 | tojson }};
 const spectraData = {
-    adj: ({{ graph.spectra.adj_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
-    kirchhoff: ({{ graph.spectra.kirchhoff_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
-    signless: ({{ graph.spectra.signless_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
-    lap: ({{ graph.spectra.lap_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
-    dist: ({{ graph.spectra.dist_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
-    distlap: ({{ graph.spectra.distlap_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
-    distsign: ({{ graph.spectra.distsign_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
-    distnorm: ({{ graph.spectra.distnorm_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
-    ecc: ({{ graph.spectra.ecc_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
-    yoon2: ({{ graph.spectra.yoon2_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
-    yoon3: ({{ graph.spectra.yoon3_eigenvalues | tojson }} || []).map(x => ({re: x, im: 0})),
-    nb: ({{ graph.spectra.nb_eigenvalues_re | tojson }} || []).map((re, i) => ({
-        re: re,
-        im: ({{ graph.spectra.nb_eigenvalues_im | tojson }} || [])[i]
-    })),
-    nbl: ({{ graph.spectra.nbl_eigenvalues_re | tojson }} || []).map((re, i) => ({
-        re: re,
-        im: ({{ graph.spectra.nbl_eigenvalues_im | tojson }} || [])[i]
-    })),
-    non3cyc: ({{ graph.spectra.non3cyc_eigenvalues_re | tojson }} || []).map((re, i) => ({
-        re: re, im: ({{ graph.spectra.non3cyc_eigenvalues_im | tojson }} || [])[i]
-    })),
-    non4cyc: ({{ graph.spectra.non4cyc_eigenvalues_re | tojson }} || []).map((re, i) => ({
-        re: re, im: ({{ graph.spectra.non4cyc_eigenvalues_im | tojson }} || [])[i]
-    }))
+    adj: [], kirchhoff: [], signless: [], lap: [], dist: [], distlap: [],
+    distsign: [], distnorm: [], ecc: [], yoon2: [], yoon3: [],
+    nb: [], nbl: [], non3cyc: [], non4cyc: []
 };
+
+// Populate spectraData from the eigenvalues endpoint's JSON payload.
+function buildSpectraData(d) {
+    const real = m => (d[m + '_eigenvalues'] || []).map(x => ({re: x, im: 0}));
+    const complex = m => (d[m + '_eigenvalues_re'] || []).map((re, i) => ({
+        re: re, im: (d[m + '_eigenvalues_im'] || [])[i]
+    }));
+    ['adj', 'kirchhoff', 'signless', 'lap', 'dist', 'distlap', 'distsign',
+     'distnorm', 'ecc', 'yoon2', 'yoon3'].forEach(m => { spectraData[m] = real(m); });
+    ['nb', 'nbl', 'non3cyc', 'non4cyc'].forEach(m => { spectraData[m] = complex(m); });
+}
 
 function renderGraphDetailRealPlot() {
     const container = document.getElementById('graph-detail-real-plot');
@@ -623,16 +616,34 @@ function renderGraph() {
         </div>
     </div>
     <script>
-    if (typeof d3 !== 'undefined') {
+    async function loadAndRenderSpectra() {
+        const realC = document.getElementById('graph-detail-real-plot');
+        const cplxC = document.getElementById('graph-detail-complex-plot');
+        const spinner = '<div aria-busy="true" style="padding:1.5rem;color:var(--pico-muted-color);">Computing eigenvalues...</div>';
+        if (realC) realC.innerHTML = spinner;
+        if (cplxC) cplxC.innerHTML = spinner;
+        try {
+            const resp = await fetch(`/api/graph/${encodeURIComponent(SPECTRA_G6)}/eigenvalues`);
+            if (!resp.ok) throw new Error('eigenvalue fetch failed');
+            buildSpectraData(await resp.json());
+        } catch (e) {
+            const msg = '<div style="padding:1.5rem;color:var(--pico-muted-color);">Could not load eigenvalues.</div>';
+            if (realC) realC.innerHTML = msg;
+            if (cplxC) cplxC.innerHTML = msg;
+            return;
+        }
         renderGraphDetailRealPlot();
         renderGraphDetailComplexPlot();
+    }
+
+    if (typeof d3 !== 'undefined') {
+        loadAndRenderSpectra();
     } else {
         document.addEventListener('DOMContentLoaded', () => {
             const checkD3 = setInterval(() => {
                 if (typeof d3 !== 'undefined') {
                     clearInterval(checkD3);
-                    renderGraphDetailRealPlot();
-                    renderGraphDetailComplexPlot();
+                    loadAndRenderSpectra();
                 }
             }, 50);
         });
@@ -841,11 +852,6 @@ function renderGraph() {
     {% else %}
     <p><em>No cospectral mates for any matrix type.</em></p>
     {% endif %}
-
-    <p style="margin-top: 1.5rem; color: var(--pico-muted-color);">
-        Graphs with similar spectrum:
-        <a href="/similar/{{ graph.graph6 | urlencode }}" style="color: var(--pico-primary); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.15s ease;">Find similar</a>.
-    </p>
 </details>
 
 <details>
@@ -1220,13 +1226,13 @@ function copyCode(btn) {
         Yoon-3
     </button>
     {% endif %}
-    {% if graph.spectra.non3cyc_eigenvalues_re %}
+    {% if graph.spectra.non3cyc_hash %}
     <button class="outline" onclick="downloadEigenvaluesCSV('non3cyc')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Non-3-cyc
     </button>
     {% endif %}
-    {% if graph.spectra.non4cyc_eigenvalues_re %}
+    {% if graph.spectra.non4cyc_hash %}
     <button class="outline" onclick="downloadEigenvaluesCSV('non4cyc')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Non-4-cyc

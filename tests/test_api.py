@@ -85,10 +85,20 @@ class TestGraphEndpoint:
         response = client.get("/graph/D%3F%7B")
         data = response.json()
         spectra = data["spectra"]
-        assert len(spectra["adj_eigenvalues"]) == 5
-        assert len(spectra["lap_eigenvalues"]) == 5
+        # Eigenvalue arrays are no longer in the detail payload (loaded lazily);
+        # only the hashes are.
+        assert spectra["adj_eigenvalues"] is None
         assert "adj_hash" in spectra
         assert len(spectra["adj_hash"]) == 16
+
+    def test_graph_eigenvalues_endpoint(self):
+        """Eigenvalue arrays are served on demand from a dedicated endpoint."""
+        response = client.get("/api/graph/D%3F%7B/eigenvalues")
+        assert response.status_code == 200
+        eigs = response.json()
+        assert len(eigs["adj_eigenvalues"]) == 5
+        assert len(eigs["lap_eigenvalues"]) == 5
+        assert len(eigs["nb_eigenvalues_re"]) == len(eigs["nb_eigenvalues_im"])
 
     def test_graph_cospectral_mates(self):
         response = client.get("/graph/D%3F%7B")
@@ -104,7 +114,7 @@ class TestGraphEndpoint:
         assert "DEo" in mates["adj"]
 
     def test_graph_with_kirchhoff_signless_eigenvalues(self):
-        """All graphs should have Kirchhoff and signless eigenvalues computed."""
+        """The eigenvalues endpoint computes Kirchhoff and signless spectra on demand."""
         # Test with a graph from n=9 (previously these were NULL)
         response = client.get("/search?n=9&limit=1")
         if response.status_code == 200:
@@ -112,24 +122,19 @@ class TestGraphEndpoint:
             if len(data) > 0:
                 graph6 = data[0]["graph6"]
                 from urllib.parse import quote
-                detail_response = client.get(f"/graph/{quote(graph6, safe='')}")
-                assert detail_response.status_code == 200
-                detail_data = detail_response.json()
-                # Should have spectra fields with computed values
-                assert "spectra" in detail_data
-                assert "kirchhoff_eigenvalues" in detail_data["spectra"]
-                assert "signless_eigenvalues" in detail_data["spectra"]
-                # Should have actual eigenvalues (not empty)
-                kirchhoff = detail_data["spectra"]["kirchhoff_eigenvalues"]
-                signless = detail_data["spectra"]["signless_eigenvalues"]
+                g6 = quote(graph6, safe='')
+                # Detail payload retains the hashes...
+                detail_data = client.get(f"/graph/{g6}").json()
+                assert len(detail_data["spectra"]["kirchhoff_hash"]) == 16
+                assert len(detail_data["spectra"]["signless_hash"]) == 16
+                # ...and the arrays are computed on demand.
+                eigs = client.get(f"/api/graph/{g6}/eigenvalues").json()
+                kirchhoff = eigs["kirchhoff_eigenvalues"]
+                signless = eigs["signless_eigenvalues"]
                 assert isinstance(kirchhoff, list)
                 assert isinstance(signless, list)
                 assert len(kirchhoff) == 9  # Should have n eigenvalues
                 assert len(signless) == 9
-                # Should have corresponding hashes
-                assert "kirchhoff_hash" in detail_data["spectra"]
-                assert "signless_hash" in detail_data["spectra"]
-                assert len(detail_data["spectra"]["kirchhoff_hash"]) == 16
                 assert len(detail_data["spectra"]["signless_hash"]) == 16
 
 
@@ -190,11 +195,14 @@ class TestCompareEndpoint:
         assert "spectral_comparison" in data
 
     def test_compare_spectral_comparison(self):
-        response = client.get("/compare?graphs=D%3F%7B,DEo")
-        data = response.json()
-        comp = data["spectral_comparison"]
-        # D?{ and DEo are adj-cospectral (distance should be 0.0000)
-        assert comp["adj"] == "0.0000"
+        # /compare gives a cheap hash-based same/different summary at render time.
+        data = client.get("/compare?graphs=D%3F%7B,DEo").json()
+        # D?{ and DEo are adj-cospectral
+        assert data["spectral_comparison"]["adj"] == "same"
+        # The numeric distances are served lazily by /api/compare/distances.
+        dist = client.get("/api/compare/distances?graphs=D%3F%7B,DEo").json()
+        assert dist["spectral_comparison"]["adj"] == "0.0000"
+        assert dist["distance_matrix"] is None
 
     def test_compare_includes_all_matrices(self):
         """Compare endpoint should include all 6 matrix types in spectral_comparison."""
@@ -247,33 +255,37 @@ class TestCompareEndpoint:
         assert "Spectra</strong>" in response.text or "Spectra</" in response.text
         assert "compare-spectrum-real-plot" in response.text
 
-    def test_n10_graph_detail_renders_hash_only(self):
-        """n=10 graphs are stored hash-only (eigenvalue arrays NULL); their detail
-        page must render (eigenvalues optional), not 500."""
+    def test_n10_graph_detail_renders_with_ondemand_spectra(self):
+        """n=10 graphs store only hashes (no eigenvalue arrays); the detail page
+        must still render, with eigenvalues recomputed on demand from graph6."""
         from urllib.parse import quote
         listing = client.get("/search?n=10&limit=1", headers={"Accept": "application/json"})
         if listing.status_code != 200 or not listing.json():
             pytest.skip("no n=10 graphs in this database")
         g6 = listing.json()[0]["graph6"]
-        resp = client.get(f"/graph/{quote(g6, safe='')}", headers={"Accept": "application/json"})
+        enc = quote(g6, safe='')
+        resp = client.get(f"/graph/{enc}", headers={"Accept": "application/json"})
         assert resp.status_code == 200
         spectra = resp.json()["spectra"]
         assert spectra["adj_hash"]  # hash retained
-        assert spectra["adj_eigenvalues"] is None  # array not stored
+        assert spectra["adj_eigenvalues"] is None  # arrays loaded lazily
+        # Eigenvalues are recomputed on demand from graph6 via the endpoint.
+        eigs = client.get(f"/api/graph/{enc}/eigenvalues")
+        assert eigs.status_code == 200
+        assert len(eigs.json()["adj_eigenvalues"]) == 10
 
     def test_compare_many_with_disconnected_graph_serializes(self):
-        """Regression: comparing >2 graphs where one is disconnected must not 500.
+        """Regression: the >2-graph distance matrix where one graph is disconnected
+        must serialize cleanly (null, not NaN) and not 500.
 
         A disconnected graph has no distance spectrum, so distance-based matrices
         yield null (N/A) cells. These were previously float('nan'), which is not
-        JSON-serializable and 500'd the response. D?? is the empty graph on 5
-        vertices (disconnected); D?{ and DEo are connected 5-vertex graphs.
+        JSON-serializable. The distance matrix is now served by /api/compare/distances.
+        D?? is the empty graph on 5 vertices (disconnected); D?{ and DEo are connected.
         """
-        response = client.get("/compare?graphs=D%3F%3F,D%3F%7B,DEo")
+        response = client.get("/api/compare/distances?graphs=D%3F%3F,D%3F%7B,DEo")
         assert response.status_code == 200
-        data = response.json()
-        assert len(data["graphs"]) == 3
-        dm = data["distance_matrix"]
+        dm = response.json()["distance_matrix"]
         assert dm is not None
         # The disconnected graph forces at least one null cell in a distance-based matrix.
         assert any(
@@ -424,8 +436,11 @@ class TestCompareEdgeCases:
         assert response.status_code == 200
         data = response.json()
         assert len(data["graphs"]) == 2
-        # Same graph should have zero spectral distance
-        assert data["spectral_comparison"]["adj"] == "0.0000"
+        # Same graph: identical spectrum -> "same" hash summary at render time,
+        # and zero distance from the lazy distances endpoint.
+        assert data["spectral_comparison"]["adj"] == "same"
+        dist = client.get("/api/compare/distances?graphs=D%3F%7B,D%3F%7B").json()
+        assert dist["spectral_comparison"]["adj"] == "0.0000"
 
     def test_compare_html_has_visualizations(self):
         response = client.get(
@@ -518,65 +533,6 @@ class TestComparePropertyDiffs:
         assert "downloadJSON" in response.text
         assert "downloadEdgeList" in response.text
         assert "downloadAdjList" in response.text
-
-    def test_graph_detail_has_find_similar_link(self):
-        """Graph detail page should have link to find similar spectra."""
-        response = client.get("/graph/D%3F%7B", headers={"Accept": "text/html"})
-        assert response.status_code == 200
-        assert "Find similar" in response.text
-        assert "/similar/" in response.text
-
-
-@needs_db
-class TestSimilarEndpoint:
-    def test_similar_rejects_hash_only_matrices(self):
-        """No spectral similarity for hash-only (large-spectrum) matrices."""
-        for matrix in ("kblock3", "kblock4", "non3cyc", "non4cyc"):
-            response = client.get(f"/similar/D%3F%7B?matrix={matrix}")
-            assert response.status_code == 400, matrix
-
-    def test_similar_returns_json(self):
-        response = client.get("/similar/D%3F%7B")
-        assert response.status_code == 200
-        data = response.json()
-        assert isinstance(data, list)
-        for item in data:
-            assert "graph" in item
-            assert "distance" in item
-            assert item["distance"] >= 0
-
-    def test_similar_includes_cospectral_mates_with_zero_distance(self):
-        """Cospectral mates should appear first with distance ~0."""
-        # D?{ and DEo are known adj-cospectral mates
-        response = client.get("/similar/D%3F%7B?matrix=adj")
-        assert response.status_code == 200
-        data = response.json()
-
-        # Find DEo in results
-        deo_result = next((item for item in data if item["graph"]["graph6"] == "DEo"), None)
-        assert deo_result is not None, "Cospectral mate DEo should appear in results"
-        assert deo_result["distance"] < 1e-6, "Cospectral mate should have distance ~0"
-
-    def test_similar_with_matrix_param(self):
-        response = client.get("/similar/D%3F%7B?matrix=lap")
-        assert response.status_code == 200
-        data = response.json()
-        assert isinstance(data, list)
-
-    def test_similar_invalid_matrix(self):
-        response = client.get("/similar/D%3F%7B?matrix=invalid")
-        assert response.status_code == 400
-        assert "invalid matrix" in response.json()["detail"].lower()
-
-    def test_similar_not_found(self):
-        response = client.get("/similar/INVALID")
-        assert response.status_code == 404
-
-    def test_similar_returns_html(self):
-        response = client.get("/similar/D%3F%7B", headers={"Accept": "text/html"})
-        assert response.status_code == 200
-        assert "text/html" in response.headers["content-type"]
-        assert "Similar" in response.text
 
 
 @needs_db

@@ -18,7 +18,6 @@ from .database import (
     fetch_graph_mechanisms,
     fetch_random_cospectral_class,
     fetch_random_graph,
-    fetch_similar_graphs,
     get_stats,
     query_graphs,
 )
@@ -32,7 +31,8 @@ from .models import (
     CompareResult,
 )
 from .routes import mechanisms
-from db.matrix_types import MATRIX_KEYS, real_keys, signature_keys, HASH_ONLY_KEYS
+from db.matrix_types import MATRIX_KEYS, real_keys, signature_keys
+from db.graph_data import eigenvalues_for_viz
 
 logging.basicConfig(
     level=logging.INFO,
@@ -129,41 +129,24 @@ def row_to_graph_full(row: dict, mates: dict[str, list[str]]) -> GraphFull:
             closeness_centrality=row.get("closeness_centrality"),
             eigenvector_centrality=row.get("eigenvector_centrality"),
         ),
+        # Eigenvalue arrays are loaded lazily by the frontend from
+        # /api/graph/{g6}/eigenvalues; only the hashes are rendered inline.
         spectra=Spectra(
-            adj_eigenvalues=row["adj_eigenvalues"],
             adj_hash=row["adj_spectral_hash"],
-            kirchhoff_eigenvalues=row["kirchhoff_eigenvalues"] or [],
             kirchhoff_hash=row["kirchhoff_spectral_hash"] or "",
-            signless_eigenvalues=row["signless_eigenvalues"] or [],
             signless_hash=row["signless_spectral_hash"] or "",
-            lap_eigenvalues=row["lap_eigenvalues"],
             lap_hash=row["lap_spectral_hash"],
-            nb_eigenvalues_re=row["nb_eigenvalues_re"],
-            nb_eigenvalues_im=row["nb_eigenvalues_im"],
             nb_hash=row["nb_spectral_hash"],
-            nbl_eigenvalues_re=row["nbl_eigenvalues_re"],
-            nbl_eigenvalues_im=row["nbl_eigenvalues_im"],
             nbl_hash=row["nbl_spectral_hash"],
-            dist_eigenvalues=row["dist_eigenvalues"],
             dist_hash=row["dist_spectral_hash"],
-            distlap_eigenvalues=row["distlap_eigenvalues"],
             distlap_hash=row["distlap_spectral_hash"],
-            distsign_eigenvalues=row["distsign_eigenvalues"],
             distsign_hash=row["distsign_spectral_hash"],
-            distnorm_eigenvalues=row["distnorm_eigenvalues"],
             distnorm_hash=row["distnorm_spectral_hash"],
-            ecc_eigenvalues=row["ecc_eigenvalues"],
             ecc_hash=row["ecc_spectral_hash"],
             kblock_family_hash=row["kblock_family_spectral_hash"],
-            yoon2_eigenvalues=row["yoon2_eigenvalues"],
             yoon2_hash=row["yoon2_spectral_hash"],
-            yoon3_eigenvalues=row["yoon3_eigenvalues"],
             yoon3_hash=row["yoon3_spectral_hash"],
-            non3cyc_eigenvalues_re=row["non3cyc_eigenvalues_re"],
-            non3cyc_eigenvalues_im=row["non3cyc_eigenvalues_im"],
             non3cyc_hash=row["non3cyc_spectral_hash"],
-            non4cyc_eigenvalues_re=row["non4cyc_eigenvalues_re"],
-            non4cyc_eigenvalues_im=row["non4cyc_eigenvalues_im"],
             non4cyc_hash=row["non4cyc_spectral_hash"],
         ),
         cospectral_mates=CospectralMates(**mates),
@@ -732,121 +715,15 @@ async def compare_graphs(
 
     logger.info(f"  compare fetch {len(graph6_list)} graphs: {(time.perf_counter()-t0)*1000:.0f}ms")
 
-    # Compute spectral distances
+    # Cheap per-matrix "same/different" summary from the stored hashes. The
+    # numeric spectral distances and the full pairwise distance matrix require
+    # eigenvalues, which are not stored; the frontend loads them lazily from
+    # /api/compare/distances and hydrates the page.
+    comparison = {
+        matrix: "same" if len(hs) == 1 else "different"
+        for matrix, hs in all_hashes.items()
+    }
     distance_matrix_data = None
-    if len(graph6_list) == 2:
-        import numpy as np
-        from scipy.stats import wasserstein_distance
-        import ot
-
-        g1_row = await fetch_graph(graph6_list[0])
-        g2_row = await fetch_graph(graph6_list[1])
-
-        comparison = {}
-        for matrix in MATRIX_KEYS:
-            if matrix in signature_keys():
-                continue  # composite hash-only invariant: no spectrum to compare
-            if matrix in real_keys():
-                # 1D Wasserstein for real eigenvalues
-                eigs1 = g1_row[f"{matrix}_eigenvalues"]
-                eigs2 = g2_row[f"{matrix}_eigenvalues"]
-                if eigs1 is not None and eigs2 is not None and len(eigs1) == len(eigs2):
-                    dist = wasserstein_distance(eigs1, eigs2)
-                    if dist < 1e-8:
-                        dist = 0.0
-                    comparison[matrix] = f"{dist:.4f}"
-                else:
-                    comparison[matrix] = "n/a"
-            else:
-                # 2D Wasserstein for complex eigenvalues
-                re1 = g1_row[f"{matrix}_eigenvalues_re"]
-                im1 = g1_row[f"{matrix}_eigenvalues_im"]
-                re2 = g2_row[f"{matrix}_eigenvalues_re"]
-                im2 = g2_row[f"{matrix}_eigenvalues_im"]
-
-                if re1 is not None and re2 is not None and len(re1) == len(re2):
-                    eigs1 = np.column_stack([re1, im1])
-                    eigs2 = np.column_stack([re2, im2])
-                    n_eigs = len(eigs1)
-                    a = np.ones(n_eigs) / n_eigs
-                    b = np.ones(n_eigs) / n_eigs
-                    M = ot.dist(eigs1, eigs2, metric='euclidean')
-                    dist = ot.emd2(a, b, M)
-                    if dist < 1e-8:
-                        dist = 0.0
-                    comparison[matrix] = f"{dist:.4f}"
-                else:
-                    comparison[matrix] = "n/a"
-    elif len(graph6_list) > 2:
-        # Compute distance matrix for all pairs
-        import numpy as np
-        from scipy.stats import wasserstein_distance
-        import ot
-
-        # Fetch all graph rows
-        graph_rows = [await fetch_graph(g6) for g6 in graph6_list]
-        n = len(graph6_list)
-
-        distance_matrix_data = {}
-        for matrix in MATRIX_KEYS:
-            if matrix in signature_keys():
-                continue  # composite hash-only invariant: no spectrum to compare
-            dist_matrix = [[0.0 for _ in range(n)] for _ in range(n)]
-
-            for i in range(n):
-                for j in range(i + 1, n):
-                    g1_row = graph_rows[i]
-                    g2_row = graph_rows[j]
-
-                    if matrix in real_keys():
-                        # 1D Wasserstein for real eigenvalues
-                        eigs1 = g1_row[f"{matrix}_eigenvalues"]
-                        eigs2 = g2_row[f"{matrix}_eigenvalues"]
-                        if eigs1 is not None and eigs2 is not None and len(eigs1) == len(eigs2):
-                            dist = wasserstein_distance(eigs1, eigs2)
-                        else:
-                            dist = None
-                    else:
-                        # 2D Wasserstein for complex eigenvalues
-                        re1 = g1_row[f"{matrix}_eigenvalues_re"]
-                        im1 = g1_row[f"{matrix}_eigenvalues_im"]
-                        re2 = g2_row[f"{matrix}_eigenvalues_re"]
-                        im2 = g2_row[f"{matrix}_eigenvalues_im"]
-
-                        if re1 is not None and re2 is not None and len(re1) == len(re2):
-                            eigs1 = np.column_stack([re1, im1])
-                            eigs2 = np.column_stack([re2, im2])
-                            n_eigs = len(eigs1)
-                            a = np.ones(n_eigs) / n_eigs
-                            b = np.ones(n_eigs) / n_eigs
-                            M = ot.dist(eigs1, eigs2, metric='euclidean')
-                            dist = ot.emd2(a, b, M)
-                        else:
-                            dist = None
-
-                    # Missing or non-finite distances (e.g. disconnected graphs have
-                    # no distance spectrum) become None -> JSON null; the template
-                    # renders those cells as N/A. NaN cannot be JSON-serialized.
-                    if dist is not None and not np.isfinite(dist):
-                        dist = None
-                    if dist is not None and dist < 1e-8:
-                        dist = 0.0
-
-                    dist_matrix[i][j] = dist
-                    dist_matrix[j][i] = dist
-
-            distance_matrix_data[matrix] = dist_matrix
-
-        # For backward compatibility, still provide a summary
-        comparison = {
-            matrix: "same" if len(hashes) == 1 else "different"
-            for matrix, hashes in all_hashes.items()
-        }
-    else:
-        comparison = {
-            matrix: "same" if len(hashes) == 1 else "different"
-            for matrix, hashes in all_hashes.items()
-        }
 
     # Fetch mechanisms only for 2-graph comparisons (that's all we display)
     mechanisms_by_pair = {}
@@ -895,6 +772,92 @@ async def compare_graphs(
     return result
 
 
+# These two endpoints are deliberately plain `def` (not async): they are pure,
+# CPU-bound functions of graph6 (no DB, no I/O) and can take seconds for dense
+# n=10 graphs (non-cycling eigvals on a 5000x5000 matrix). FastAPI runs sync
+# path operations in a threadpool, so they never block the event loop. The
+# frontend calls them lazily and hydrates the plots/tables when they return.
+
+
+@app.get("/api/graph/{graph6:path}/eigenvalues")
+def graph_eigenvalues(graph6: str):
+    """Eigenvalue arrays for every plotted matrix, computed on demand from
+    graph6. Loaded lazily by the detail and compare pages."""
+    try:
+        return eigenvalues_for_viz(graph6)
+    except Exception:
+        raise HTTPException(status_code=400, detail=f"Invalid graph6: '{graph6}'")
+
+
+@app.get("/api/compare/distances")
+def compare_distances(
+    graphs: str = Query(..., description="Comma-separated graph6 strings"),
+):
+    """Spectral distances for /compare, computed on demand. Returns a numeric
+    per-matrix comparison for 2 graphs, and a full pairwise distance matrix for
+    more than 2 (mirrors the shapes the compare page hydrates)."""
+    import numpy as np
+    from scipy.stats import wasserstein_distance
+    import ot
+
+    graph6_list = [g.strip() for g in graphs.split(",")]
+    if len(graph6_list) < 2:
+        raise HTTPException(status_code=400, detail="Need at least 2 graphs to compare")
+    if len(graph6_list) > 10:
+        raise HTTPException(status_code=400, detail="Maximum 10 graphs per comparison")
+
+    try:
+        eigs_list = [eigenvalues_for_viz(g6) for g6 in graph6_list]
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid graph6 in comparison")
+
+    def pair_distance(e1, e2, matrix):
+        """Wasserstein distance for one matrix between two graphs, or None when
+        the spectrum is missing/mismatched (e.g. disconnected distance spectra)."""
+        if matrix in real_keys():
+            a1 = e1[f"{matrix}_eigenvalues"]
+            a2 = e2[f"{matrix}_eigenvalues"]
+            if a1 is None or a2 is None or len(a1) != len(a2):
+                return None
+            return wasserstein_distance(a1, a2)
+        re1, im1 = e1[f"{matrix}_eigenvalues_re"], e1[f"{matrix}_eigenvalues_im"]
+        re2, im2 = e2[f"{matrix}_eigenvalues_re"], e2[f"{matrix}_eigenvalues_im"]
+        if re1 is None or re2 is None or len(re1) != len(re2):
+            return None
+        p1 = np.column_stack([re1, im1])
+        p2 = np.column_stack([re2, im2])
+        k = len(p1)
+        w = np.ones(k) / k
+        return ot.emd2(w, w, ot.dist(p1, p2, metric="euclidean"))
+
+    matrices = [m for m in MATRIX_KEYS if m not in signature_keys()]
+
+    if len(graph6_list) == 2:
+        comparison = {}
+        for matrix in matrices:
+            dist = pair_distance(eigs_list[0], eigs_list[1], matrix)
+            if dist is None or not np.isfinite(dist):
+                comparison[matrix] = "n/a"
+            else:
+                comparison[matrix] = f"{0.0 if dist < 1e-8 else dist:.4f}"
+        return {"spectral_comparison": comparison, "distance_matrix": None}
+
+    n = len(graph6_list)
+    distance_matrix_data = {}
+    for matrix in matrices:
+        dm = [[0.0 for _ in range(n)] for _ in range(n)]
+        for i in range(n):
+            for j in range(i + 1, n):
+                dist = pair_distance(eigs_list[i], eigs_list[j], matrix)
+                if dist is not None and not np.isfinite(dist):
+                    dist = None
+                if dist is not None and dist < 1e-8:
+                    dist = 0.0
+                dm[i][j] = dm[j][i] = dist
+        distance_matrix_data[matrix] = dm
+    return {"spectral_comparison": None, "distance_matrix": distance_matrix_data}
+
+
 @app.get("/glossary", response_class=HTMLResponse)
 async def glossary(request: Request):
     """Terminology glossary."""
@@ -930,43 +893,3 @@ async def stats(request: Request):
             request, "stats.html", {"stats": result}
         )
     return result
-
-
-@app.get("/similar/{graph6}")
-async def similar_graphs(
-    graph6: str,
-    request: Request,
-    matrix: str = Query(default="adj", description="Matrix type: adj, kirchhoff, signless, lap, nb, nbl, dist"),
-    limit: int = Query(default=10, le=50),
-):
-    """Find graphs with similar spectrum (by Earth Mover's Distance)."""
-    t0 = time.perf_counter()
-
-    if matrix not in MATRIX_KEYS:
-        raise HTTPException(status_code=400, detail="Invalid matrix type")
-    if matrix in HASH_ONLY_KEYS or matrix in signature_keys():
-        raise HTTPException(
-            status_code=400,
-            detail="Spectral similarity is not available for this matrix "
-            "(eigenvalues are not stored; cospectral mates only).",
-        )
-
-    results = await fetch_similar_graphs(graph6, matrix=matrix, limit=limit)
-    logger.info(f"  fetch_similar_graphs: {(time.perf_counter()-t0)*1000:.0f}ms")
-
-    if not results:
-        raise HTTPException(status_code=404, detail=f"Graph '{graph6}' not found or no similar graphs")
-
-    similar = [
-        {
-            "graph": row_to_graph_summary(row),
-            "distance": round(dist, 6),
-        }
-        for row, dist in results
-    ]
-
-    if wants_html(request):
-        return templates.TemplateResponse(
-            request, "similar.html", {"source_graph6": graph6, "matrix": matrix, "results": similar}
-        )
-    return similar

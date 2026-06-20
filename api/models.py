@@ -47,26 +47,26 @@ class Spectra(BaseModel):
     nbl_eigenvalues_re: list[float] | None = None
     nbl_eigenvalues_im: list[float] | None = None
     nbl_hash: str
-    dist_eigenvalues: list[float] | None
+    dist_eigenvalues: list[float] | None = None
     dist_hash: str | None
-    distlap_eigenvalues: list[float] | None
+    distlap_eigenvalues: list[float] | None = None
     distlap_hash: str | None
-    distsign_eigenvalues: list[float] | None
+    distsign_eigenvalues: list[float] | None = None
     distsign_hash: str | None
-    distnorm_eigenvalues: list[float] | None
+    distnorm_eigenvalues: list[float] | None = None
     distnorm_hash: str | None
-    ecc_eigenvalues: list[float] | None
+    ecc_eigenvalues: list[float] | None = None
     ecc_hash: str | None
     kblock_family_hash: str | None
-    yoon2_eigenvalues: list[float] | None
+    yoon2_eigenvalues: list[float] | None = None
     yoon2_hash: str | None
-    yoon3_eigenvalues: list[float] | None
+    yoon3_eigenvalues: list[float] | None = None
     yoon3_hash: str | None
-    non3cyc_eigenvalues_re: list[float] | None
-    non3cyc_eigenvalues_im: list[float] | None
+    non3cyc_eigenvalues_re: list[float] | None = None
+    non3cyc_eigenvalues_im: list[float] | None = None
     non3cyc_hash: str | None
-    non4cyc_eigenvalues_re: list[float] | None
-    non4cyc_eigenvalues_im: list[float] | None
+    non4cyc_eigenvalues_re: list[float] | None = None
+    non4cyc_eigenvalues_im: list[float] | None = None
     non4cyc_hash: str | None
 
 
