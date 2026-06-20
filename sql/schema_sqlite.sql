@@ -1,67 +1,37 @@
 -- SQLite schema for SMOL database
 
+-- Eigenvalue arrays are not stored: the API computes them on demand from
+-- graph6 (and serves them lazily to the viz). Only the per-matrix spectral
+-- hashes are kept, which is all cospectrality needs.
 CREATE TABLE IF NOT EXISTS graphs (
     id                  INTEGER PRIMARY KEY AUTOINCREMENT,
     n                   INTEGER NOT NULL,
     m                   INTEGER NOT NULL,
     graph6              TEXT NOT NULL UNIQUE,
 
-    -- Adjacency spectrum (JSON array)
-    adj_eigenvalues         TEXT NOT NULL,
     adj_spectral_hash       TEXT NOT NULL,
-
-    -- Kirchhoff (combinatorial) Laplacian spectrum (JSON array)
-    kirchhoff_eigenvalues   TEXT NOT NULL,
     kirchhoff_spectral_hash TEXT NOT NULL,
-
-    -- Signless Laplacian spectrum (JSON array)
-    signless_eigenvalues    TEXT NOT NULL,
     signless_spectral_hash  TEXT NOT NULL,
-
-    -- Normalized Laplacian spectrum (JSON array)
-    lap_eigenvalues         TEXT NOT NULL,
     lap_spectral_hash       TEXT NOT NULL,
+    nb_spectral_hash        TEXT NOT NULL,
+    nbl_spectral_hash       TEXT NOT NULL,
 
-    -- Non-backtracking spectrum (JSON arrays for complex)
-    nb_eigenvalues_re   TEXT NOT NULL,
-    nb_eigenvalues_im   TEXT NOT NULL,
-    nb_spectral_hash    TEXT NOT NULL,
+    -- Distance-based spectra: hash is NULL for disconnected graphs
+    dist_spectral_hash      TEXT,
+    distlap_spectral_hash   TEXT,
+    distsign_spectral_hash  TEXT,
+    distnorm_spectral_hash  TEXT,
+    ecc_spectral_hash       TEXT,
 
-    -- NB Laplacian spectrum (JSON arrays for complex)
-    nbl_eigenvalues_re  TEXT NOT NULL,
-    nbl_eigenvalues_im  TEXT NOT NULL,
-    nbl_spectral_hash   TEXT NOT NULL,
-
-    -- Distance matrix spectrum (JSON array, NULL if disconnected)
-    dist_eigenvalues    TEXT,
-    dist_spectral_hash  TEXT,
-
-    -- Distance Laplacian / signless (Tr -/+ Dist; real, connected only)
-    distlap_eigenvalues    TEXT,
-    distlap_spectral_hash  TEXT,
-    distsign_eigenvalues   TEXT,
-    distsign_spectral_hash TEXT,
-    distnorm_eigenvalues   TEXT,
-    distnorm_spectral_hash TEXT,
-    ecc_eigenvalues        TEXT,
-    ecc_spectral_hash      TEXT,
-
-    -- k-blocking family: one composite hash over {M_k : k=2..Delta} (NULL for
-    -- forests). A multi-matrix signature, so no eigenvalue arrays.
+    -- k-blocking family: composite hash over {M_k : k=2..Delta} (NULL for forests)
     kblock_family_spectral_hash TEXT,
 
-    -- Yoon m-Laplacian spectra (real; NULL when n <= m)
-    yoon2_eigenvalues   TEXT,
+    -- Yoon m-Laplacian hashes (NULL when n <= m)
     yoon2_spectral_hash TEXT,
-    yoon3_eigenvalues   TEXT,
     yoon3_spectral_hash TEXT,
 
-    -- Non-k-cycling matrix spectra (complex; NULL when nilpotent)
-    non3cyc_eigenvalues_re TEXT,
-    non3cyc_eigenvalues_im TEXT,
+    -- Non-k-cycling hashes (NULL when nilpotent)
     non3cyc_spectral_hash  TEXT,
-    non4cyc_eigenvalues_re TEXT,
-    non4cyc_eigenvalues_im TEXT,
     non4cyc_spectral_hash  TEXT,
 
     -- Structural properties
@@ -95,24 +65,20 @@ CREATE TABLE IF NOT EXISTS graphs (
     created_at              TEXT
 );
 
--- Indexes for common queries
+-- Structural-filter indexes (graph6 is already uniquely indexed by its UNIQUE
+-- constraint, so no separate index is needed).
 CREATE INDEX IF NOT EXISTS idx_graphs_n ON graphs(n);
 CREATE INDEX IF NOT EXISTS idx_graphs_n_m ON graphs(n, m);
-CREATE INDEX IF NOT EXISTS idx_graphs_graph6 ON graphs(graph6);
-CREATE INDEX IF NOT EXISTS idx_graphs_adj_hash ON graphs(adj_spectral_hash);
-CREATE INDEX IF NOT EXISTS idx_graphs_kirchhoff_hash ON graphs(kirchhoff_spectral_hash);
-CREATE INDEX IF NOT EXISTS idx_graphs_signless_hash ON graphs(signless_spectral_hash);
-CREATE INDEX IF NOT EXISTS idx_graphs_lap_hash ON graphs(lap_spectral_hash);
-CREATE INDEX IF NOT EXISTS idx_graphs_nb_hash ON graphs(nb_spectral_hash);
-CREATE INDEX IF NOT EXISTS idx_graphs_nbl_hash ON graphs(nbl_spectral_hash);
-CREATE INDEX IF NOT EXISTS idx_graphs_dist_hash ON graphs(dist_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_graphs_bipartite ON graphs(is_bipartite);
 CREATE INDEX IF NOT EXISTS idx_graphs_planar ON graphs(is_planar);
 CREATE INDEX IF NOT EXISTS idx_graphs_regular ON graphs(is_regular);
 CREATE INDEX IF NOT EXISTS idx_graphs_min_degree ON graphs(min_degree);
 CREATE INDEX IF NOT EXISTS idx_graphs_diameter ON graphs(diameter);
+CREATE INDEX IF NOT EXISTS idx_graphs_girth ON graphs(girth);
 
--- Composite indexes for cospectral mate queries (n + spectral_hash)
+-- Cospectral-mate derivation: (n, hash) per matrix. The bare single-column hash
+-- indexes are omitted because every mate query scopes by n, making these a
+-- covering superset.
 CREATE INDEX IF NOT EXISTS idx_n_adj_hash ON graphs(n, adj_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_kirchhoff_hash ON graphs(n, kirchhoff_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_signless_hash ON graphs(n, signless_spectral_hash);
@@ -120,23 +86,14 @@ CREATE INDEX IF NOT EXISTS idx_n_lap_hash ON graphs(n, lap_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_nb_hash ON graphs(n, nb_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_nbl_hash ON graphs(n, nbl_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_dist_hash ON graphs(n, dist_spectral_hash);
-CREATE INDEX IF NOT EXISTS idx_graphs_distlap_hash ON graphs(distlap_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_distlap_hash ON graphs(n, distlap_spectral_hash);
-CREATE INDEX IF NOT EXISTS idx_graphs_distsign_hash ON graphs(distsign_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_distsign_hash ON graphs(n, distsign_spectral_hash);
-CREATE INDEX IF NOT EXISTS idx_graphs_distnorm_hash ON graphs(distnorm_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_distnorm_hash ON graphs(n, distnorm_spectral_hash);
-CREATE INDEX IF NOT EXISTS idx_graphs_ecc_hash ON graphs(ecc_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_ecc_hash ON graphs(n, ecc_spectral_hash);
-CREATE INDEX IF NOT EXISTS idx_graphs_kblock_family_hash ON graphs(kblock_family_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_kblock_family_hash ON graphs(n, kblock_family_spectral_hash);
-CREATE INDEX IF NOT EXISTS idx_graphs_yoon2_hash ON graphs(yoon2_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_yoon2_hash ON graphs(n, yoon2_spectral_hash);
-CREATE INDEX IF NOT EXISTS idx_graphs_yoon3_hash ON graphs(yoon3_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_yoon3_hash ON graphs(n, yoon3_spectral_hash);
-CREATE INDEX IF NOT EXISTS idx_graphs_non3cyc_hash ON graphs(non3cyc_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_non3cyc_hash ON graphs(n, non3cyc_spectral_hash);
-CREATE INDEX IF NOT EXISTS idx_graphs_non4cyc_hash ON graphs(non4cyc_spectral_hash);
 CREATE INDEX IF NOT EXISTS idx_n_non4cyc_hash ON graphs(n, non4cyc_spectral_hash);
 
 -- Pre-computed cospectral families table
