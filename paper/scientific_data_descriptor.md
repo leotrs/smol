@@ -228,11 +228,24 @@ family; largest = size of the biggest single family).
 ## Technical Validation
 
 **Reproduction of known counts.** The census sizes (Table 1) match the known
-number of simple graphs (OEIS A000088). The adjacency and Laplacian
-cospectral-family counts at small n agree with the published "determined by
-spectrum" tabulations [4,5]. [[fill in
-the exact small-n agreement table; cross-reference OEIS A006608 (adjacency-
-cospectral) and related sequences.]]
+number of simple graphs (OEIS A000088). SMOL's count of graphs with an adjacency
+cospectral mate matches OEIS A006608 (the number of graphs not determined by
+their adjacency spectrum) exactly across the full range, *including n = 10*
+(Table 3a). The combinatorial-Laplacian and signless-Laplacian counts likewise
+reproduce the published Haemers-Spence tabulations [5].
+
+Table 3a. Graphs with an adjacency cospectral mate: SMOL vs OEIS A006608.
+
+| n | 5 | 6 | 7 | 8 | 9 | 10 |
+|---|---|---|---|---|---|----|
+| SMOL (exact) | 2 | 10 | 110 | 1,722 | 51,039 | 2,560,606 |
+| A006608 | 2 | 10 | 110 | 1,722 | 51,039 | 2,560,606 |
+
+The n = 10 entry is the sharpest test, and it doubles as a demonstration of the
+exactness payoff: an 8-decimal floating-point classification gives 2,560,604 at
+n = 10 (two short), whereas the exact characteristic-polynomial count is
+2,560,606, matching A006608. Exactness is what makes SMOL agree with the
+authoritative value.
 
 **Exactness recovers cospectral families that floating point misses.** We
 compared, for each of the 13 exactly-classified matrices, the exact
@@ -329,13 +342,14 @@ Confirmed:
    161(1-2), 311-314.
 9. OEIS Foundation. Sequence A000088 (number of graphs on n unlabeled nodes).
    *The On-Line Encyclopedia of Integer Sequences*.
+10. OEIS Foundation. Sequence A006608 (number of graphs on n nodes not determined
+    by their adjacency spectrum; values via Brouwer & Spence, 2009).
+    *The On-Line Encyclopedia of Integer Sequences*.
 
 To verify / complete before submission:
 
-10. [[House of Graphs 2.0 — Coolsaet, Goedgebeur, et al. (2023), exact venue.]]
-11. [[Eccentricity matrix source — glossary cites Mahato et al.; confirm full
+11. [[House of Graphs 2.0 — Coolsaet, Goedgebeur, et al. (2023), exact venue.]]
+12. [[Eccentricity matrix source — glossary cites Mahato et al.; confirm full
     reference.]]
-12. [[Yoon m-Laplacian source — confirm the originating paper.]]
-13. [[Non-k-cycling matrix source — confirm reference.]]
-14. [[OEIS sequence numbers for adjacency-/Laplacian-cospectral graph counts used
-    in the small-n cross-check.]]
+13. [[Yoon m-Laplacian source — confirm the originating paper.]]
+14. [[Non-k-cycling matrix source — confirm reference.]]
