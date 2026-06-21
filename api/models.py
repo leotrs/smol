@@ -43,10 +43,10 @@ class Spectra(BaseModel):
     lap_hash: str
     nb_eigenvalues_re: list[float] | None = None
     nb_eigenvalues_im: list[float] | None = None
-    nb_hash: str
+    nb_hash: str | None = None
     nbl_eigenvalues_re: list[float] | None = None
     nbl_eigenvalues_im: list[float] | None = None
-    nbl_hash: str
+    nbl_hash: str | None = None
     dist_eigenvalues: list[float] | None = None
     dist_hash: str | None
     distlap_eigenvalues: list[float] | None = None

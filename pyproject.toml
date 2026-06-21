@@ -38,6 +38,7 @@ dependencies = [
     "aiosqlite>=0.22.0",
     "sympy>=1.14.0",
     "pot>=0.9.6.post1",
+    "python-flint>=0.6.0",
 ]
 
 [project.urls]

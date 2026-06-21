@@ -26,7 +26,9 @@ from math import comb, gcd
 import networkx as nx
 import numpy as np
 
-from .matrices import adjacency_matrix, open_path_matrix
+from flint import fmpz_mat, fmpq_mat, fmpq
+
+from .matrices import adjacency_matrix, nonbacktracking_matrix, open_path_matrix
 from .matrix_types import MATRIX_TYPES
 from .spectrum import bareiss_poly_det, charpoly_hash
 
@@ -158,6 +160,47 @@ def _yoon_charpoly_key(G: nx.Graph, m: int) -> str | None:
     return charpoly_hash(_integer_charpoly_coeffs(M))
 
 
+def _nb_charpoly_key(G: nx.Graph) -> str | None:
+    """Exact non-backtracking cospectral hash: the integer characteristic
+    polynomial of the 2m x 2m Hashimoto matrix B (a 0/1 matrix), computed
+    directly. This is NOT the Ihara-Bass reduction. None for edgeless graphs
+    (empty spectrum), matching the float convention."""
+    B = nonbacktracking_matrix(G)
+    if B.shape[0] == 0:
+        return None
+    M = [[int(round(float(x))) for x in row] for row in B]
+    coeffs = [int(c) for c in fmpz_mat(M).charpoly().coeffs()]
+    return charpoly_hash(coeffs)
+
+
+def _nbl_charpoly_key(G: nx.Graph) -> str | None:
+    """Exact non-backtracking Laplacian cospectral hash. NBL = I - D^{-1}B is
+    rational (B the Hashimoto matrix, D the diagonal of NB out-degrees, with
+    zero-out-degree rows left as the identity row, matching the builder). We form
+    it exactly over the rationals and hash its monic characteristic polynomial,
+    with denominators cleared to a canonical integer tuple. None for edgeless
+    graphs."""
+    B = nonbacktracking_matrix(G)
+    if B.shape[0] == 0:
+        return None
+    n = B.shape[0]
+    Bi = [[int(round(float(B[i][j]))) for j in range(n)] for i in range(n)]
+    deg = [sum(Bi[i]) for i in range(n)]
+    rows = []
+    for i in range(n):
+        di = deg[i]
+        if di > 0:
+            rows.append([fmpq((1 if i == j else 0) * di - Bi[i][j], di) for j in range(n)])
+        else:
+            rows.append([fmpq(1 if i == j else 0, 1) for j in range(n)])
+    coeffs = list(fmpq_mat(rows).charpoly().coeffs())  # monic rational charpoly
+    den = 1
+    for c in coeffs:
+        den = den // gcd(den, int(c.q)) * int(c.q)
+    ints = [int(c.p) * (den // int(c.q)) for c in coeffs]
+    return charpoly_hash(ints)
+
+
 def exact_spectral_hash(key: str, G: nx.Graph) -> str | None:
     """Exact charpoly cospectral hash for matrix `key` on graph G, or None if the
     matrix is undefined for G (e.g. distance matrices on disconnected graphs)."""
@@ -167,6 +210,10 @@ def exact_spectral_hash(key: str, G: nx.Graph) -> str | None:
         return _distnorm_charpoly_key(G)
     if key in YOON_MATRICES:
         return _yoon_charpoly_key(G, YOON_MATRICES[key])
+    if key == "nb":
+        return _nb_charpoly_key(G)
+    if key == "nbl":
+        return _nbl_charpoly_key(G)
     if key in INTEGER_MATRICES:
         M = MATRIX_TYPES[key].builder(G)
         if M is None or M.size == 0:
