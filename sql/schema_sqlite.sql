@@ -13,8 +13,8 @@ CREATE TABLE IF NOT EXISTS graphs (
     kirchhoff_spectral_hash TEXT NOT NULL,
     signless_spectral_hash  TEXT NOT NULL,
     lap_spectral_hash       TEXT NOT NULL,
-    nb_spectral_hash        TEXT NOT NULL,
-    nbl_spectral_hash       TEXT NOT NULL,
+    nb_spectral_hash        TEXT,
+    nbl_spectral_hash       TEXT,
 
     -- Distance-based spectra: hash is NULL for disconnected graphs
     dist_spectral_hash      TEXT,
