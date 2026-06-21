@@ -40,17 +40,45 @@ def get_pg_connection():
     return psycopg2.connect(PG_DATABASE_URL)
 
 
+def _schema_path() -> str:
+    return os.path.join(os.path.dirname(__file__), "..", "sql", "schema_sqlite.sql")
+
+
+def _split_schema(sql: str) -> tuple[str, str]:
+    """Separate CREATE INDEX statements from the rest, so indexes can be built
+    after the bulk insert (maintaining them per-row makes a 12M-row load crawl)."""
+    import re
+    table_ddl, index_ddl = [], []
+    for stmt in sql.split(";"):
+        if re.search(r"CREATE\s+(UNIQUE\s+)?INDEX", stmt, re.I):
+            index_ddl.append(stmt)
+        else:
+            table_ddl.append(stmt)
+    return ";".join(table_ddl) + ";", ";".join(index_ddl) + ";"
+
+
 def create_sqlite_db(output_path: str):
-    """Create SQLite database with schema."""
+    """Create the SQLite database with tables only (indexes deferred), and set
+    bulk-load PRAGMAs so the 12M-row insert is not fsync/journal bound."""
     if os.path.exists(output_path):
         os.remove(output_path)
 
     conn = sqlite3.connect(output_path)
-    schema_path = os.path.join(os.path.dirname(__file__), "..", "sql", "schema_sqlite.sql")
-    with open(schema_path) as f:
-        conn.executescript(f.read())
+    conn.executescript("PRAGMA synchronous=OFF; PRAGMA journal_mode=OFF; PRAGMA temp_store=MEMORY;")
+    table_ddl, _ = _split_schema(open(_schema_path()).read())
+    conn.executescript(table_ddl)
     conn.commit()
     return conn
+
+
+def create_indexes(conn) -> None:
+    """Build the deferred indexes after all rows are inserted."""
+    _, index_ddl = _split_schema(open(_schema_path()).read())
+    print("Building indexes...", end="", flush=True)
+    start = time.time()
+    conn.executescript(index_ddl)
+    conn.commit()
+    print(f" done in {time.time()-start:.1f}s")
 
 
 def pg_to_sqlite_value(val, col_type: str):
@@ -203,6 +231,8 @@ def main():
 
     elapsed = time.time() - start
     print(f"\nExported {total_rows:,} total rows in {elapsed:.1f}s")
+
+    create_indexes(sqlite_conn)
 
     if verify_counts(sqlite_conn, pg_conn, args.max_n):
         print("\n✓ Export verified successfully!")
