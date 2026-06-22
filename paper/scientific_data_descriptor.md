@@ -76,7 +76,7 @@ cospectrality.
 
 The complete dataset (12.3 million graphs, 16 matrices) is provided as a
 relational database with a documented schema (Data Records), archived with a
-persistent identifier [[Zenodo DOI]], and served live through a query API at
+persistent identifier (Zenodo, DOI 10.5281/zenodo.20794132), and served live through a query API at
 `smol-graphs-db.fly.dev`.
 
 ---
@@ -164,8 +164,8 @@ public query API.
 
 ## Data Records
 
-The dataset is archived at [[Zenodo DOI]] under a **CC0 1.0 public-domain
-dedication** and comprises:
+The dataset is archived at Zenodo (https://doi.org/10.5281/zenodo.20794132) under
+a **CC0 1.0 public-domain dedication** and comprises:
 
 - `smol.db` / SQL dumps: the relational database (schema in `sql/schema.sql`).
 - Per-n flat files (CSV/Parquet) of the `graphs` and `cospectral_families`
@@ -312,12 +312,18 @@ spectrally-indistinguishable graphs.
 
 All code to regenerate the database (enumeration, matrix construction, exact
 characteristic-polynomial hashing, and the API) is openly available at
-[[GitHub URL]] and archived at [[Zenodo code DOI]] under the [[MIT]] license; the
-dataset itself is released under CC0 1.0. The generation pipeline is
+https://github.com/leotrs/smol and archived with the dataset at Zenodo
+(https://doi.org/10.5281/zenodo.20794132) under the MIT license; the dataset
+itself is released under CC0 1.0. The generation pipeline is
 deterministic given `nauty`'s `geng`, so the entire dataset is reproducible from
 source.
 
 ---
+
+## Data Citation
+
+Torres, L. (2026). SMOL: Spectra and Matrices Of Little graphs [Data set].
+Zenodo. https://doi.org/10.5281/zenodo.20794132
 
 ## References
 
