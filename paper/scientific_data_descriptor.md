@@ -102,18 +102,18 @@ adjacency matrix A and degree-diagonal D:
 - **Signless Laplacian** Q = D + A.
 - **Normalized Laplacian** I − D^(−1/2) A D^(−1/2).
 - **Non-backtracking (Hashimoto)** matrix B on directed edges, and the
-  **non-backtracking Laplacian** I − D^(−1)B (complex spectra).
+  **non-backtracking Laplacian** I − D^(−1)B (complex spectra) [7].
 - **Distance** matrix and its **Laplacian** (Tr − Dist), **signless Laplacian**
   (Tr + Dist), and **normalized** variant, where Tr is the diagonal of
   transmissions; defined for connected graphs only.
-- **Eccentricity** matrix (connected graphs only).
-- **Yoon m-Laplacians** for m = 2, 3.
-- **Non-k-cycling** matrices for k = 3, 4 (complex spectra).
+- **Eccentricity** matrix (connected graphs only) [12].
+- **Yoon m-Laplacians** for m = 2, 3 [13].
+- **Non-k-cycling** matrices for k = 3, 4 (complex spectra) [14].
 - **k-blocking family**, a composite, eigenvalue-free *signature* over the
   k-blocking operators M_k for k = 2, …, Δ.
 
-[[expand each definition with a citation in the final version; the glossary at
-`/glossary` already holds the LaTeX definitions and references.]]
+Full definitions of the less-standard matrices are given in the cited sources and
+in the project glossary.
 
 ### Spectral hashing and exact cospectrality
 
@@ -352,10 +352,13 @@ Confirmed:
     by their adjacency spectrum; values via Brouwer & Spence, 2009).
     *The On-Line Encyclopedia of Integer Sequences*.
 
-To verify / complete before submission:
-
-11. [[House of Graphs 2.0 — Coolsaet, Goedgebeur, et al. (2023), exact venue.]]
-12. [[Eccentricity matrix source — glossary cites Mahato et al.; confirm full
-    reference.]]
-13. [[Yoon m-Laplacian source — confirm the originating paper.]]
-14. [[Non-k-cycling matrix source — confirm reference.]]
+11. Coolsaet, K., D'hondt, S., & Goedgebeur, J. (2023). House of Graphs 2.0: a
+    database of interesting graphs and more. *Discrete Applied Mathematics*, 325,
+    97-107.
+12. Mahato, I., Gurusamy, R., Kannan, M. R., & Arockiaraj, S. (2020). Spectra of
+    eccentricity matrices of graphs. *Discrete Applied Mathematics*, 285,
+    252-260.
+13. Yoon, M. (2025). Graph Laplacians with higher accuracy. arXiv:2504.04461.
+14. Arrigo, F., Higham, D. J., & Noferini, V. (2020). Beyond non-backtracking:
+    non-cycling network centrality measures. *Proceedings of the Royal Society A*,
+    476(2235), 20190653.
