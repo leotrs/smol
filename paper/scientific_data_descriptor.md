@@ -75,9 +75,10 @@ families that rounding wrongly created, so a float-based census mis-counts
 cospectrality.
 
 The complete dataset (12.3 million graphs, 16 matrices) is provided as a
-relational database with a documented schema (Data Records), archived with a
-persistent identifier (Zenodo, DOI 10.5281/zenodo.20794132), and served live through a query API at
-`smol-graphs-db.fly.dev`.
+relational database with a documented schema (Data Records) and archived under a
+persistent identifier (Zenodo, DOI 10.5281/zenodo.20794132), with all code in a
+public repository. It is also served through a live query interface (currently at
+`smol-graphs-db.fly.dev`; the current address is linked from the repository).
 
 ---
 
@@ -184,6 +185,12 @@ disconnected graphs, or a nilpotent non-k-cycling operator).
 (`matrix_type`, `n`, `spectral_hash`) with a `family_size` count. Members are
 the graphs sharing that (n, hash). Per-matrix totals are in Table 2.
 
+Figure 1 shows, for each of the 16 matrices, the smallest cospectral family among
+connected graphs; Figure 2 shows the same restricted to graphs of minimum degree
+at least two. The non-backtracking Laplacian is the only matrix with no such
+family up to n = 10: every minimum-degree-≥2 graph in the census is determined by
+its non-backtracking Laplacian spectrum.
+
 Table 1. Census sizes (number of simple undirected graphs).
 
 | n | graphs |
@@ -222,6 +229,20 @@ family; largest = size of the biggest single family).
 | yoon3 | Yoon 3-Laplacian | real | exact | 10 | 20 | 2 |
 | non3cyc | Non-3-cycling | complex | numerical | 63,559 | 204,415 | 242 |
 | non4cyc | Non-4-cycling | complex | numerical | 14,084 | 48,308 | 141 |
+
+![Figure 1](fig1_cospectral_connected.png)
+
+**Figure 1.** For each of the 16 matrices, the smallest cospectral family among
+connected graphs (the fewest-vertex family of non-isomorphic graphs sharing that
+matrix's spectrum); the number of vertices n is given per panel. The k-blocking
+family panel shows a triple; all others are pairs.
+
+![Figure 2](fig2_cospectral_mindeg2.png)
+
+**Figure 2.** The smallest cospectral family per matrix among graphs of minimum
+degree at least two. The non-backtracking Laplacian has no such family up to
+n = 10, so every minimum-degree-≥2 graph in the census is determined by its
+non-backtracking Laplacian spectrum.
 
 ---
 
@@ -289,9 +310,10 @@ two, SMOL's cospectral-family counts agree with the earlier enumeration of [7].
 ## Usage Notes
 
 The database can be queried three ways: (1) directly in SQL against the provided
-schema; (2) via the public REST API at `smol-graphs-db.fly.dev` (endpoints for
-single-graph lookup, filtered search, cospectral-family listing, and on-demand
-spectra); (3) by loading the per-n flat files. Eigenvalue arrays are not stored
+schema; (2) via the public REST API of the live interface (currently at
+`smol-graphs-db.fly.dev`, linked from the repository; endpoints for single-graph
+lookup, filtered search, cospectral-family listing, and on-demand spectra);
+(3) by loading the per-n flat files. Eigenvalue arrays are not stored
 but are recomputed on demand from `graph6` (a single function call), so any
 spectrum in the dataset is reproducible bit-for-bit from the public code.
 
