@@ -29,3 +29,12 @@ smol_prod.db-*
 # Local agent config and deploy-state artifact (do not commit)
 .claude/
 .deploy_manifest.json
+
+# RSM and LaTeX build artifacts for the paper (regenerable from paper/smol.rsm)
+.rsm-index.html
+paper/smol.html
+paper/static/
+paper/*.aux
+paper/*.log
+paper/*.toc
+paper/*.out

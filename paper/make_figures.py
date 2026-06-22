@@ -83,8 +83,7 @@ def render(families, title, outstem):
     for i, (name, members) in enumerate(families):
         draw_panel(fig, outer[divmod(i, 4)], name, members)
     fig.suptitle(title, fontsize=13, y=0.995)
-    fig.savefig(f"{outstem}.pdf", bbox_inches="tight")
-    fig.savefig(f"{outstem}.png", dpi=140, bbox_inches="tight")
+    fig.savefig(f"{outstem}.png", dpi=300, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -93,4 +92,4 @@ if __name__ == "__main__":
            "paper/fig1_cospectral_connected")
     render(FAM_MINDEG2, "Smallest cospectral family per matrix (minimum degree ≥ 2)",
            "paper/fig2_cospectral_mindeg2")
-    print("wrote paper/fig1_cospectral_connected.{pdf,png} and paper/fig2_cospectral_mindeg2.{pdf,png}")
+    print("wrote paper/fig1_cospectral_connected.png and paper/fig2_cospectral_mindeg2.png")
