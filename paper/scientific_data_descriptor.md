@@ -314,6 +314,28 @@ source.
 
 ---
 
+## Author Contributions
+
+L.T. conceived the database, designed and implemented the generation pipeline and
+the exact characteristic-polynomial cospectrality hashing, performed all
+computations and validation, built the query interface, and wrote the manuscript.
+
+## Competing Interests
+
+The author declares no competing interests.
+
+## Funding
+
+This research received no specific grant from any funding agency in the public,
+commercial, or not-for-profit sectors.
+
+## Acknowledgements
+
+This work relies on the `nauty` package of McKay and Piperno for graph
+enumeration.
+
+---
+
 ## Data Citation
 
 Torres, L. (2026). SMOL: Spectra and Matrices Of Little graphs [Data set].
