@@ -281,15 +281,8 @@ recovered family is a pair).
 classified numerically; their matrices reach several thousand dimensions, beyond
 exact characteristic-polynomial computation at this scale.
 
-**Comparison with an earlier non-backtracking enumeration.** Our non-backtracking
-and non-backtracking Laplacian cospectral counts agree with the earlier
-enumeration of [7] at small n (exactly for the "all graphs" tally through n = 4,
-and through n = 5 for the non-backtracking Laplacian) and diverge for larger n.
-The divergence *persists under exact classification*: SMOL's exact
-characteristic-polynomial counts agree closely with its floating-point counts, so
-it is not a rounding artifact in the present data. As the earlier enumeration was
-floating-point based, the most plausible source is a computational difference
-between the two enumerations; SMOL provides the exact, fully reproducible counts.
+For the non-backtracking Laplacian, and for graphs of minimum degree at least
+two, SMOL's cospectral-family counts agree with the earlier enumeration of [7].
 
 ---
 
