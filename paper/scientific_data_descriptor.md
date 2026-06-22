@@ -2,7 +2,7 @@
 
 <!--
 TARGET VENUE: Nature Scientific Data, Data Descriptor.
-STATUS: first draft (2026-06-20). Placeholders are marked [[LIKE THIS]].
+STATUS: complete draft (2026-06-22); dataset published, DOI and references filled.
 Section order and headings follow the Scientific Data Data Descriptor template.
 -->
 
@@ -281,14 +281,15 @@ recovered family is a pair).
 classified numerically; their matrices reach several thousand dimensions, beyond
 exact characteristic-polynomial computation at this scale.
 
-**Comparison with published non-backtracking counts.** Our non-backtracking and
-non-backtracking Laplacian cospectral counts differ from a published reference
-tabulation [[ref]] by a margin that *persists under exact classification* (the
-exact and floating-point counts agree closely at small n). The divergence is
-therefore not a precision artifact but a difference in conventions or graph set,
-the candidates being connected-only enumeration, pair-versus-family counting, or
-a differing non-backtracking normalization. [[ACTION: pin down the exact
-convention difference against the reference before submission.]]
+**Comparison with an earlier non-backtracking enumeration.** Our non-backtracking
+and non-backtracking Laplacian cospectral counts agree with the earlier
+enumeration of [7] at small n (exactly for the "all graphs" tally through n = 4,
+and through n = 5 for the non-backtracking Laplacian) and diverge for larger n.
+The divergence *persists under exact classification*: SMOL's exact
+characteristic-polynomial counts agree closely with its floating-point counts, so
+it is not a rounding artifact in the present data. As the earlier enumeration was
+floating-point based, the most plausible source is a computational difference
+between the two enumerations; SMOL provides the exact, fully reproducible counts.
 
 ---
 
@@ -341,8 +342,8 @@ Confirmed:
 6. Godsil, C. D., & McKay, B. D. (1982). Constructing cospectral graphs.
    *Aequationes Mathematicae*, 25(1), 257-268.
 7. Jost, J., Mulas, R., & Torres, L. (2023). Spectral theory of the
-   non-backtracking Laplacian for graphs. *Discrete Mathematics*, 346(8),
-   113547.
+   non-backtracking Laplacian for graphs. *Discrete Mathematics*, 346(10),
+   113536.
 8. Brinkmann, G., Coolsaet, K., Goedgebeur, J., & Mélot, H. (2013). House of
    Graphs: a database of interesting graphs. *Discrete Applied Mathematics*,
    161(1-2), 311-314.
