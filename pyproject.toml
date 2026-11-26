@@ -73,6 +73,7 @@ markers = [
 
 [tool.ruff]
 exclude = [
+    "paper/checks/*.py",  # one-off verification scripts (exec-shared setup, short names)
     "scripts/algebraic_approach.py",
     "scripts/analyze_*.py",
     "scripts/block_structure_analysis.py",

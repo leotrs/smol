@@ -15,11 +15,17 @@ Per matrix the exact invariant is:
   - normalized (lap, distnorm): eigenvalues are generalized eigenvalues of an integer
     pencil; hash the MONIC charpoly of det(xB - M). lap also multiplies in
     (x-1)^(#isolated vertices) for its isolated-vertex eigenvalue-1 convention.
-  - nb: the Ihara-Bass charpoly (db.spectrum.nb_charpoly).
-
-The hard tier (nbl, non3cyc, non4cyc) is not implemented here yet.
+  - nb: integer charpoly of the 2m x 2m Hashimoto matrix. nbl: monic rational charpoly
+    of I - D^{-1}B, denominators cleared.
+  - non3cyc, non4cyc, kblock_family: matrices too large for a charpoly in coefficients
+    (non4cyc reaches 5040 x 5040 at n = 10). Their hash is built from exact values of
+    det(xI - M) at two fixed points modulo two fixed primes, computed through a smaller
+    determinant (see _noncyc_charvals and _zb_charval). Equal charpolys always give equal
+    hashes; different charpolys of degree N agree at both points with probability at most
+    (N / 2^31)^2. No floating point and no random numbers are involved.
 """
 
+import hashlib
 from fractions import Fraction
 from math import comb, gcd
 
@@ -32,11 +38,6 @@ from .matrices import adjacency_matrix, nonbacktracking_matrix, open_path_matrix
 from .matrix_types import MATRIX_TYPES
 from .spectrum import bareiss_poly_det, charpoly_hash
 
-# Matrices that get an exact charpoly hash: the 11 real (symmetric, eigvalsh-stable)
-# matrices. The 4 complex-spectrum matrices (nb, nbl, non3cyc, non4cyc) keep the
-# float-eigenvalue hash: their non-symmetric matrices are far too large for exact
-# charpoly (non4cyc reaches 3024x3024 at n=9), and the only feasible exact route for
-# nb (the Ihara-Bass reduction) is deliberately not used here.
 INTEGER_MATRICES = ("adj", "kirchhoff", "signless", "dist", "distlap", "distsign", "ecc")
 NORMALIZED_MATRICES = ("lap", "distnorm")
 YOON_MATRICES = {"yoon2": 2, "yoon3": 3}
@@ -201,6 +202,136 @@ def _nbl_charpoly_key(G: nx.Graph) -> str | None:
     return charpoly_hash(ints)
 
 
+# Fixed evaluation points and primes for the value-based exact hashes. Products of two
+# residues stay below 2^62, so int64 arithmetic is exact.
+_P1, _P2 = 2_147_483_647, 2_147_483_629
+_X1, _X2 = 1_000_003, 999_983
+
+
+def _det_mod(M: np.ndarray, p: int) -> int:
+    """Determinant mod p of an integer matrix with entries in [0, p), by elimination."""
+    M = M.copy()
+    n = M.shape[0]
+    det = 1
+    for c in range(n):
+        nz = np.nonzero(M[c:, c])[0]
+        if nz.size == 0:
+            return 0
+        r = c + int(nz[0])
+        if r != c:
+            M[[c, r]] = M[[r, c]]
+            det = (p - det) % p
+        piv = int(M[c, c])
+        det = det * piv % p
+        f = M[c + 1:, c] * pow(piv, p - 2, p) % p
+        M[c + 1:, c:] = (M[c + 1:, c:] - f[:, None] * M[c, c:] % p) % p
+    return det
+
+
+def _paths(G: nx.Graph, k: int) -> list[tuple]:
+    """Directed paths with k distinct vertices."""
+    out = [(v,) for v in G]
+    for _ in range(k - 1):
+        out = [q + (y,) for q in out for y in G[q[-1]] if y not in q]
+    return out
+
+
+def _noncyc_charvals(G: nx.Graph, k: int, x: int, p: int) -> tuple[int, int]:
+    """(det(xI - P_k) mod p, dim P_k) for the non-k-cycling matrix P_k (k >= 3).
+
+    Arrigo, Higham, Noferini (2020), Thm 5.3 and Prop. 2.3: P_k = W_k - Delta_k with
+    W_k = R L^T and L^T R = P_{k-1}, where L, R map each path with k vertices to its first
+    and last k-1 vertices. Delta_k sends a path that closes a k-cycle to its rotation, so
+    Delta_k^k = I on those paths (c orbits of length k) and Delta_k = 0 elsewhere. By the
+    determinant lemma
+        det(xI - P_k) = x^(N - kc) (x^k - (-1)^k)^c det(I - L^T (xI + Delta_k)^{-1} R),
+    a determinant of the size of the path space one level down.
+    """
+    Pk, low = _paths(G, k), _paths(G, k - 1)
+    N = len(Pk)
+    if N == 0:
+        return 1, 0
+    idx = {q: i for i, q in enumerate(low)}
+    sign = 1 if k % 2 == 0 else p - 1
+    q_inv = pow((pow(x, k, p) - sign) % p, p - 2, p)
+    coef = []
+    for j in range(k):
+        cj = pow(x, k - 1 - j, p) * q_inv % p
+        coef.append((p - cj) % p if j % 2 else cj)
+    x_inv = pow(x, p - 2, p)
+    Q = np.zeros((len(low), len(low)), dtype=np.int64)
+    ncyc = 0
+    for path in Pk:
+        a = idx[path[:-1]]
+        if path[0] not in G[path[-1]]:
+            b = idx[path[1:]]
+            Q[a, b] = (Q[a, b] + x_inv) % p
+            continue
+        ncyc += 1
+        rot = path
+        for j in range(k):
+            b = idx[rot[1:]]
+            Q[a, b] = (Q[a, b] + coef[j]) % p
+            rot = rot[1:] + rot[:1]
+    c = ncyc // k
+    M = (np.eye(len(low), dtype=np.int64) - Q) % p
+    val = pow(x, N - k * c, p) * pow((pow(x, k, p) - sign) % p, c, p) * _det_mod(M, p) % p
+    return val, N
+
+
+def _noncyc_charpoly_key(G: nx.Graph, k: int) -> str | None:
+    """Exact non-k-cycling hash; None when P_k is nilpotent (all-zero spectrum)."""
+    G = nx.convert_node_labels_to_integers(G)
+    v1, N = _noncyc_charvals(G, k, _X1, _P1)
+    v2, _ = _noncyc_charvals(G, k, _X2, _P2)
+    if v1 == pow(_X1, N, _P1) and v2 == pow(_X2, N, _P2):
+        return None
+    return hashlib.sha256(f"non{k}cyc-exact|{N}|{v1}|{v2}".encode()).hexdigest()[:16]
+
+
+def _zb_charval(G: nx.Graph, z: dict, x: int, p: int) -> int:
+    """det(xI - ZB) mod p, where B is the Hashimoto matrix of G and Z scales the row of
+    u->v by z[v]. With Delta_uv = x^2 - z_u z_v, the determinant lemma gives
+        det(xI - ZB) = prod_{uv in E} Delta_uv * det(I - diag(z) Atil),
+        Atil[u, v] = x / Delta_uv (uv in E),  Atil[u, u] = -sum_{v ~ u} z_v / Delta_uv."""
+    nodes = list(G)
+    pos = {v: i for i, v in enumerate(nodes)}
+    M = np.eye(len(nodes), dtype=np.int64)
+    prod = 1
+    for u in nodes:
+        diag = 0
+        for v in G[u]:
+            delta = (x * x - z[u] * z[v]) % p
+            dinv = pow(delta, p - 2, p)
+            if pos[u] < pos[v]:
+                prod = prod * delta % p
+            M[pos[u], pos[v]] = (M[pos[u], pos[v]] - z[u] * (x * dinv % p)) % p
+            diag = (diag + z[v] * dinv) % p
+        M[pos[u], pos[u]] = (M[pos[u], pos[u]] + z[u] * diag) % p
+    return prod * _det_mod(M, p) % p
+
+
+def _kblock_family_key(G: nx.Graph) -> str | None:
+    """Exact hash of the k-blocking family {M_k : k = 2 .. }: for each k until the cycle
+    core H_k is empty, (m_k, |states(M_k)|, det(xI - D_k B_k) at the two fixed points).
+    None for a forest, as in kblock_family_signature."""
+    from .matrices import cycle_core, kblocking_size
+
+    parts = []
+    k = 2
+    while True:
+        Hk = cycle_core(G, k)
+        if Hk.number_of_edges() == 0:
+            break
+        z = {v: comb(G.degree(v) - 2, k - 2) for v in Hk}
+        parts.append(f"k{k}:{Hk.number_of_edges()}:{kblocking_size(G, k)}:"
+                     f"{_zb_charval(Hk, z, _X1, _P1)}:{_zb_charval(Hk, z, _X2, _P2)}")
+        k += 1
+    if not parts:
+        return None
+    return hashlib.sha256(("kblock_family-exact|" + "|".join(parts)).encode()).hexdigest()[:16]
+
+
 def exact_spectral_hash(key: str, G: nx.Graph) -> str | None:
     """Exact charpoly cospectral hash for matrix `key` on graph G, or None if the
     matrix is undefined for G (e.g. distance matrices on disconnected graphs)."""
@@ -214,6 +345,12 @@ def exact_spectral_hash(key: str, G: nx.Graph) -> str | None:
         return _nb_charpoly_key(G)
     if key == "nbl":
         return _nbl_charpoly_key(G)
+    if key == "non3cyc":
+        return _noncyc_charpoly_key(G, 3)
+    if key == "non4cyc":
+        return _noncyc_charpoly_key(G, 4)
+    if key == "kblock_family":
+        return _kblock_family_key(G)
     if key in INTEGER_MATRICES:
         M = MATRIX_TYPES[key].builder(G)
         if M is None or M.size == 0:
